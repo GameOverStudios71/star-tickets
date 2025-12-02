@@ -21,6 +21,11 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
 
+// Admin Routes
+const adminRoutes = require('./admin-routes');
+app.use('/api/admin', adminRoutes(db));
+
+
 // --- API Routes ---
 
 // 1. Config (Menus & Services)
