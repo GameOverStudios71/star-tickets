@@ -115,12 +115,13 @@ async function deleteService(id) {
         const res = await fetch(`/api/admin/services/${id}`, { method: 'DELETE' });
         const data = await res.json();
         if (data.error) {
-            alert(data.error);
+            showToast(data.error, 'error');
         } else {
+            showToast('Serviço excluído com sucesso!', 'success');
             loadServices();
         }
     } catch (e) {
-        alert('Erro ao excluir serviço');
+        showToast('Erro ao excluir serviço', 'error');
     }
 }
 
