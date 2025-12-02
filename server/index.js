@@ -5,6 +5,8 @@ const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const session = require('express-session');
+const fs = require('fs');
+const { execSync } = require('child_process');
 
 const app = express();
 const server = http.createServer(app);
@@ -16,6 +18,20 @@ const io = new Server(server, {
 });
 
 const dbPath = path.resolve(__dirname, '../database/star-tickets.db');
+
+// Check if database exists, if not, initialize it
+if (!fs.existsSync(dbPath)) {
+    console.log('⚠️  Database not found. Initializing...');
+    try {
+        const initPath = path.resolve(__dirname, '../database/init.js');
+        execSync(`node ${initPath}`, { stdio: 'inherit' });
+        console.log('✅ Database initialized successfully!');
+    } catch (error) {
+        console.error('❌ Error initializing database:', error);
+        process.exit(1);
+    }
+}
+
 const db = new sqlite3.Database(dbPath);
 
 app.use(cors());

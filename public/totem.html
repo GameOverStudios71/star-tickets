@@ -101,10 +101,15 @@
         <div id="selection-summary" class="card" style="display:none; margin-top: 20px;">
             <h3>Serviços Selecionados:</h3>
             <ul id="selected-list"></ul>
-            <button id="back-to-menu-btn" class="btn btn-large" onclick="backToMenu()">⬅️ VOLTAR E ADICIONAR OUTROS
-                SERVIÇOS</button>
-            <button class="btn btn-large btn-accent" onclick="confirmTicket()">CONFIRMAR E IMPRIMIR</button>
-            <button class="btn" onclick="resetSelection()">Limpar Tudo</button>
+            <div style="display:flex; gap:10px; margin-bottom:10px;">
+                <button id="back-to-menu-btn" class="btn btn-large" onclick="backToMenu()" style="flex:1;">
+                    ⬅️ VOLTAR E ADICIONAR OUTROS SERVIÇOS
+                </button>
+                <button class="btn btn-large btn-accent" onclick="confirmTicket()" style="flex:1;">
+                    CONFIRMAR E IMPRIMIR
+                </button>
+            </div>
+            <button class="btn" onclick="resetSelection()" style="width:100%;">Limpar Tudo</button>
         </div>
     </div>
 
