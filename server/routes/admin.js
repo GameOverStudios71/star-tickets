@@ -75,9 +75,11 @@ module.exports = (db) => {
 
     router.post('/rooms', (req, res) => {
         const { name, type, is_active } = req.body;
+        const establishmentId = req.establishmentId || 1; // Fallback for safety, though middleware should handle it
+
         db.run(
-            "INSERT INTO rooms (name, type, is_active) VALUES (?, ?, ?)",
-            [name, type || '', is_active !== undefined ? is_active : 1],
+            "INSERT INTO rooms (name, type, is_active, establishment_id) VALUES (?, ?, ?, ?)",
+            [name, type || '', is_active !== undefined ? is_active : 1, establishmentId],
             function (err) {
                 if (err) return res.status(500).json({ error: err.message });
                 res.json({ id: this.lastID, name });
