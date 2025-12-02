@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Star Tickets - Autoatendimento</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <header>
         <h1>Bem-vindo ao Star Tickets</h1>
@@ -16,17 +18,20 @@
         <div id="menu-container" class="menu-grid">
             <!-- Menus will be loaded here -->
         </div>
-        
+
         <div id="selection-summary" class="card" style="display:none; margin-top: 20px;">
             <h3>Serviços Selecionados:</h3>
             <ul id="selected-list"></ul>
+            <button id="back-to-menu-btn" class="btn btn-large" onclick="backToMenu()">⬅️ VOLTAR E ADICIONAR OUTROS
+                SERVIÇOS</button>
             <button class="btn btn-large btn-accent" onclick="confirmTicket()">CONFIRMAR E IMPRIMIR</button>
-            <button class="btn" onclick="resetSelection()">Limpar</button>
+            <button class="btn" onclick="resetSelection()">Limpar Tudo</button>
         </div>
     </div>
 
     <!-- Modal Impressão -->
-    <div id="print-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); color:white; flex-direction:column; justify-content:center; align-items:center; z-index:1000;">
+    <div id="print-modal"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); color:white; flex-direction:column; justify-content:center; align-items:center; z-index:1000;">
         <h2>Sua Senha</h2>
         <div style="background:white; color:black; padding:40px; border-radius:10px; text-align:center; margin:20px;">
             <h1 id="modal-ticket-code" style="font-size:5rem; margin:0;">---</h1>
@@ -39,6 +44,7 @@
         let currentMenuId = null;
         let selectedServices = [];
         let menuData = [];
+        let menuHistory = []; // Track navigation history
 
         async function loadConfig() {
             const res = await fetch('/api/config');
@@ -56,9 +62,16 @@
                 backBtn.className = 'menu-item';
                 backBtn.innerText = '⬅️ Voltar';
                 backBtn.onclick = () => {
-                    // Simple logic: reload root for now (or track history)
-                    currentMenuId = null;
-                    renderMenu(menuData);
+                    // Go back in history
+                    menuHistory.pop();
+                    const previous = menuHistory[menuHistory.length - 1];
+                    if (previous) {
+                        currentMenuId = previous.id;
+                        renderMenu(previous.children);
+                    } else {
+                        currentMenuId = null;
+                        renderMenu(menuData);
+                    }
                 };
                 container.appendChild(backBtn);
             }
@@ -66,38 +79,56 @@
             items.forEach(item => {
                 const div = document.createElement('div');
                 div.className = 'menu-item';
+
+                // Check if this service is already selected
+                const isSelected = selectedServices.some(s => s.service_id === item.service_id && item.service_id);
+                if (isSelected) {
+                    div.classList.add('selected');
+                }
+
                 div.innerHTML = `<div>${item.icon ? '' : ''} ${item.label}</div>`;
-                
+
                 div.onclick = () => {
                     if (item.children && item.children.length > 0) {
                         currentMenuId = item.id;
+                        menuHistory.push(item);
                         renderMenu(item.children);
                     } else {
                         // It's a service
-                        toggleService(item);
+                        toggleService(item, div);
                     }
                 };
                 container.appendChild(div);
             });
         }
 
-        function toggleService(item) {
+        function toggleService(item, divElement) {
             if (!item.service_id) return;
-            
-            selectedServices.push(item);
+
+            // Check if already selected
+            const existingIndex = selectedServices.findIndex(s => s.service_id === item.service_id);
+
+            if (existingIndex >= 0) {
+                // Remove if already selected
+                selectedServices.splice(existingIndex, 1);
+                divElement.classList.remove('selected');
+            } else {
+                // Add to selection
+                selectedServices.push(item);
+                divElement.classList.add('selected');
+            }
+
             updateSummary();
-            
-            // For simple flow, maybe just confirm immediately? 
-            // Or allow multiple. Let's allow multiple.
-            alert(`Adicionado: ${item.label}`);
         }
 
         function updateSummary() {
             const summary = document.getElementById('selection-summary');
             const list = document.getElementById('selected-list');
-            
+            const backBtn = document.getElementById('back-to-menu-btn');
+
             if (selectedServices.length > 0) {
                 summary.style.display = 'block';
+                backBtn.style.display = 'inline-block'; // Show back button
                 list.innerHTML = selectedServices.map(s => `<li>${s.label}</li>`).join('');
             } else {
                 summary.style.display = 'none';
@@ -108,6 +139,16 @@
             selectedServices = [];
             updateSummary();
             currentMenuId = null;
+            menuHistory = [];
+            renderMenu(menuData);
+        }
+
+        function backToMenu() {
+            // Hide only the back button, keep summary visible
+            document.getElementById('back-to-menu-btn').style.display = 'none';
+            // Go back to root menu
+            currentMenuId = null;
+            menuHistory = [];
             renderMenu(menuData);
         }
 
@@ -115,7 +156,7 @@
             if (selectedServices.length === 0) return;
 
             const serviceIds = selectedServices.map(s => s.service_id);
-            
+
             try {
                 const res = await fetch('/api/tickets', {
                     method: 'POST',
@@ -123,7 +164,7 @@
                     body: JSON.stringify({ serviceIds })
                 });
                 const data = await res.json();
-                
+
                 showPrintModal(data.displayCode);
                 resetSelection();
             } catch (e) {
@@ -143,4 +184,5 @@
         loadConfig();
     </script>
 </body>
+
 </html>

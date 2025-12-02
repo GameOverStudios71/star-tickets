@@ -67,11 +67,19 @@ async function loadServices() {
             <td>${s.prefix}</td>
             <td>${s.average_time_minutes}</td>
             <td>
-                <button class="btn action-btn" onclick="editService(${s.id})">Editar</button>
-                <button class="btn btn-accent action-btn" onclick="deleteService(${s.id})">Excluir</button>
+                <button class="btn action-btn edit-service-btn" data-id="${s.id}">Editar</button>
+                <button class="btn btn-accent action-btn delete-service-btn" data-id="${s.id}">Excluir</button>
             </td>
         `;
         tbody.appendChild(tr);
+    });
+
+    // Add event listeners
+    document.querySelectorAll('.edit-service-btn').forEach(btn => {
+        btn.addEventListener('click', () => editService(parseInt(btn.dataset.id)));
+    });
+    document.querySelectorAll('.delete-service-btn').forEach(btn => {
+        btn.addEventListener('click', () => deleteService(parseInt(btn.dataset.id)));
     });
 }
 
@@ -154,11 +162,18 @@ async function loadRooms() {
             <td>${r.type || '-'}</td>
             <td>${r.is_active ? 'Ativa' : 'Inativa'}</td>
             <td>
-                <button class="btn action-btn" onclick="editRoom(${r.id})">Editar</button>
-                <button class="btn btn-accent action-btn" onclick="deleteRoom(${r.id})">Excluir</button>
+                <button class="btn action-btn edit-room-btn" data-id="${r.id}">Editar</button>
+                <button class="btn btn-accent action-btn delete-room-btn" data-id="${r.id}">Excluir</button>
             </td>
         `;
         tbody.appendChild(tr);
+    });
+
+    document.querySelectorAll('.edit-room-btn').forEach(btn => {
+        btn.addEventListener('click', () => editRoom(parseInt(btn.dataset.id)));
+    });
+    document.querySelectorAll('.delete-room-btn').forEach(btn => {
+        btn.addEventListener('click', () => deleteRoom(parseInt(btn.dataset.id)));
     });
 }
 
@@ -241,11 +256,18 @@ async function loadMenus() {
             <td>${m.service_name || 'Container'}</td>
             <td>${m.order_index}</td>
             <td>
-                <button class="btn action-btn" onclick="editMenu(${m.id})">Editar</button>
-                <button class="btn btn-accent action-btn" onclick="deleteMenu(${m.id})">Excluir</button>
+                <button class="btn action-btn edit-menu-btn" data-id="${m.id}">Editar</button>
+                <button class="btn btn-accent action-btn delete-menu-btn" data-id="${m.id}">Excluir</button>
             </td>
         `;
         tbody.appendChild(tr);
+    });
+
+    document.querySelectorAll('.edit-menu-btn').forEach(btn => {
+        btn.addEventListener('click', () => editMenu(parseInt(btn.dataset.id)));
+    });
+    document.querySelectorAll('.delete-menu-btn').forEach(btn => {
+        btn.addEventListener('click', () => deleteMenu(parseInt(btn.dataset.id)));
     });
 }
 
@@ -320,11 +342,18 @@ async function loadUsers() {
             <td>${u.username}</td>
             <td>${u.role}</td>
             <td>
-                <button class="btn action-btn" onclick="editUser(${u.id})">Editar</button>
-                <button class="btn btn-accent action-btn" onclick="deleteUser(${u.id})">Excluir</button>
+                <button class="btn action-btn edit-user-btn" data-id="${u.id}">Editar</button>
+                <button class="btn btn-accent action-btn delete-user-btn" data-id="${u.id}">Excluir</button>
             </td>
         `;
         tbody.appendChild(tr);
+    });
+
+    document.querySelectorAll('.edit-user-btn').forEach(btn => {
+        btn.addEventListener('click', () => editUser(parseInt(btn.dataset.id)));
+    });
+    document.querySelectorAll('.delete-user-btn').forEach(btn => {
+        btn.addEventListener('click', () => deleteUser(parseInt(btn.dataset.id)));
     });
 }
 

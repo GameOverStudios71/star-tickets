@@ -120,6 +120,21 @@ app.get('/api/tickets', (req, res) => {
     });
 });
 
+// Get services for a specific ticket (MUST come before /api/tickets/:id/link)
+app.get('/api/tickets/:id/services', (req, res) => {
+    const query = `
+        SELECT ts.id, ts.status, ts.order_sequence, s.name as service_name, s.id as service_id
+        FROM ticket_services ts
+        JOIN services s ON ts.service_id = s.id
+        WHERE ts.ticket_id = ?
+        ORDER BY ts.order_sequence
+    `;
+    db.all(query, [req.params.id], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
 // Link Customer to Ticket
 app.put('/api/tickets/:id/link', (req, res) => {
     const { customerName } = req.body;
@@ -133,6 +148,88 @@ app.put('/api/tickets/:id/link', (req, res) => {
         res.json({ success: true });
     });
 });
+
+// Remove a service from a ticket
+app.delete('/api/tickets/services/:id', (req, res) => {
+    const ticketServiceId = req.params.id;
+
+    // Get ticket_id before deleting
+    db.get("SELECT ticket_id FROM ticket_services WHERE id = ?", [ticketServiceId], (err, row) => {
+        if (err || !row) return res.status(500).json({ error: "Service not found" });
+
+        const ticketId = row.ticket_id;
+
+        db.run("DELETE FROM ticket_services WHERE id = ?", [ticketServiceId], function (err) {
+            if (err) return res.status(500).json({ error: err.message });
+
+            // Check if ticket has any remaining services
+            db.get("SELECT count(*) as count FROM ticket_services WHERE ticket_id = ?", [ticketId], (err, countRow) => {
+                if (countRow.count === 0) {
+                    // If no services left, cancel the ticket
+                    db.run("UPDATE tickets SET status = 'CANCELED' WHERE id = ?", [ticketId]);
+                }
+                io.emit('ticket_updated', { ticketId });
+                res.json({ success: true });
+            });
+        });
+    });
+});
+
+// Add a service to a ticket
+app.post('/api/tickets/:id/services', (req, res) => {
+    const ticketId = req.params.id;
+    const { serviceId } = req.body;
+
+    // Get the max order_sequence for this ticket
+    db.get("SELECT MAX(order_sequence) as max_seq FROM ticket_services WHERE ticket_id = ?", [ticketId], (err, row) => {
+        const nextSequence = (row.max_seq || 0) + 1;
+
+        db.run(
+            "INSERT INTO ticket_services (ticket_id, service_id, order_sequence, status) VALUES (?, ?, ?, 'PENDING')",
+            [ticketId, serviceId, nextSequence],
+            function (err) {
+                if (err) return res.status(500).json({ error: err.message });
+                io.emit('ticket_updated', { ticketId });
+                res.json({ id: this.lastID, success: true });
+            }
+        );
+    });
+});
+
+// Move a service up or down in the order
+app.put('/api/tickets/services/:id/move', (req, res) => {
+    const ticketServiceId = req.params.id;
+    const { direction } = req.body; // 'up' or 'down'
+
+    // Get current service info
+    db.get("SELECT * FROM ticket_services WHERE id = ?", [ticketServiceId], (err, currentService) => {
+        if (err || !currentService) return res.status(500).json({ error: "Service not found" });
+
+        const currentSeq = currentService.order_sequence;
+        const ticketId = currentService.ticket_id;
+        const targetSeq = direction === 'up' ? currentSeq - 1 : currentSeq + 1;
+
+        // Find the service to swap with
+        db.get(
+            "SELECT * FROM ticket_services WHERE ticket_id = ? AND order_sequence = ?",
+            [ticketId, targetSeq],
+            (err, targetService) => {
+                if (err || !targetService) return res.status(500).json({ error: "Cannot move in that direction" });
+
+                // Swap the order_sequence values
+                db.run("UPDATE ticket_services SET order_sequence = ? WHERE id = ?", [targetSeq, ticketServiceId]);
+                db.run("UPDATE ticket_services SET order_sequence = ? WHERE id = ?", [currentSeq, targetService.id], function (err) {
+                    if (err) return res.status(500).json({ error: err.message });
+                    io.emit('ticket_updated', { ticketId });
+                    res.json({ success: true });
+                });
+            }
+        );
+    });
+});
+
+
+
 
 // 4. Professional - Queue & Actions
 app.get('/api/queue/:roomId', (req, res) => {

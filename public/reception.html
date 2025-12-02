@@ -7,72 +7,426 @@
     <title>Star Tickets - Recepção</title>
     <link rel="stylesheet" href="style.css">
     <script src="/socket.io/socket.io.js"></script>
+    <style>
+        .reception-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .filter-section {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .filter-section h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+
+        .filter-checkboxes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .filter-checkboxes label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+        }
+
+        .ticket-card {
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .ticket-card:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .ticket-card.selected {
+            border-color: var(--accent-color);
+            background: #fff5f5;
+        }
+
+        .ticket-code {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 5px;
+        }
+
+        .ticket-services {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+
+        .ticket-status {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            background: #e0e0e0;
+        }
+
+        .ticket-status.linked {
+            background: #c8e6c9;
+            color: #2e7d32;
+        }
+
+        .detail-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            min-height: 400px;
+        }
+
+        .service-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #f5f5f5;
+            margin-bottom: 8px;
+            border-radius: 5px;
+        }
+
+        .service-item .service-info {
+            flex: 1;
+        }
+
+        .service-item .service-actions {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .service-item button {
+            padding: 5px 10px;
+            font-size: 0.85rem;
+        }
+
+        .arrow-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 3px 8px;
+            cursor: pointer;
+            border-radius: 3px;
+            font-size: 1rem;
+        }
+
+        .arrow-btn:hover {
+            opacity: 0.8;
+        }
+
+        .arrow-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #999;
+            padding: 40px;
+        }
+
+        .add-service-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #eee;
+        }
+
+        .add-service-section select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+        }
+    </style>
 </head>
 
 <body>
     <header>
         <h1>Recepção</h1>
     </header>
-    <div class="container">
-        <div class="card">
-            <h2>Senhas Aguardando</h2>
-            <div id="ticket-list"></div>
+
+    <div class="reception-layout">
+        <!-- Lista de Senhas -->
+        <div>
+            <!-- Filtros -->
+            <div class="filter-section">
+                <h3>🔍 Filtrar por Serviço</h3>
+                <div class="filter-checkboxes" id="filter-checkboxes">
+                    <!-- Checkboxes will be loaded here -->
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Senhas Emitidas</h2>
+                <div id="ticket-list"></div>
+            </div>
+        </div>
+
+        <!-- Painel de Detalhes -->
+        <div>
+            <div class="detail-panel" id="detail-panel">
+                <div class="empty-state">
+                    <p>👈 Selecione uma senha para ver os detalhes</p>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
         const socket = io();
+        let selectedTicket = null;
+        let allTickets = [];
+        let allServices = [];
+        let selectedFilters = new Set();
+
+        async function loadServices() {
+            const res = await fetch('/api/admin/services');
+            allServices = await res.json();
+            renderFilters();
+        }
+
+        function renderFilters() {
+            const container = document.getElementById('filter-checkboxes');
+            container.innerHTML = '';
+
+            allServices.forEach(service => {
+                const label = document.createElement('label');
+                label.innerHTML = `
+                    <input type="checkbox" value="${service.id}" onchange="toggleFilter(${service.id})">
+                    ${service.name}
+                `;
+                container.appendChild(label);
+            });
+        }
+
+        function toggleFilter(serviceId) {
+            if (selectedFilters.has(serviceId)) {
+                selectedFilters.delete(serviceId);
+            } else {
+                selectedFilters.add(serviceId);
+            }
+            renderTickets(filterTickets(allTickets));
+        }
+
+        function filterTickets(tickets) {
+            if (selectedFilters.size === 0) return tickets;
+
+            return tickets.filter(ticket => {
+                // Check if ticket has any of the selected services
+                const ticketServiceIds = ticket.services_list ?
+                    ticket.services_list.split(', ').map(name => {
+                        const service = allServices.find(s => s.name === name);
+                        return service ? service.id : null;
+                    }).filter(id => id !== null) : [];
+
+                return ticketServiceIds.some(id => selectedFilters.has(id));
+            });
+        }
 
         async function loadTickets() {
             const res = await fetch('/api/tickets');
-            const tickets = await res.json();
-            renderTickets(tickets);
+            allTickets = await res.json();
+            renderTickets(filterTickets(allTickets));
+
+            // Re-render detail if a ticket is selected
+            if (selectedTicket) {
+                const updated = allTickets.find(t => t.id === selectedTicket.id);
+                if (updated) {
+                    selectedTicket = updated;
+                    showTicketDetail(selectedTicket);
+                }
+            }
         }
 
         function renderTickets(tickets) {
             const container = document.getElementById('ticket-list');
             container.innerHTML = '';
 
+            if (tickets.length === 0) {
+                container.innerHTML = '<p style="color:#999; text-align:center; padding:20px;">Nenhuma senha encontrada</p>';
+                return;
+            }
+
             tickets.forEach(t => {
                 const div = document.createElement('div');
-                div.className = 'ticket-list-item';
+                div.className = 'ticket-card';
+                if (selectedTicket && selectedTicket.id === t.id) {
+                    div.classList.add('selected');
+                }
 
-                const customerInfo = t.temp_customer_name ?
-                    `<strong>${t.temp_customer_name}</strong>` :
-                    `<input type="text" placeholder="Nome do Cliente" id="input-${t.id}"> <button class="btn" onclick="linkCustomer(${t.id})">Vincular</button>`;
+                const statusClass = t.temp_customer_name ? 'linked' : '';
+                const statusText = t.temp_customer_name ? `Cliente: ${t.temp_customer_name}` : 'Sem nome';
 
                 div.innerHTML = `
-                    <div>
-                        <span style="font-size:1.5rem; font-weight:bold; margin-right:10px;">${t.display_code}</span>
-                        <span>${t.services_list}</span>
+                    <div class="ticket-code">${t.display_code}</div>
+                    <div class="ticket-services">${t.services_list || 'Sem serviços'}</div>
+                    <span class="ticket-status ${statusClass}">${statusText}</span>
+                `;
+
+                div.onclick = () => selectTicket(t);
+                container.appendChild(div);
+            });
+        }
+
+        function selectTicket(ticket) {
+            selectedTicket = ticket;
+            renderTickets(filterTickets(allTickets));
+            showTicketDetail(ticket);
+        }
+
+        async function showTicketDetail(ticket) {
+            const panel = document.getElementById('detail-panel');
+
+            // Fetch detailed services for this ticket
+            const res = await fetch(`/api/tickets/${ticket.id}/services`);
+            const services = await res.json();
+
+            const hasName = ticket.temp_customer_name;
+
+            panel.innerHTML = `
+                <h2>Senha: ${ticket.display_code}</h2>
+                
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label><strong>Nome do Cliente:</strong></label>
+                    ${hasName ?
+                    `<p style="font-size:1.2rem; color: var(--primary-color);">${ticket.temp_customer_name}</p>` :
+                    `<input type="text" id="customer-name-input" placeholder="Digite o nome do cliente" style="width:100%; padding:10px; margin-top:5px;">
+                         <button class="btn" onclick="linkCustomerName()" style="margin-top:10px;">Vincular Nome</button>`
+                }
+                </div>
+
+                <h3>Serviços Selecionados:</h3>
+                <div id="services-list"></div>
+
+                <div class="add-service-section">
+                    <h3>➕ Adicionar Serviço</h3>
+                    <select id="add-service-select">
+                        <option value="">Selecione um serviço...</option>
+                    </select>
+                    <button class="btn" onclick="addService()">Adicionar</button>
+                </div>
+            `;
+
+            // Populate add service dropdown
+            const select = document.getElementById('add-service-select');
+            allServices.forEach(s => {
+                const option = document.createElement('option');
+                option.value = s.id;
+                option.textContent = s.name;
+                select.appendChild(option);
+            });
+
+            renderServicesList(services);
+        }
+
+        function renderServicesList(services) {
+            const container = document.getElementById('services-list');
+            if (!container) return;
+
+            container.innerHTML = '';
+
+            if (services.length === 0) {
+                container.innerHTML = '<p style="color:#999;">Nenhum serviço selecionado</p>';
+                return;
+            }
+
+            services.forEach((s, index) => {
+                const div = document.createElement('div');
+                div.className = 'service-item';
+                div.innerHTML = `
+                    <div class="service-info">
+                        <strong>${s.service_name}</strong>
+                        <small style="color:#999; margin-left:10px;">(${s.status})</small>
                     </div>
-                    <div>
-                        ${customerInfo}
-                        <span style="margin-left:10px; color:gray;">${t.status}</span>
+                    <div class="service-actions">
+                        <button class="arrow-btn" onclick="moveService(${s.id}, 'up')" ${index === 0 ? 'disabled' : ''}>↑</button>
+                        <button class="arrow-btn" onclick="moveService(${s.id}, 'down')" ${index === services.length - 1 ? 'disabled' : ''}>↓</button>
+                        <button class="btn btn-accent" onclick="removeService(${s.id})">Remover</button>
                     </div>
                 `;
                 container.appendChild(div);
             });
         }
 
-        async function linkCustomer(ticketId) {
-            const input = document.getElementById(`input-${ticketId}`);
-            const name = input.value;
-            if (!name) return alert('Digite um nome');
+        async function linkCustomerName() {
+            const input = document.getElementById('customer-name-input');
+            const name = input.value.trim();
 
-            await fetch(`/api/tickets/${ticketId}/link`, {
+            if (!name) {
+                alert('Digite um nome');
+                return;
+            }
+
+            await fetch(`/api/tickets/${selectedTicket.id}/link`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ customerName: name })
             });
-            // Socket will trigger reload, but let's reload manually for simplicity
+
+            loadTickets();
+        }
+
+        async function addService() {
+            const select = document.getElementById('add-service-select');
+            const serviceId = select.value;
+
+            if (!serviceId) {
+                alert('Selecione um serviço');
+                return;
+            }
+
+            await fetch(`/api/tickets/${selectedTicket.id}/services`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ serviceId: parseInt(serviceId) })
+            });
+
+            loadTickets();
+        }
+
+        async function removeService(ticketServiceId) {
+            if (!confirm('Tem certeza que deseja remover este serviço?')) return;
+
+            await fetch(`/api/tickets/services/${ticketServiceId}`, {
+                method: 'DELETE'
+            });
+
+            loadTickets();
+        }
+
+        async function moveService(ticketServiceId, direction) {
+            await fetch(`/api/tickets/services/${ticketServiceId}/move`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ direction })
+            });
+
             loadTickets();
         }
 
         socket.on('new_ticket', () => loadTickets());
         socket.on('ticket_updated', () => loadTickets());
-        socket.on('call_ticket', () => loadTickets()); // Status changes
+        socket.on('call_ticket', () => loadTickets());
 
+        loadServices();
         loadTickets();
     </script>
 </body>
