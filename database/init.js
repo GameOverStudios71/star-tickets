@@ -1,173 +1,224 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
-const fs = require('fs');
 
 const dbPath = path.resolve(__dirname, 'star-tickets.db');
 const db = new sqlite3.Database(dbPath);
 
-const schema = `
--- Configuração e Catálogo
-CREATE TABLE IF NOT EXISTS services (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    prefix TEXT NOT NULL,
-    average_time_minutes INTEGER DEFAULT 15,
-    description TEXT
-);
-
-CREATE TABLE IF NOT EXISTS service_menus (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    parent_id INTEGER,
-    label TEXT NOT NULL,
-    service_id INTEGER,
-    order_index INTEGER DEFAULT 0,
-    icon TEXT,
-    FOREIGN KEY (parent_id) REFERENCES service_menus(id),
-    FOREIGN KEY (service_id) REFERENCES services(id)
-);
-
-CREATE TABLE IF NOT EXISTS rooms (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    type TEXT,
-    is_active BOOLEAN DEFAULT 1
-);
-
-CREATE TABLE IF NOT EXISTS room_services (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    room_id INTEGER NOT NULL,
-    service_id INTEGER NOT NULL,
-    FOREIGN KEY (room_id) REFERENCES rooms(id),
-    FOREIGN KEY (service_id) REFERENCES services(id)
-);
-
--- Fluxo de Atendimento
-CREATE TABLE IF NOT EXISTS customers (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT,
-    document_id TEXT,
-    phone TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS tickets (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    display_code TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    status TEXT DEFAULT 'WAITING', -- WAITING, IN_PROGRESS, DONE, CANCELED
-    customer_id INTEGER,
-    temp_customer_name TEXT,
-    FOREIGN KEY (customer_id) REFERENCES customers(id)
-);
-
-CREATE TABLE IF NOT EXISTS ticket_services (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    ticket_id INTEGER NOT NULL,
-    service_id INTEGER NOT NULL,
-    status TEXT DEFAULT 'PENDING', -- PENDING, CALLED, IN_PROGRESS, COMPLETED, SKIPPED
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    order_sequence INTEGER DEFAULT 0,
-    FOREIGN KEY (ticket_id) REFERENCES tickets(id),
-    FOREIGN KEY (service_id) REFERENCES services(id)
-);
-
--- Operação e Histórico
-CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    username TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
-    role TEXT DEFAULT 'PROFESSIONAL' -- ADMIN, RECEPTIONIST, PROFESSIONAL
-);
-
-CREATE TABLE IF NOT EXISTS attendance_logs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    ticket_service_id INTEGER NOT NULL,
-    user_id INTEGER,
-    room_id INTEGER,
-    start_time DATETIME,
-    end_time DATETIME,
-    notes TEXT,
-    FOREIGN KEY (ticket_service_id) REFERENCES ticket_services(id),
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (room_id) REFERENCES rooms(id)
-);
-`;
-
-const seedData = async () => {
-    // Check if services exist to avoid re-seeding
-    db.get("SELECT count(*) as count FROM services", (err, row) => {
-        if (err) console.error(err);
-        if (row.count === 0) {
-            console.log("Seeding database...");
-
-            // Services
-            db.run(`INSERT INTO services (name, prefix, average_time_minutes) VALUES 
-                ('Triagem', 'TRI', 5),
-                ('Consulta Geral', 'CON', 20),
-                ('Exame de Sangue', 'LAB', 10),
-                ('Raio-X', 'IMG', 15)
-            `);
-
-            // Menus
-            // 1. Exames (Container)
-            // 2. Consultas (Container)
-            db.run(`INSERT INTO service_menus (label, order_index, icon) VALUES ('Exames', 1, 'flask'), ('Consultas', 2, 'user-md')`, function (err) {
-                if (!err) {
-                    const examesId = 1; // Assuming ID 1
-                    const consultasId = 2; // Assuming ID 2
-
-                    // Submenus
-                    db.run(`INSERT INTO service_menus (parent_id, label, service_id, order_index) VALUES 
-                        (${examesId}, 'Sangue', 3, 1),
-                        (${examesId}, 'Raio-X', 4, 2),
-                        (${consultasId}, 'Clínico Geral', 2, 1),
-                        (${consultasId}, 'Triagem Rápida', 1, 2)
-                    `);
-                }
-            });
-
-            // Rooms
-            db.run(`INSERT INTO rooms (name, type) VALUES 
-                ('Recepção 1', 'RECEPTION'),
-                ('Consultório 1', 'OFFICE'),
-                ('Consultório 2', 'OFFICE'),
-                ('Sala de Coleta', 'LAB'),
-                ('Sala de Raio-X', 'IMG')
-            `);
-
-            // Room Services Mapping
-            // Recepção -> Triagem
-            // Consultório 1 -> Consulta Geral
-            // Consultório 2 -> Consulta Geral
-            // Sala de Coleta -> Exame de Sangue
-            // Sala de Raio-X -> Raio-X
-            setTimeout(() => {
-                db.run(`INSERT INTO room_services (room_id, service_id) VALUES 
-                    (1, 1), 
-                    (2, 2), 
-                    (3, 2), 
-                    (4, 3), 
-                    (5, 4)
-                `);
-            }, 1000);
-
-            console.log("Seed data inserted.");
-        } else {
-            console.log("Database already seeded.");
-        }
-    });
-};
-
 db.serialize(() => {
-    db.exec(schema, (err) => {
-        if (err) {
-            console.error("Error creating schema:", err);
-        } else {
-            console.log("Schema created successfully.");
-            seedData();
-        }
+    // Drop existing tables
+    db.run("DROP TABLE IF EXISTS attendance_logs");
+    db.run("DROP TABLE IF EXISTS ticket_services");
+    db.run("DROP TABLE IF EXISTS tickets");
+    db.run("DROP TABLE IF EXISTS customers");
+    db.run("DROP TABLE IF EXISTS room_services");
+    db.run("DROP TABLE IF EXISTS service_menus");
+    db.run("DROP TABLE IF EXISTS services");
+    db.run("DROP TABLE IF EXISTS rooms");
+    db.run("DROP TABLE IF EXISTS users");
+    db.run("DROP TABLE IF EXISTS establishments");
+
+    // Create establishments table
+    db.run(`
+        CREATE TABLE establishments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            code TEXT UNIQUE NOT NULL,
+            address TEXT,
+            phone TEXT,
+            email TEXT,
+            is_active INTEGER DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
+    // Create services table
+    db.run(`
+        CREATE TABLE services (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            prefix TEXT NOT NULL,
+            average_time_minutes INTEGER DEFAULT 15,
+            description TEXT,
+            establishment_id INTEGER,
+            FOREIGN KEY (establishment_id) REFERENCES establishments(id)
+        )
+    `);
+
+    // Create rooms table
+    db.run(`
+        CREATE TABLE rooms (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            type TEXT,
+            is_active INTEGER DEFAULT 1,
+            establishment_id INTEGER NOT NULL,
+            FOREIGN KEY (establishment_id) REFERENCES establishments(id)
+        )
+    `);
+
+    // Create customers table
+    db.run(`
+        CREATE TABLE customers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            phone TEXT,
+            email TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
+    // Create tickets table
+    db.run(`
+        CREATE TABLE tickets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            display_code TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            status TEXT DEFAULT 'WAITING',
+            customer_id INTEGER,
+            temp_customer_name TEXT,
+            establishment_id INTEGER NOT NULL,
+            FOREIGN KEY (customer_id) REFERENCES customers(id),
+            FOREIGN KEY (establishment_id) REFERENCES establishments(id)
+        )
+    `);
+
+    // Create ticket_services table
+    db.run(`
+        CREATE TABLE ticket_services (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ticket_id INTEGER NOT NULL,
+            service_id INTEGER NOT NULL,
+            order_sequence INTEGER NOT NULL,
+            status TEXT DEFAULT 'PENDING',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (ticket_id) REFERENCES tickets(id),
+            FOREIGN KEY (service_id) REFERENCES services(id)
+        )
+    `);
+
+    // Create users table
+    db.run(`
+        CREATE TABLE users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            role TEXT DEFAULT 'professional',
+            establishment_id INTEGER,
+            FOREIGN KEY (establishment_id) REFERENCES establishments(id)
+        )
+    `);
+
+    // Create service_menus table
+    db.run(`
+        CREATE TABLE service_menus (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            label TEXT NOT NULL,
+            parent_id INTEGER,
+            service_id INTEGER,
+            order_index INTEGER DEFAULT 0,
+            icon TEXT,
+            establishment_id INTEGER,
+            FOREIGN KEY (parent_id) REFERENCES service_menus(id),
+            FOREIGN KEY (service_id) REFERENCES services(id),
+            FOREIGN KEY (establishment_id) REFERENCES establishments(id)
+        )
+    `);
+
+    // Create room_services table
+    db.run(`
+        CREATE TABLE room_services (
+            room_id INTEGER NOT NULL,
+            service_id INTEGER NOT NULL,
+            PRIMARY KEY (room_id, service_id),
+            FOREIGN KEY (room_id) REFERENCES rooms(id),
+            FOREIGN KEY (service_id) REFERENCES services(id)
+        )
+    `);
+
+    // Create attendance_logs table
+    db.run(`
+        CREATE TABLE attendance_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            ticket_service_id INTEGER NOT NULL,
+            started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            finished_at DATETIME,
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            FOREIGN KEY (ticket_service_id) REFERENCES ticket_services(id)
+        )
+    `);
+
+    // Insert sample establishments
+    const establishments = [
+        { name: 'Clínica Central', code: 'CENTRAL', address: 'Av. Principal, 100', phone: '(11) 1234-5678', email: 'central@clinica.com' },
+        { name: 'Clínica Norte', code: 'NORTE', address: 'Rua Norte, 200', phone: '(11) 2345-6789', email: 'norte@clinica.com' },
+        { name: 'Clínica Sul', code: 'SUL', address: 'Rua Sul, 300', phone: '(11) 3456-7890', email: 'sul@clinica.com' }
+    ];
+
+    const estStmt = db.prepare("INSERT INTO establishments (name, code, address, phone, email) VALUES (?, ?, ?, ?, ?)");
+    establishments.forEach(e => estStmt.run(e.name, e.code, e.address, e.phone, e.email));
+    estStmt.finalize();
+
+    // Insert sample services for each establishment
+    const services = [
+        { name: 'Triagem', prefix: 'TRI', time: 10, est: 1 },
+        { name: 'Consulta Geral', prefix: 'CON', time: 30, est: 1 },
+        { name: 'Exame de Sangue', prefix: 'LAB', time: 20, est: 1 },
+        { name: 'Raio-X', prefix: 'RAD', time: 15, est: 1 },
+        { name: 'Triagem', prefix: 'TRI', time: 10, est: 2 },
+        { name: 'Consulta Geral', prefix: 'CON', time: 30, est: 2 },
+        { name: 'Exame de Sangue', prefix: 'LAB', time: 20, est: 2 },
+        { name: 'Triagem', prefix: 'TRI', time: 10, est: 3 },
+        { name: 'Consulta Geral', prefix: 'CON', time: 30, est: 3 }
+    ];
+
+    const svcStmt = db.prepare("INSERT INTO services (name, prefix, average_time_minutes, establishment_id) VALUES (?, ?, ?, ?)");
+    services.forEach(s => svcStmt.run(s.name, s.prefix, s.time, s.est));
+    svcStmt.finalize();
+
+    // Insert sample rooms for each establishment
+    const rooms = [
+        { name: 'Sala 1', type: 'Consulta', est: 1 },
+        { name: 'Sala 2', type: 'Exames', est: 1 },
+        { name: 'Sala 1', type: 'Consulta', est: 2 },
+        { name: 'Sala 2', type: 'Exames', est: 2 },
+        { name: 'Sala 1', type: 'Consulta', est: 3 }
+    ];
+
+    const roomStmt = db.prepare("INSERT INTO rooms (name, type, establishment_id) VALUES (?, ?, ?)");
+    rooms.forEach(r => roomStmt.run(r.name, r.type, r.est));
+    roomStmt.finalize();
+
+    // Insert sample menus for establishment 1
+    const menus = [
+        { label: 'Consultas', parent: null, service: null, order: 1, est: 1 },
+        { label: 'Exames', parent: null, service: null, order: 2, est: 1 },
+        { label: 'Geral', parent: 1, service: 2, order: 1, est: 1 },
+        { label: 'Sangue', parent: 2, service: 3, order: 1, est: 1 },
+        { label: 'Raio-X', parent: 2, service: 4, order: 2, est: 1 }
+    ];
+
+    const menuStmt = db.prepare("INSERT INTO service_menus (label, parent_id, service_id, order_index, establishment_id) VALUES (?, ?, ?, ?, ?)");
+    menus.forEach(m => menuStmt.run(m.label, m.parent, m.service, m.order, m.est));
+    menuStmt.finalize();
+
+    // Insert room-service mappings
+    db.run("INSERT INTO room_services (room_id, service_id) VALUES (1, 2), (2, 3), (2, 4)");
+
+    // Insert sample users
+    const users = [
+        { name: 'Dr. João', username: 'joao', password: '123', role: 'professional', est: 1 },
+        { name: 'Dra. Maria', username: 'maria', password: '123', role: 'professional', est: 2 },
+        { name: 'Admin', username: 'admin', password: 'admin', role: 'admin', est: null }
+    ];
+
+    const userStmt = db.prepare("INSERT INTO users (name, username, password, role, establishment_id) VALUES (?, ?, ?, ?, ?)");
+    users.forEach(u => userStmt.run(u.name, u.username, u.password, u.role, u.est));
+    userStmt.finalize(() => {
+        console.log('✅ Database recreated with establishments support!');
+        console.log('📍 3 establishments created: Central, Norte, Sul');
+        console.log('🏥 Services and rooms distributed across establishments');
+        db.close();
     });
 });
-
-module.exports = db;

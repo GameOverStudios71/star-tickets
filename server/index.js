@@ -94,9 +94,113 @@ app.get('/api/rooms', (req, res) => {
     });
 });
 
+// Establishments API
+app.get('/api/establishments', (req, res) => {
+    db.all("SELECT * FROM establishments WHERE is_active = 1 ORDER BY name", [], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
+app.get('/api/establishments/:id', (req, res) => {
+    db.get("SELECT * FROM establishments WHERE id = ?", [req.params.id], (err, row) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(row);
+    });
+});
+
+// Dashboard API - General Stats
+app.get('/api/dashboard/stats', (req, res) => {
+    const establishmentId = req.query.establishment_id;
+
+    const queries = {
+        totalToday: `SELECT COUNT(*) as count FROM tickets WHERE DATE(created_at) = DATE('now') ${establishmentId ? 'AND establishment_id = ?' : ''}`,
+        waiting: `SELECT COUNT(*) as count FROM tickets WHERE status = 'WAITING' ${establishmentId ? 'AND establishment_id = ?' : ''}`,
+        inService: `SELECT COUNT(*) as count FROM tickets WHERE status IN ('CALLED', 'IN_SERVICE') ${establishmentId ? 'AND establishment_id = ?' : ''}`,
+        completed: `SELECT COUNT(*) as count FROM tickets WHERE status = 'DONE' AND DATE(created_at) = DATE('now') ${establishmentId ? 'AND establishment_id = ?' : ''}`,
+        avgTime: `SELECT AVG(CAST((julianday(finished_at) - julianday(started_at)) * 24 * 60 AS INTEGER)) as avg_minutes 
+                  FROM attendance_logs 
+                  WHERE finished_at IS NOT NULL 
+                  AND DATE(started_at) = DATE('now')
+                  ${establishmentId ? 'AND user_id IN (SELECT id FROM users WHERE establishment_id = ?)' : ''}`
+    };
+
+    const params = establishmentId ? [establishmentId] : [];
+    const stats = {};
+
+    Promise.all([
+        new Promise((resolve) => db.get(queries.totalToday, params, (err, row) => resolve(row?.count || 0))),
+        new Promise((resolve) => db.get(queries.waiting, params, (err, row) => resolve(row?.count || 0))),
+        new Promise((resolve) => db.get(queries.inService, params, (err, row) => resolve(row?.count || 0))),
+        new Promise((resolve) => db.get(queries.completed, params, (err, row) => resolve(row?.count || 0))),
+        new Promise((resolve) => db.get(queries.avgTime, params, (err, row) => resolve(Math.round(row?.avg_minutes || 0))))
+    ]).then(([totalToday, waiting, inService, completed, avgTime]) => {
+        res.json({
+            totalToday,
+            waiting,
+            inService,
+            completed,
+            avgTime
+        });
+    });
+});
+
+// Dashboard API - Active Tickets
+app.get('/api/dashboard/tickets', (req, res) => {
+    const establishmentId = req.query.establishment_id;
+
+    const query = `
+        SELECT 
+            t.id,
+            t.display_code,
+            t.status,
+            t.temp_customer_name,
+            t.created_at,
+            e.name as establishment_name,
+            e.code as establishment_code,
+            (SELECT group_concat(s.name, ', ') FROM ticket_services ts JOIN services s ON ts.service_id = s.id WHERE ts.ticket_id = t.id) as services_list
+        FROM tickets t
+        JOIN establishments e ON t.establishment_id = e.id
+        WHERE t.status NOT IN ('DONE', 'CANCELED')
+        ${establishmentId ? 'AND t.establishment_id = ?' : ''}
+        ORDER BY t.created_at DESC
+        LIMIT 50
+    `;
+
+    const params = establishmentId ? [establishmentId] : [];
+
+    db.all(query, params, (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
+// Dashboard API - Tickets by Hour (for charts)
+app.get('/api/dashboard/tickets-by-hour', (req, res) => {
+    const establishmentId = req.query.establishment_id;
+
+    const query = `
+        SELECT 
+            strftime('%H', created_at) as hour,
+            COUNT(*) as count
+        FROM tickets
+        WHERE DATE(created_at) = DATE('now')
+        ${establishmentId ? 'AND establishment_id = ?' : ''}
+        GROUP BY hour
+        ORDER BY hour
+    `;
+
+    const params = establishmentId ? [establishmentId] : [];
+
+    db.all(query, params, (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
 // 2. Create Ticket (Totem)
 app.post('/api/tickets', (req, res) => {
-    const { serviceIds } = req.body; // Array of service IDs
+    const { serviceIds, establishmentId = 1 } = req.body; // Array of service IDs + establishment
     if (!serviceIds || serviceIds.length === 0) return res.status(400).json({ error: "No services selected" });
 
     // Generate Display Code (Simplified logic: Get prefix of first service + sequence)
@@ -111,7 +215,7 @@ app.post('/api/tickets', (req, res) => {
             const number = (countRow.count + 1).toString().padStart(3, '0');
             const displayCode = `${prefix}${number}`;
 
-            db.run("INSERT INTO tickets (display_code, status) VALUES (?, 'WAITING')", [displayCode], function (err) {
+            db.run("INSERT INTO tickets (display_code, status, establishment_id) VALUES (?, 'WAITING', ?)", [displayCode, establishmentId], function (err) {
                 if (err) return res.status(500).json({ error: err.message });
                 const ticketId = this.lastID;
 
