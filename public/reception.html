@@ -306,11 +306,15 @@
                 
                 <div class="form-group" style="margin-bottom: 20px;">
                     <label><strong>Nome do Cliente:</strong></label>
-                    ${hasName ?
-                    `<p style="font-size:1.2rem; color: var(--primary-color);">${ticket.temp_customer_name}</p>` :
-                    `<input type="text" id="customer-name-input" placeholder="Digite o nome do cliente" style="width:100%; padding:10px; margin-top:5px;">
-                         <button class="btn" onclick="linkCustomerName()" style="margin-top:10px;">Vincular Nome</button>`
-                }
+                    <div style="display:flex; gap:10px; align-items:center; margin-top:5px;">
+                        <input type="text" id="customer-name-input" 
+                               value="${ticket.temp_customer_name || ''}" 
+                               placeholder="Digite o nome do cliente" 
+                               style="flex:1; padding:10px;">
+                        <button class="btn" onclick="linkCustomerName()" style="white-space:nowrap;">
+                            ${hasName ? '✏️ Atualizar' : '✓ Vincular'}
+                        </button>
+                    </div>
                 </div>
 
                 <h3>Serviços Selecionados:</h3>
@@ -393,12 +397,23 @@
                 return;
             }
 
+            // Check for duplicate services
+            const res = await fetch(`/api/tickets/${selectedTicket.id}/services`);
+            const existingServices = await res.json();
+            const isDuplicate = existingServices.some(s => s.service_id === parseInt(serviceId));
+
+            if (isDuplicate) {
+                showToast('Este serviço já está adicionado a esta senha', 'error');
+                return;
+            }
+
             await fetch(`/api/tickets/${selectedTicket.id}/services`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ serviceId: parseInt(serviceId) })
             });
 
+            showToast('Serviço adicionado com sucesso!', 'success');
             loadTickets();
         }
 
