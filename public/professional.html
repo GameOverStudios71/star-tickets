@@ -68,9 +68,10 @@
             queue.forEach(item => {
                 const div = document.createElement('div');
                 div.className = 'ticket-list-item';
+                const priorityBadge = item.is_priority ? '<span style="background:#FF9800;color:white;padding:2px 8px;border-radius:3px;font-size:0.8rem;margin-left:5px;">⭐ PREFERENCIAL</span>' : '';
                 div.innerHTML = `
                     <div>
-                        <strong>${item.display_code}</strong> - ${item.temp_customer_name || 'Sem nome'}
+                        <strong>${item.display_code}</strong> ${priorityBadge} - ${item.temp_customer_name || 'Sem nome'}
                         <br><small>${item.service_name}</small>
                     </div>
                     <button class="btn" onclick="callTicket(${item.ticket_service_id})">CHAMAR</button>

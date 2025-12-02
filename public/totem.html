@@ -6,6 +6,68 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Star Tickets - Autoatendimento</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        .priority-selection {
+            padding: 40px 20px;
+        }
+
+        .priority-btn {
+            background: white;
+            border: 3px solid #ddd;
+            border-radius: 15px;
+            padding: 40px 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .priority-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .normal-btn {
+            border-color: #2196F3;
+        }
+
+        .normal-btn:hover {
+            background: #2196F3;
+            color: white;
+        }
+
+        .priority-btn-special {
+            border-color: #FF9800;
+            background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%);
+        }
+
+        .priority-btn-special:hover {
+            background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
+            color: white;
+            border-color: #F57C00;
+        }
+
+        .priority-icon {
+            font-size: 4rem;
+            margin-bottom: 15px;
+        }
+
+        .priority-label {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+
+        .priority-subtitle {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 10px;
+        }
+
+        .priority-btn-special:hover .priority-subtitle {
+            color: white;
+        }
+    </style>
 </head>
 
 <body>
@@ -15,7 +77,24 @@
     </header>
 
     <div class="container">
-        <div id="menu-container" class="menu-grid">
+        <!-- Priority Selection Screen (First Screen) -->
+        <div id="priority-selection" class="priority-selection">
+            <h2 style="text-align:center; margin-bottom:40px;">Selecione o tipo de atendimento</h2>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:30px; max-width:800px; margin:0 auto;">
+                <button class="priority-btn normal-btn" onclick="selectPriority(false)">
+                    <div class="priority-icon">👤</div>
+                    <div class="priority-label">ATENDIMENTO<br>NORMAL</div>
+                </button>
+                <button class="priority-btn priority-btn-special" onclick="selectPriority(true)">
+                    <div class="priority-icon">⭐</div>
+                    <div class="priority-label">ATENDIMENTO<br>PREFERENCIAL</div>
+                    <div class="priority-subtitle">Idosos, Gestantes,<br>Lactantes, PcD</div>
+                </button>
+            </div>
+        </div>
+
+        <!-- Menu Container (Hidden initially) -->
+        <div id="menu-container" class="menu-grid" style="display:none;">
             <!-- Menus will be loaded here -->
         </div>
 
@@ -47,16 +126,27 @@
     <!-- Modal Impressão -->
     <div id="print-modal"
         style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); color:white; flex-direction:column; justify-content:center; align-items:center; z-index:1000;">
-        <h2>Sua Senha</h2>
-        <div style="background:white; color:black; padding:40px; border-radius:10px; text-align:center; margin:20px;">
-            <h1 id="modal-ticket-code" style="font-size:5rem; margin:0;">---</h1>
-            <p>Aguarde ser chamado no painel.</p>
-            <div id="qr-code-container" style="margin:20px 0;">
-                <p style="font-size:0.9rem; color:#666; margin-bottom:10px;">Escaneie para acompanhar:</p>
-                <img id="qr-code-image" src="" alt="QR Code" style="max-width:200px; display:none;">
+        <div
+            style="background:white; color:black; padding:50px; border-radius:15px; text-align:center; margin:20px; max-width:500px;">
+            <h2 style="color:#4CAF50; margin-top:0;">✓ Senha Gerada com Sucesso!</h2>
+            <h1 id="modal-ticket-code" style="font-size:5rem; margin:20px 0; color:var(--primary-color);">---</h1>
+            <p style="font-size:1.2rem; margin:20px 0;">Aguarde ser chamado no painel.</p>
+
+            <div style="border-top:2px dashed #ddd; margin:30px 0; padding-top:30px;">
+                <p style="font-size:1rem; color:#666; margin-bottom:15px;">
+                    📱 <strong>Acompanhe pelo celular!</strong><br>
+                    Escaneie o QR Code abaixo:
+                </p>
+                <div id="qr-code-container" style="display:flex; justify-content:center; margin:20px 0;">
+                    <img id="qr-code-image" src="" alt="QR Code"
+                        style="max-width:200px; border:3px solid #eee; border-radius:10px; padding:10px; display:none;">
+                </div>
             </div>
-            <p id="auto-close-message" style="color:#666; margin-top:20px;">Voltando ao menu em <span
-                    id="countdown">5</span> segundos...</p>
+
+            <button class="btn btn-large btn-accent" onclick="window.location.reload()"
+                style="margin-top:20px; width:100%;">
+                FINALIZAR ATENDIMENTO
+            </button>
         </div>
     </div>
     </div>
@@ -66,6 +156,17 @@
         let selectedServices = [];
         let menuData = [];
         let menuHistory = []; // Track navigation history
+        let isPriorityTicket = false; // Track if user selected priority
+
+        function selectPriority(priority) {
+            isPriorityTicket = priority;
+            // Hide priority selection
+            document.getElementById('priority-selection').style.display = 'none';
+            // Show menu container
+            document.getElementById('menu-container').style.display = 'grid';
+            // Load menu
+            loadConfig();
+        }
 
         async function loadConfig() {
             const res = await fetch('/api/config');
@@ -224,7 +325,7 @@
                 const res = await fetch('/api/tickets', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ serviceIds })
+                    body: JSON.stringify({ serviceIds, isPriority: isPriorityTicket })
                 });
                 const data = await res.json();
 
@@ -248,20 +349,6 @@
             } catch (e) {
                 console.error('Erro ao carregar QR code:', e);
             }
-
-            // Start countdown
-            let seconds = 5;
-            const countdownEl = document.getElementById('countdown');
-
-            const interval = setInterval(() => {
-                seconds--;
-                countdownEl.innerText = seconds;
-
-                if (seconds <= 0) {
-                    clearInterval(interval);
-                    closeModal();
-                }
-            }, 1000);
         }
 
         function closeModal() {

@@ -76,6 +76,7 @@ db.serialize(() => {
             status TEXT DEFAULT 'WAITING',
             customer_id INTEGER,
             temp_customer_name TEXT,
+            is_priority INTEGER DEFAULT 0,
             establishment_id INTEGER NOT NULL,
             FOREIGN KEY (customer_id) REFERENCES customers(id),
             FOREIGN KEY (establishment_id) REFERENCES establishments(id)

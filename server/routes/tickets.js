@@ -5,7 +5,7 @@ module.exports = (db, io) => {
 
     // 2. Create Ticket (Totem)
     router.post('/tickets', (req, res) => {
-        const { serviceIds, establishmentId = 1 } = req.body; // Array of service IDs + establishment
+        const { serviceIds, establishmentId = 1, isPriority = false } = req.body; // Array of service IDs + establishment + priority
         if (!serviceIds || serviceIds.length === 0) return res.status(400).json({ error: "No services selected" });
 
         // Generate Display Code (Simplified logic: Get prefix of first service + sequence)
@@ -19,21 +19,24 @@ module.exports = (db, io) => {
                 const number = (countRow.count + 1).toString().padStart(3, '0');
                 const displayCode = `${prefix}${number}`;
 
-                db.run("INSERT INTO tickets (display_code, status, establishment_id) VALUES (?, 'WAITING', ?)", [displayCode, establishmentId], function (err) {
-                    if (err) return res.status(500).json({ error: err.message });
-                    const ticketId = this.lastID;
+                db.run("INSERT INTO tickets (display_code, status, is_priority, establishment_id) VALUES (?, 'WAITING', ?, ?)",
+                    [displayCode, isPriority ? 1 : 0, establishmentId],
+                    function (err) {
+                        if (err) return res.status(500).json({ error: err.message });
+                        const ticketId = this.lastID;
 
-                    // Insert Ticket Services
-                    const stmt = db.prepare("INSERT INTO ticket_services (ticket_id, service_id, order_sequence, status) VALUES (?, ?, ?, ?)");
-                    serviceIds.forEach((serviceId, index) => {
-                        // First service is PENDING, others are BLOCKED (conceptually) but we use PENDING + order_sequence logic
-                        stmt.run(ticketId, serviceId, index + 1, 'PENDING');
-                    });
-                    stmt.finalize();
+                        // Insert Ticket Services
+                        const stmt = db.prepare("INSERT INTO ticket_services (ticket_id, service_id, order_sequence, status) VALUES (?, ?, ?, ?)");
+                        serviceIds.forEach((serviceId, index) => {
+                            // First service is PENDING, others are BLOCKED (conceptually) but we use PENDING + order_sequence logic
+                            stmt.run(ticketId, serviceId, index + 1, 'PENDING');
+                        });
+                        stmt.finalize();
 
-                    io.emit('new_ticket', { ticketId, displayCode });
-                    res.json({ ticketId, displayCode });
-                });
+                        io.emit('new_ticket', { ticketId, displayCode, isPriority });
+                        res.json({ ticketId, displayCode, isPriority });
+                    }
+                );
             });
         });
     });
@@ -244,7 +247,7 @@ module.exports = (db, io) => {
         const roomId = req.params.roomId;
 
         const query = `
-            SELECT ts.id as ticket_service_id, t.id as ticket_id, t.display_code, t.temp_customer_name, s.name as service_name
+            SELECT ts.id as ticket_service_id, t.id as ticket_id, t.display_code, t.temp_customer_name, t.is_priority, s.name as service_name
             FROM ticket_services ts
             JOIN tickets t ON ts.ticket_id = t.id
             JOIN services s ON ts.service_id = s.id
@@ -259,7 +262,7 @@ module.exports = (db, io) => {
                 AND ts_prev.order_sequence < ts.order_sequence 
                 AND ts_prev.status != 'COMPLETED'
             )
-            ORDER BY ts.created_at ASC
+            ORDER BY t.is_priority DESC, ts.created_at ASC
         `;
 
         db.all(query, [roomId], (err, rows) => {
