@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Star Tickets - Profissional</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <header>
+        <h1>Área do Profissional</h1>
+        <select id="room-select" onchange="loadQueue()" style="padding:5px; margin-left:10px;">
+            <option value="">Selecione sua Sala...</option>
+        </select>
+    </header>
+    <div class="container">
+        <div class="grid">
+            <div class="card">
+                <h2>Em Atendimento</h2>
+                <div id="current-ticket" style="text-align:center; padding:20px;">
+                    <h3 style="color:gray;">Nenhum atendimento iniciado</h3>
+                </div>
+            </div>
+            <div class="card">
+                <h2>Fila da Sala</h2>
+                <div id="queue-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentRoomId = null;
+        let currentTicketServiceId = null;
+
+        async function loadRooms() {
+            const res = await fetch('/api/rooms');
+            const rooms = await res.json();
+            const select = document.getElementById('room-select');
+            rooms.forEach(r => {
+                const opt = document.createElement('option');
+                opt.value = r.id;
+                opt.innerText = r.name;
+                select.appendChild(opt);
+            });
+        }
+
+        async function loadQueue() {
+            const select = document.getElementById('room-select');
+            currentRoomId = select.value;
+            if (!currentRoomId) return;
+
+            const res = await fetch(`/api/queue/${currentRoomId}`);
+            const queue = await res.json();
+            renderQueue(queue);
+        }
+
+        function renderQueue(queue) {
+            const container = document.getElementById('queue-list');
+            container.innerHTML = '';
+
+            if (queue.length === 0) {
+                container.innerHTML = '<p>Fila vazia.</p>';
+                return;
+            }
+
+            queue.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'ticket-list-item';
+                div.innerHTML = `
+                    <div>
+                        <strong>${item.display_code}</strong> - ${item.temp_customer_name || 'Sem nome'}
+                        <br><small>${item.service_name}</small>
+                    </div>
+                    <button class="btn" onclick="callTicket(${item.ticket_service_id})">CHAMAR</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        async function callTicket(ticketServiceId) {
+            if (currentTicketServiceId) {
+                if (!confirm('Finalizar atendimento atual antes de chamar o próximo?')) return;
+                await finishTicket();
+            }
+
+            await fetch('/api/call', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ticketServiceId, roomId: currentRoomId })
+            });
+
+            currentTicketServiceId = ticketServiceId;
+
+            // Move from queue to current (simplified visual update)
+            loadQueue();
+            updateCurrentDisplay(ticketServiceId);
+        }
+
+        async function finishTicket() {
+            if (!currentTicketServiceId) return;
+
+            await fetch('/api/finish', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ticketServiceId: currentTicketServiceId })
+            });
+
+            currentTicketServiceId = null;
+            document.getElementById('current-ticket').innerHTML = '<h3 style="color:gray;">Atendimento Finalizado</h3>';
+            loadQueue();
+        }
+
+        function updateCurrentDisplay(id) {
+            // In a real app we'd fetch details, here we just show generic
+            document.getElementById('current-ticket').innerHTML = `
+                <h1>Em Atendimento</h1>
+                <p>Ticket ID: ${id}</p>
+                <button class="btn btn-accent btn-large" onclick="finishTicket()">FINALIZAR ATENDIMENTO</button>
+            `;
+        }
+
+        // Auto refresh queue every 5s
+        setInterval(() => {
+            if (currentRoomId) loadQueue();
+        }, 5000);
+
+        loadRooms();
+    </script>
+</body>
+
+</html>

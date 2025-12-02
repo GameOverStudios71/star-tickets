@@ -1,0 +1,33 @@
+# Node modules
+node_modules/
+
+# Database
+database/*.db
+database/*.db-journal
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Environment variables
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build output
+dist/
+build/
+
+# Temporary files
+tmp/
+temp/

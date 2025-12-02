@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Star Tickets - Autoatendimento</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>Bem-vindo ao Star Tickets</h1>
+        <p>Toque para selecionar seu atendimento</p>
+    </header>
+
+    <div class="container">
+        <div id="menu-container" class="menu-grid">
+            <!-- Menus will be loaded here -->
+        </div>
+        
+        <div id="selection-summary" class="card" style="display:none; margin-top: 20px;">
+            <h3>Serviços Selecionados:</h3>
+            <ul id="selected-list"></ul>
+            <button class="btn btn-large btn-accent" onclick="confirmTicket()">CONFIRMAR E IMPRIMIR</button>
+            <button class="btn" onclick="resetSelection()">Limpar</button>
+        </div>
+    </div>
+
+    <!-- Modal Impressão -->
+    <div id="print-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); color:white; flex-direction:column; justify-content:center; align-items:center; z-index:1000;">
+        <h2>Sua Senha</h2>
+        <div style="background:white; color:black; padding:40px; border-radius:10px; text-align:center; margin:20px;">
+            <h1 id="modal-ticket-code" style="font-size:5rem; margin:0;">---</h1>
+            <p>Aguarde ser chamado no painel.</p>
+        </div>
+        <button class="btn btn-large" onclick="closeModal()">FECHAR</button>
+    </div>
+
+    <script>
+        let currentMenuId = null;
+        let selectedServices = [];
+        let menuData = [];
+
+        async function loadConfig() {
+            const res = await fetch('/api/config');
+            menuData = await res.json();
+            renderMenu(menuData);
+        }
+
+        function renderMenu(items) {
+            const container = document.getElementById('menu-container');
+            container.innerHTML = '';
+
+            // Back button if not root
+            if (currentMenuId) {
+                const backBtn = document.createElement('div');
+                backBtn.className = 'menu-item';
+                backBtn.innerText = '⬅️ Voltar';
+                backBtn.onclick = () => {
+                    // Simple logic: reload root for now (or track history)
+                    currentMenuId = null;
+                    renderMenu(menuData);
+                };
+                container.appendChild(backBtn);
+            }
+
+            items.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'menu-item';
+                div.innerHTML = `<div>${item.icon ? '' : ''} ${item.label}</div>`;
+                
+                div.onclick = () => {
+                    if (item.children && item.children.length > 0) {
+                        currentMenuId = item.id;
+                        renderMenu(item.children);
+                    } else {
+                        // It's a service
+                        toggleService(item);
+                    }
+                };
+                container.appendChild(div);
+            });
+        }
+
+        function toggleService(item) {
+            if (!item.service_id) return;
+            
+            selectedServices.push(item);
+            updateSummary();
+            
+            // For simple flow, maybe just confirm immediately? 
+            // Or allow multiple. Let's allow multiple.
+            alert(`Adicionado: ${item.label}`);
+        }
+
+        function updateSummary() {
+            const summary = document.getElementById('selection-summary');
+            const list = document.getElementById('selected-list');
+            
+            if (selectedServices.length > 0) {
+                summary.style.display = 'block';
+                list.innerHTML = selectedServices.map(s => `<li>${s.label}</li>`).join('');
+            } else {
+                summary.style.display = 'none';
+            }
+        }
+
+        function resetSelection() {
+            selectedServices = [];
+            updateSummary();
+            currentMenuId = null;
+            renderMenu(menuData);
+        }
+
+        async function confirmTicket() {
+            if (selectedServices.length === 0) return;
+
+            const serviceIds = selectedServices.map(s => s.service_id);
+            
+            try {
+                const res = await fetch('/api/tickets', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ serviceIds })
+                });
+                const data = await res.json();
+                
+                showPrintModal(data.displayCode);
+                resetSelection();
+            } catch (e) {
+                alert('Erro ao gerar senha');
+            }
+        }
+
+        function showPrintModal(code) {
+            document.getElementById('modal-ticket-code').innerText = code;
+            document.getElementById('print-modal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('print-modal').style.display = 'none';
+        }
+
+        loadConfig();
+    </script>
+</body>
+</html>

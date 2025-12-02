@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Star Tickets - Recepção</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+
+<body>
+    <header>
+        <h1>Recepção</h1>
+    </header>
+    <div class="container">
+        <div class="card">
+            <h2>Senhas Aguardando</h2>
+            <div id="ticket-list"></div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+
+        async function loadTickets() {
+            const res = await fetch('/api/tickets');
+            const tickets = await res.json();
+            renderTickets(tickets);
+        }
+
+        function renderTickets(tickets) {
+            const container = document.getElementById('ticket-list');
+            container.innerHTML = '';
+
+            tickets.forEach(t => {
+                const div = document.createElement('div');
+                div.className = 'ticket-list-item';
+
+                const customerInfo = t.temp_customer_name ?
+                    `<strong>${t.temp_customer_name}</strong>` :
+                    `<input type="text" placeholder="Nome do Cliente" id="input-${t.id}"> <button class="btn" onclick="linkCustomer(${t.id})">Vincular</button>`;
+
+                div.innerHTML = `
+                    <div>
+                        <span style="font-size:1.5rem; font-weight:bold; margin-right:10px;">${t.display_code}</span>
+                        <span>${t.services_list}</span>
+                    </div>
+                    <div>
+                        ${customerInfo}
+                        <span style="margin-left:10px; color:gray;">${t.status}</span>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        async function linkCustomer(ticketId) {
+            const input = document.getElementById(`input-${ticketId}`);
+            const name = input.value;
+            if (!name) return alert('Digite um nome');
+
+            await fetch(`/api/tickets/${ticketId}/link`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ customerName: name })
+            });
+            // Socket will trigger reload, but let's reload manually for simplicity
+            loadTickets();
+        }
+
+        socket.on('new_ticket', () => loadTickets());
+        socket.on('ticket_updated', () => loadTickets());
+        socket.on('call_ticket', () => loadTickets()); // Status changes
+
+        loadTickets();
+    </script>
+</body>
+
+</html>

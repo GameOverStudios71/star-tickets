@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Star Tickets - Painel</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+
+<body>
+    <div class="tv-container">
+        <div class="tv-main">
+            <div class="ticket-display" id="main-ticket">---</div>
+            <div class="customer-display" id="main-customer">Aguardando chamada...</div>
+            <div class="room-display" id="main-room">---</div>
+        </div>
+        <div class="tv-sidebar">
+            <h2>Histórico</h2>
+            <div id="history-list">
+                <!-- History items -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        const historyList = document.getElementById('history-list');
+
+        // Audio context for "ding dong"
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playAlert() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(660, audioCtx.currentTime);
+            osc.frequency.setValueAtTime(440, audioCtx.currentTime + 0.5);
+            gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1);
+
+            osc.start();
+            osc.stop(audioCtx.currentTime + 1);
+        }
+
+        socket.on('call_ticket', (data) => {
+            // Move current to history if valid
+            const currentTicket = document.getElementById('main-ticket').innerText;
+            if (currentTicket !== '---') {
+                addToHistory({
+                    displayCode: currentTicket,
+                    roomName: document.getElementById('main-room').innerText
+                });
+            }
+
+            // Update Main
+            document.getElementById('main-ticket').innerText = data.displayCode;
+            document.getElementById('main-customer').innerText = data.customerName || 'Cliente';
+            document.getElementById('main-room').innerText = data.roomName;
+
+            playAlert();
+        });
+
+        function addToHistory(item) {
+            const div = document.createElement('div');
+            div.className = 'history-item';
+            div.innerHTML = `<strong>${item.displayCode}</strong> - ${item.roomName}`;
+            historyList.prepend(div);
+
+            if (historyList.children.length > 5) {
+                historyList.removeChild(historyList.lastChild);
+            }
+        }
+    </script>
+</body>
+
+</html>
