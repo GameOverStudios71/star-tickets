@@ -371,7 +371,7 @@
             const name = input.value.trim();
 
             if (!name) {
-                alert('Digite um nome');
+                showToast('Digite um nome', 'warning');
                 return;
             }
 
@@ -389,7 +389,7 @@
             const serviceId = select.value;
 
             if (!serviceId) {
-                alert('Selecione um serviço');
+                showToast('Selecione um serviço', 'warning');
                 return;
             }
 
@@ -403,7 +403,7 @@
         }
 
         async function removeService(ticketServiceId) {
-            if (!confirm('Tem certeza que deseja remover este serviço?')) return;
+            if (!confirm('Remover este serviço?')) return;
 
             await fetch(`/api/tickets/services/${ticketServiceId}`, {
                 method: 'DELETE'
@@ -422,13 +422,16 @@
             loadTickets();
         }
 
+        // Initial load
+        loadServices();
+        loadTickets();
+
+        // Real-time updates
         socket.on('new_ticket', () => loadTickets());
         socket.on('ticket_updated', () => loadTickets());
         socket.on('call_ticket', () => loadTickets());
-
-        loadServices();
-        loadTickets();
     </script>
+    <script src="toast.js"></script>
 </body>
 
 </html>

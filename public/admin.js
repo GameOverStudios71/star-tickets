@@ -109,11 +109,18 @@ function editService(id) {
 }
 
 async function deleteService(id) {
-    if (!confirm('Tem certeza que deseja excluir este serviço?')) return;
+    console.log('deleteService called with id:', id);
 
+    // Show warning toast
+    showToast('Excluindo serviço...', 'warning');
+
+    console.log('Sending DELETE request...');
     try {
         const res = await fetch(`/api/admin/services/${id}`, { method: 'DELETE' });
+        console.log('Response status:', res.status);
         const data = await res.json();
+        console.log('Response data:', data);
+
         if (data.error) {
             showToast(data.error, 'error');
         } else {
@@ -121,6 +128,7 @@ async function deleteService(id) {
             loadServices();
         }
     } catch (e) {
+        console.error('Error deleting service:', e);
         showToast('Erro ao excluir serviço', 'error');
     }
 }
@@ -203,9 +211,21 @@ function editRoom(id) {
 }
 
 async function deleteRoom(id) {
-    if (!confirm('Tem certeza que deseja excluir esta sala?')) return;
-    await fetch(`/api/admin/rooms/${id}`, { method: 'DELETE' });
-    loadRooms();
+    showToast('Excluindo sala...', 'warning');
+
+    try {
+        const res = await fetch(`/api/admin/rooms/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+
+        if (data.error) {
+            showToast(data.error, 'error');
+        } else {
+            showToast('Sala excluída com sucesso!', 'success');
+            loadRooms();
+        }
+    } catch (e) {
+        showToast('Erro ao excluir sala', 'error');
+    }
 }
 
 document.getElementById('room-form').addEventListener('submit', async (e) => {
@@ -384,9 +404,21 @@ function editUser(id) {
 }
 
 async function deleteUser(id) {
-    if (!confirm('Tem certeza que deseja excluir este usuário?')) return;
-    await fetch(`/api/admin/users/${id}`, { method: 'DELETE' });
-    loadUsers();
+    showToast('Excluindo usuário...', 'warning');
+
+    try {
+        const res = await fetch(`/api/admin/users/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+
+        if (data.error) {
+            showToast(data.error, 'error');
+        } else {
+            showToast('Usuário excluído com sucesso!', 'success');
+            loadUsers();
+        }
+    } catch (e) {
+        showToast('Erro ao excluir usuário', 'error');
+    }
 }
 
 document.getElementById('user-form').addEventListener('submit', async (e) => {

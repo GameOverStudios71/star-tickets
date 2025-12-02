@@ -230,7 +230,7 @@
 
                 showPrintModal(data.displayCode, data.ticketId);
             } catch (e) {
-                alert('Erro ao gerar senha');
+                showToast('Erro ao gerar senha', 'error');
             }
         }
 

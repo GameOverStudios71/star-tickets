@@ -38,20 +38,28 @@ module.exports = (db) => {
     });
 
     router.delete('/services/:id', (req, res) => {
-        // Check if service is in use
-        db.get("SELECT count(*) as count FROM ticket_services WHERE service_id = ?", [req.params.id], (err, row) => {
+        const serviceId = req.params.id;
+
+        // Check if service is in use in tickets
+        db.get("SELECT count(*) as count FROM ticket_services WHERE service_id = ?", [serviceId], (err, row) => {
             if (err) return res.status(500).json({ error: err.message });
             if (row.count > 0) {
-                return res.status(400).json({ error: "Serviço está em uso e não pode ser excluído" });
+                return res.status(400).json({ error: "Serviço está em uso em senhas e não pode ser excluído" });
             }
 
-            // Delete related records first
-            db.run("DELETE FROM room_services WHERE service_id = ?", [req.params.id]);
-            db.run("DELETE FROM service_menus WHERE service_id = ?", [req.params.id]);
-
-            db.run("DELETE FROM services WHERE id = ?", [req.params.id], function (err) {
+            // Delete related records first in proper sequence
+            db.run("DELETE FROM room_services WHERE service_id = ?", [serviceId], (err) => {
                 if (err) return res.status(500).json({ error: err.message });
-                res.json({ success: true });
+
+                db.run("DELETE FROM service_menus WHERE service_id = ?", [serviceId], (err) => {
+                    if (err) return res.status(500).json({ error: err.message });
+
+                    // Finally delete the service itself
+                    db.run("DELETE FROM services WHERE id = ?", [serviceId], function (err) {
+                        if (err) return res.status(500).json({ error: err.message });
+                        res.json({ success: true, message: 'Serviço excluído com sucesso' });
+                    });
+                });
             });
         });
     });
@@ -90,10 +98,17 @@ module.exports = (db) => {
     });
 
     router.delete('/rooms/:id', (req, res) => {
-        db.run("DELETE FROM room_services WHERE room_id = ?", [req.params.id]);
-        db.run("DELETE FROM rooms WHERE id = ?", [req.params.id], function (err) {
+        const roomId = req.params.id;
+
+        // Delete related room_services first
+        db.run("DELETE FROM room_services WHERE room_id = ?", [roomId], (err) => {
             if (err) return res.status(500).json({ error: err.message });
-            res.json({ success: true });
+
+            // Then delete the room
+            db.run("DELETE FROM rooms WHERE id = ?", [roomId], function (err) {
+                if (err) return res.status(500).json({ error: err.message });
+                res.json({ success: true, message: 'Sala excluída com sucesso' });
+            });
         });
     });
 
@@ -171,11 +186,17 @@ module.exports = (db) => {
     });
 
     router.delete('/menus/:id', (req, res) => {
+        const menuId = req.params.id;
+
         // Delete children first
-        db.run("DELETE FROM service_menus WHERE parent_id = ?", [req.params.id]);
-        db.run("DELETE FROM service_menus WHERE id = ?", [req.params.id], function (err) {
+        db.run("DELETE FROM service_menus WHERE parent_id = ?", [menuId], (err) => {
             if (err) return res.status(500).json({ error: err.message });
-            res.json({ success: true });
+
+            // Then delete the menu item itself
+            db.run("DELETE FROM service_menus WHERE id = ?", [menuId], function (err) {
+                if (err) return res.status(500).json({ error: err.message });
+                res.json({ success: true, message: 'Item de menu excluído com sucesso' });
+            });
         });
     });
 
@@ -191,10 +212,9 @@ module.exports = (db) => {
     router.post('/users', (req, res) => {
         const { name, username, password, role } = req.body;
         // In production, hash the password!
-        const password_hash = password; // Simplified for prototype
         db.run(
-            "INSERT INTO users (name, username, password_hash, role) VALUES (?, ?, ?, ?)",
-            [name, username, password_hash, role || 'PROFESSIONAL'],
+            "INSERT INTO users (name, username, password, role) VALUES (?, ?, ?, ?)",
+            [name, username, password, role || 'PROFESSIONAL'],
             function (err) {
                 if (err) return res.status(500).json({ error: err.message });
                 res.json({ id: this.lastID, name, username });
@@ -207,7 +227,7 @@ module.exports = (db) => {
         let query, params;
 
         if (password) {
-            query = "UPDATE users SET name = ?, username = ?, password_hash = ?, role = ? WHERE id = ?";
+            query = "UPDATE users SET name = ?, username = ?, password = ?, role = ? WHERE id = ?";
             params = [name, username, password, role, req.params.id];
         } else {
             query = "UPDATE users SET name = ?, username = ?, role = ? WHERE id = ?";
