@@ -5,6 +5,7 @@ const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const QRCode = require('qrcode');
+const session = require('express-session');
 
 const app = express();
 const server = http.createServer(app);
@@ -22,22 +23,80 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
 
+// Session configuration
+app.use(session({
+    secret: 'star-tickets-secret-key',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { maxAge: 24 * 60 * 60 * 1000 } // 24 hours
+}));
+
+// Middleware to inject establishment_id from session
+app.use((req, res, next) => {
+    if (req.session && req.session.user) {
+        req.establishmentId = req.session.user.establishment_id;
+        req.user = req.session.user;
+    }
+    next();
+});
+
 // Admin Routes
 const adminRoutes = require('./admin-routes');
 app.use('/api/admin', adminRoutes(db));
+
+// --- Authentication Routes ---
+app.post('/api/auth/login', (req, res) => {
+    const { username, password } = req.body;
+
+    db.get("SELECT * FROM users WHERE username = ? AND password = ?", [username, password], (err, user) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (!user) return res.status(401).json({ error: 'Credenciais inválidas' });
+
+        req.session.user = {
+            id: user.id,
+            name: user.name,
+            username: user.username,
+            role: user.role,
+            establishment_id: user.establishment_id
+        };
+
+        res.json({
+            success: true,
+            user: req.session.user
+        });
+    });
+});
+
+app.post('/api/auth/logout', (req, res) => {
+    req.session.destroy((err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true });
+    });
+});
+
+app.get('/api/auth/me', (req, res) => {
+    if (req.session && req.session.user) {
+        res.json({ user: req.session.user });
+    } else {
+        res.status(401).json({ error: 'Não autenticado' });
+    }
+});
 
 
 // --- API Routes ---
 
 // 1. Config (Menus & Services)
 app.get('/api/config', (req, res) => {
+    const establishmentId = req.query.establishment_id || 1; // Default to establishment 1
+
     const query = `
         SELECT sm.*, s.name as service_name, s.prefix, s.average_time_minutes, s.id as service_id
         FROM service_menus sm 
         LEFT JOIN services s ON sm.service_id = s.id 
+        WHERE sm.establishment_id = ?
         ORDER BY sm.order_index
     `;
-    db.all(query, [], (err, rows) => {
+    db.all(query, [establishmentId], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
 
         // Get wait time estimates for each service
@@ -111,7 +170,8 @@ app.get('/api/establishments/:id', (req, res) => {
 
 // Dashboard API - General Stats
 app.get('/api/dashboard/stats', (req, res) => {
-    const establishmentId = req.query.establishment_id;
+    // Use establishment from session if available, otherwise allow query param (for admin)
+    const establishmentId = req.establishmentId || req.query.establishment_id;
 
     const queries = {
         totalToday: `SELECT COUNT(*) as count FROM tickets WHERE DATE(created_at) = DATE('now') ${establishmentId ? 'AND establishment_id = ?' : ''}`,
@@ -147,7 +207,8 @@ app.get('/api/dashboard/stats', (req, res) => {
 
 // Dashboard API - Active Tickets
 app.get('/api/dashboard/tickets', (req, res) => {
-    const establishmentId = req.query.establishment_id;
+    // Use establishment from session if available, otherwise allow query param (for admin)
+    const establishmentId = req.establishmentId || req.query.establishment_id;
 
     const query = `
         SELECT 

@@ -101,15 +101,14 @@
 <body>
     <header>
         <h1>📊 Dashboard - Star Tickets</h1>
+        <div id="user-info"></div>
     </header>
 
     <div class="container">
         <div class="dashboard-header">
             <h2>Visão Geral</h2>
-            <div class="filter-section">
-                <select id="establishment-filter" onchange="loadDashboard()">
-                    <option value="">Todos os Estabelecimentos</option>
-                </select>
+            <div class="filter-section" id="filter-container">
+                <!-- Filter will be shown only for admin users -->
             </div>
         </div>
 
@@ -158,28 +157,58 @@
         </div>
     </div>
 
+    <script src="auth-helper.js"></script>
     <script>
         const socket = io();
         let establishments = [];
+        let currentUser = null;
+
+        async function init() {
+            // Check authentication
+            currentUser = await checkAuth();
+            if (!currentUser) return;
+
+            // Show user info
+            document.getElementById('user-info').innerHTML = showUserInfo(currentUser);
+
+            // Show establishment filter only for admin
+            if (!currentUser.establishment_id) {
+                document.getElementById('filter-container').innerHTML = `
+                    <select id="establishment-filter" onchange="loadDashboard()">
+                        <option value="">Todos os Estabelecimentos</option>
+                    </select>
+                `;
+                await loadEstablishments();
+            } else {
+                document.getElementById('filter-container').innerHTML = `
+                    <p style="color: #666;">Estabelecimento: <strong>${currentUser.establishment_name}</strong></p>
+                `;
+            }
+
+            loadDashboard();
+        }
 
         async function loadEstablishments() {
             const res = await fetch('/api/establishments');
             establishments = await res.json();
 
             const select = document.getElementById('establishment-filter');
-            establishments.forEach(e => {
-                const option = document.createElement('option');
-                option.value = e.id;
-                option.textContent = e.name;
-                select.appendChild(option);
-            });
+            if (select) {
+                establishments.forEach(e => {
+                    const option = document.createElement('option');
+                    option.value = e.id;
+                    option.textContent = e.name;
+                    select.appendChild(option);
+                });
+            }
         }
 
         async function loadDashboard() {
-            const establishmentId = document.getElementById('establishment-filter').value;
+            const select = document.getElementById('establishment-filter');
+            const establishmentId = select ? select.value : '';
             const params = establishmentId ? `?establishment_id=${establishmentId}` : '';
 
-            // Load stats
+            // Load stats (will use session establishment_id automatically if not admin)
             const statsRes = await fetch(`/api/dashboard/stats${params}`);
             const stats = await statsRes.json();
 
@@ -230,8 +259,8 @@
         socket.on('ticket_updated', () => loadDashboard());
         socket.on('call_ticket', () => loadDashboard());
 
-        // Initial load
-        loadEstablishments().then(() => loadDashboard());
+        // Initialize
+        init();
 
         // Auto-refresh every 30 seconds
         setInterval(loadDashboard, 30000);

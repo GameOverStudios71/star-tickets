@@ -190,13 +190,24 @@ db.serialize(() => {
     rooms.forEach(r => roomStmt.run(r.name, r.type, r.est));
     roomStmt.finalize();
 
-    // Insert sample menus for establishment 1
+    // Insert sample menus for all establishments
     const menus = [
+        // Estabelecimento 1 (Central) - Menu completo
         { label: 'Consultas', parent: null, service: null, order: 1, est: 1 },
         { label: 'Exames', parent: null, service: null, order: 2, est: 1 },
         { label: 'Geral', parent: 1, service: 2, order: 1, est: 1 },
         { label: 'Sangue', parent: 2, service: 3, order: 1, est: 1 },
-        { label: 'Raio-X', parent: 2, service: 4, order: 2, est: 1 }
+        { label: 'Raio-X', parent: 2, service: 4, order: 2, est: 1 },
+
+        // Estabelecimento 2 (Norte) - Apenas consultas e exame de sangue
+        { label: 'Atendimento', parent: null, service: null, order: 1, est: 2 },
+        { label: 'Triagem', parent: 6, service: 5, order: 1, est: 2 },
+        { label: 'Consulta', parent: 6, service: 6, order: 2, est: 2 },
+        { label: 'Exame de Sangue', parent: null, service: 7, order: 2, est: 2 },
+
+        // Estabelecimento 3 (Sul) - Apenas consultas (sem exames)
+        { label: 'Triagem', parent: null, service: 8, order: 1, est: 3 },
+        { label: 'Consulta Geral', parent: null, service: 9, order: 2, est: 3 }
     ];
 
     const menuStmt = db.prepare("INSERT INTO service_menus (label, parent_id, service_id, order_index, establishment_id) VALUES (?, ?, ?, ?, ?)");
