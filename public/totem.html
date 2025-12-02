@@ -29,6 +29,21 @@
         </div>
     </div>
 
+    <!-- Modal Confirmação -->
+    <div id="confirmation-modal"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); color:white; flex-direction:column; justify-content:center; align-items:center; z-index:1000;">
+        <div
+            style="background:white; color:black; padding:40px; border-radius:10px; text-align:center; margin:20px; max-width:600px;">
+            <h2>Confirme seus serviços</h2>
+            <div id="confirmation-services" style="text-align:left; margin:20px 0;"></div>
+            <div id="confirmation-total"
+                style="font-size:1.5rem; font-weight:bold; margin:20px 0; padding:20px; background:#f0f0f0; border-radius:5px;">
+            </div>
+            <button class="btn btn-large btn-accent" onclick="finalConfirm()">CONFIRMAR E IMPRIMIR</button>
+            <button class="btn" onclick="closeConfirmation()">CANCELAR</button>
+        </div>
+    </div>
+
     <!-- Modal Impressão -->
     <div id="print-modal"
         style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); color:white; flex-direction:column; justify-content:center; align-items:center; z-index:1000;">
@@ -36,8 +51,14 @@
         <div style="background:white; color:black; padding:40px; border-radius:10px; text-align:center; margin:20px;">
             <h1 id="modal-ticket-code" style="font-size:5rem; margin:0;">---</h1>
             <p>Aguarde ser chamado no painel.</p>
+            <div id="qr-code-container" style="margin:20px 0;">
+                <p style="font-size:0.9rem; color:#666; margin-bottom:10px;">Escaneie para acompanhar:</p>
+                <img id="qr-code-image" src="" alt="QR Code" style="max-width:200px; display:none;">
+            </div>
+            <p id="auto-close-message" style="color:#666; margin-top:20px;">Voltando ao menu em <span
+                    id="countdown">5</span> segundos...</p>
         </div>
-        <button class="btn btn-large" onclick="closeModal()">FECHAR</button>
+    </div>
     </div>
 
     <script>
@@ -86,7 +107,11 @@
                     div.classList.add('selected');
                 }
 
-                div.innerHTML = `<div>${item.icon ? '' : ''} ${item.label}</div>`;
+                // Show wait time for services
+                const waitTimeText = item.service_id && item.estimated_wait_minutes ?
+                    `<small style="display:block; color:#666; margin-top:5px;">⏱️ Tempo estimado: ${item.estimated_wait_minutes} min</small>` : '';
+
+                div.innerHTML = `<div>${item.icon ? '' : ''} ${item.label}${waitTimeText}</div>`;
 
                 div.onclick = () => {
                     if (item.children && item.children.length > 0) {
@@ -129,7 +154,20 @@
             if (selectedServices.length > 0) {
                 summary.style.display = 'block';
                 backBtn.style.display = 'inline-block'; // Show back button
-                list.innerHTML = selectedServices.map(s => `<li>${s.label}</li>`).join('');
+
+                // Calculate total estimated time
+                const totalTime = selectedServices.reduce((sum, s) => sum + (s.estimated_wait_minutes || 0), 0);
+
+                list.innerHTML = selectedServices.map(s =>
+                    `<li>${s.label} <small style="color:#666;">(~${s.estimated_wait_minutes || 0} min)</small></li>`
+                ).join('');
+
+                // Add total time display
+                if (totalTime > 0) {
+                    list.innerHTML += `<li style="margin-top:10px; padding-top:10px; border-top:2px solid #ddd; font-weight:bold;">
+                        ⏱️ Tempo total estimado: ${totalTime} minutos
+                    </li>`;
+                }
             } else {
                 summary.style.display = 'none';
             }
@@ -155,6 +193,31 @@
         async function confirmTicket() {
             if (selectedServices.length === 0) return;
 
+            // Show confirmation modal
+            const totalTime = selectedServices.reduce((sum, s) => sum + (s.estimated_wait_minutes || 0), 0);
+
+
+            const servicesHtml = selectedServices.map(s =>
+                `<div style="padding:10px; margin:5px 0; background:#f9f9f9; border-radius:5px;">
+                    <strong>${s.label}</strong>
+                    <span style="float:right; color:#666;">~${s.estimated_wait_minutes || 0} min</span>
+                </div>`
+            ).join('');
+
+            document.getElementById('confirmation-services').innerHTML = servicesHtml;
+            document.getElementById('confirmation-total').innerHTML =
+                `⏱️ Tempo total estimado: <span style="color:var(--accent-color);">${totalTime} minutos</span>`;
+            document.getElementById('confirmation-modal').style.display = 'flex';
+        }
+
+        function closeConfirmation() {
+            document.getElementById('confirmation-modal').style.display = 'none';
+        }
+
+        async function finalConfirm() {
+            // Hide confirmation modal
+            document.getElementById('confirmation-modal').style.display = 'none';
+
             const serviceIds = selectedServices.map(s => s.service_id);
 
             try {
@@ -165,20 +228,46 @@
                 });
                 const data = await res.json();
 
-                showPrintModal(data.displayCode);
-                resetSelection();
+                showPrintModal(data.displayCode, data.ticketId);
             } catch (e) {
                 alert('Erro ao gerar senha');
             }
         }
 
-        function showPrintModal(code) {
+        async function showPrintModal(code, ticketId) {
             document.getElementById('modal-ticket-code').innerText = code;
             document.getElementById('print-modal').style.display = 'flex';
+
+            // Load QR code
+            try {
+                const qrRes = await fetch(`/api/qrcode/${ticketId}`);
+                const qrData = await qrRes.json();
+                const qrImage = document.getElementById('qr-code-image');
+                qrImage.src = qrData.qrCode;
+                qrImage.style.display = 'block';
+            } catch (e) {
+                console.error('Erro ao carregar QR code:', e);
+            }
+
+            // Start countdown
+            let seconds = 5;
+            const countdownEl = document.getElementById('countdown');
+
+            const interval = setInterval(() => {
+                seconds--;
+                countdownEl.innerText = seconds;
+
+                if (seconds <= 0) {
+                    clearInterval(interval);
+                    closeModal();
+                }
+            }, 1000);
         }
 
         function closeModal() {
             document.getElementById('print-modal').style.display = 'none';
+            // Reset everything and go back to main menu
+            resetSelection();
         }
 
         loadConfig();

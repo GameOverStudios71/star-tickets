@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acompanhe sua Senha</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .tracking-container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .ticket-code-display {
+            text-align: center;
+            font-size: 4rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin: 20px 0;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .status-waiting {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-called {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .status-in-service {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-done {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-no-show {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .time-estimate {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--accent-color);
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .services-list {
+            margin: 20px 0;
+        }
+
+        .service-item {
+            padding: 15px;
+            margin: 10px 0;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #ddd;
+        }
+
+        .service-item.completed {
+            border-left-color: #28a745;
+            opacity: 0.7;
+        }
+
+        .service-item.in-progress {
+            border-left-color: #ffc107;
+            background: #fff3cd;
+        }
+
+        .expired-message {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="tracking-container" id="tracking-container">
+        <div id="loading" style="text-align:center;">
+            <p>Carregando...</p>
+        </div>
+    </div>
+
+    <audio id="notification-sound"
+        src="data:audio/wav;base64,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"
+        preload="auto"></audio>
+
+    <script>
+        const socket = io();
+        const urlParams = new URLSearchParams(window.location.search);
+        const ticketId = urlParams.get('ticket');
+        let currentTicket = null;
+        let previousQueuePosition = null;
+
+        async function loadTicketStatus() {
+            if (!ticketId) {
+                showError('Código de senha inválido');
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/track/${ticketId}`);
+                const data = await res.json();
+
+                if (data.error) {
+                    showError(data.error);
+                    return;
+                }
+
+                currentTicket = data;
+                renderTicketStatus(data);
+            } catch (e) {
+                showError('Erro ao carregar informações');
+            }
+        }
+
+        function renderTicketStatus(data) {
+            const container = document.getElementById('tracking-container');
+
+            if (data.status === 'DONE' || data.status === 'CANCELED') {
+                container.innerHTML = `
+                    <div class="expired-message">
+                        <h2>✓ Atendimento Finalizado</h2>
+                        <p>Obrigado por utilizar nossos serviços!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            if (data.status === 'NO_SHOW') {
+                container.innerHTML = `
+                    <div class="expired-message">
+                        <h2>⚠️ Não Compareceu</h2>
+                        <p>Você foi marcado como não comparecido.</p>
+                        <p>Se você ainda está no estabelecimento, procure a recepção.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const statusText = {
+                'WAITING': 'Aguardando',
+                'CALLED': 'Chamado!',
+                'IN_SERVICE': 'Em Atendimento'
+            }[data.status] || data.status;
+
+            const statusClass = `status-${data.status.toLowerCase().replace('_', '-')}`;
+
+            let queueInfo = '';
+            if (data.queuePosition && data.status === 'WAITING') {
+                queueInfo = `
+                    <div style="text-align:center; margin:20px 0;">
+                        <p style="font-size:1.2rem; color:#666;">Posição na fila:</p>
+                        <p style="font-size:3rem; font-weight:bold; color:var(--primary-color);">${data.queuePosition}º</p>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = `
+                <h2 style="text-align:center; color:#666;">Sua Senha</h2>
+                <div class="ticket-code-display">${data.displayCode}</div>
+                <div style="text-align:center;">
+                    <span class="status-badge ${statusClass}">${statusText}</span>
+                </div>
+
+                ${queueInfo}
+
+                ${data.estimatedWaitMinutes > 0 ? `
+                    <div class="time-estimate ${data.status === 'CALLED' ? 'pulse' : ''}">
+                        ${data.status === 'CALLED' ? '🔔 Dirija-se à sala!' : `⏱️ ${data.estimatedWaitMinutes} min`}
+                    </div>
+                ` : ''}
+
+                <div class="services-list">
+                    <h3>Seus Serviços:</h3>
+                    ${data.services.map(s => `
+                        <div class="service-item ${s.status === 'DONE' ? 'completed' : ''} ${s.status === 'IN_PROGRESS' ? 'in-progress' : ''}">
+                            <strong>${s.serviceName}</strong>
+                            <div style="font-size:0.9rem; color:#666; margin-top:5px;">
+                                ${s.status === 'DONE' ? '✓ Concluído' : s.status === 'IN_PROGRESS' ? '⏳ Em andamento' : '⏱️ Aguardando'}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+
+            // Check if position changed
+            if (data.queuePosition && previousQueuePosition && data.queuePosition < previousQueuePosition) {
+                playNotification();
+            }
+            previousQueuePosition = data.queuePosition;
+
+            // Play sound if called
+            if (data.status === 'CALLED') {
+                playNotification();
+            }
+        }
+
+        function playNotification() {
+            const audio = document.getElementById('notification-sound');
+            audio.play().catch(e => console.log('Audio play failed:', e));
+        }
+
+        function showError(message) {
+            document.getElementById('tracking-container').innerHTML = `
+                <div class="expired-message">
+                    <h2>❌ Erro</h2>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+
+        // Real-time updates
+        socket.on('ticket_updated', (data) => {
+            if (data.ticketId == ticketId) {
+                loadTicketStatus();
+            }
+        });
+
+        socket.on('call_ticket', (data) => {
+            if (data.ticketId == ticketId) {
+                loadTicketStatus();
+            }
+        });
+
+        // Load initial status
+        loadTicketStatus();
+
+        // Refresh every 10 seconds
+        setInterval(loadTicketStatus, 10000);
+    </script>
+</body>
+
+</html>

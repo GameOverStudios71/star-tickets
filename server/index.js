@@ -4,6 +4,7 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const QRCode = require('qrcode');
 
 const app = express();
 const server = http.createServer(app);
@@ -31,7 +32,7 @@ app.use('/api/admin', adminRoutes(db));
 // 1. Config (Menus & Services)
 app.get('/api/config', (req, res) => {
     const query = `
-        SELECT sm.*, s.name as service_name, s.prefix, s.average_time_minutes 
+        SELECT sm.*, s.name as service_name, s.prefix, s.average_time_minutes, s.id as service_id
         FROM service_menus sm 
         LEFT JOIN services s ON sm.service_id = s.id 
         ORDER BY sm.order_index
@@ -39,25 +40,50 @@ app.get('/api/config', (req, res) => {
     db.all(query, [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
 
-        // Transform flat list into tree
-        const menuMap = {};
-        const rootMenus = [];
+        // Get wait time estimates for each service
+        const waitTimeQuery = `
+            SELECT 
+                ts.service_id,
+                COUNT(*) as pending_count,
+                s.average_time_minutes
+            FROM ticket_services ts
+            JOIN services s ON ts.service_id = s.id
+            WHERE ts.status = 'PENDING'
+            GROUP BY ts.service_id
+        `;
 
-        rows.forEach(row => {
-            menuMap[row.id] = { ...row, children: [] };
-        });
+        db.all(waitTimeQuery, [], (err, waitTimes) => {
+            const waitTimeMap = {};
+            (waitTimes || []).forEach(wt => {
+                // Estimate: pending count * average time per service
+                waitTimeMap[wt.service_id] = Math.ceil(wt.pending_count * wt.average_time_minutes);
+            });
 
-        rows.forEach(row => {
-            if (row.parent_id) {
-                if (menuMap[row.parent_id]) {
-                    menuMap[row.parent_id].children.push(menuMap[row.id]);
+            // Transform flat list into tree
+            const menuMap = {};
+            const rootMenus = [];
+
+            rows.forEach(row => {
+                const estimatedWait = row.service_id ? (waitTimeMap[row.service_id] || row.average_time_minutes || 0) : 0;
+                menuMap[row.id] = {
+                    ...row,
+                    children: [],
+                    estimated_wait_minutes: estimatedWait
+                };
+            });
+
+            rows.forEach(row => {
+                if (row.parent_id) {
+                    if (menuMap[row.parent_id]) {
+                        menuMap[row.parent_id].children.push(menuMap[row.id]);
+                    }
+                } else {
+                    rootMenus.push(menuMap[row.id]);
                 }
-            } else {
-                rootMenus.push(menuMap[row.id]);
-            }
-        });
+            });
 
-        res.json(rootMenus);
+            res.json(rootMenus);
+        });
     });
 });
 
@@ -229,6 +255,104 @@ app.put('/api/tickets/services/:id/move', (req, res) => {
 });
 
 
+// Client Tracking API
+app.get('/api/track/:ticketId', (req, res) => {
+    const ticketId = req.params.ticketId;
+
+    // Get ticket info
+    const ticketQuery = `
+        SELECT t.*, 
+        (SELECT group_concat(s.name, ', ') FROM ticket_services ts JOIN services s ON ts.service_id = s.id WHERE ts.ticket_id = t.id) as services_list
+        FROM tickets t
+        WHERE t.id = ?
+    `;
+
+    db.get(ticketQuery, [ticketId], (err, ticket) => {
+        if (err || !ticket) {
+            return res.status(404).json({ error: 'Senha não encontrada' });
+        }
+
+        // Get services details
+        const servicesQuery = `
+            SELECT ts.*, s.name as serviceName, s.average_time_minutes
+            FROM ticket_services ts
+            JOIN services s ON ts.service_id = s.id
+            WHERE ts.ticket_id = ?
+            ORDER BY ts.order_sequence
+        `;
+
+        db.all(servicesQuery, [ticketId], (err, services) => {
+            // Calculate queue position if waiting
+            let queuePosition = null;
+            let estimatedWaitMinutes = 0;
+
+            if (ticket.status === 'WAITING') {
+                // Count tickets ahead in queue (created before this one and still waiting)
+                db.get(
+                    `SELECT COUNT(*) as position FROM tickets 
+                     WHERE created_at < ? AND status = 'WAITING'`,
+                    [ticket.created_at],
+                    (err, row) => {
+                        queuePosition = (row?.position || 0) + 1;
+
+                        // Estimate wait time based on pending services ahead
+                        db.get(
+                            `SELECT SUM(s.average_time_minutes) as total_time
+                             FROM ticket_services ts
+                             JOIN services s ON ts.service_id = s.id
+                             JOIN tickets t ON ts.ticket_id = t.id
+                             WHERE t.created_at < ? AND t.status = 'WAITING' AND ts.status = 'PENDING'`,
+                            [ticket.created_at],
+                            (err, timeRow) => {
+                                estimatedWaitMinutes = Math.ceil(timeRow?.total_time || 0);
+
+                                res.json({
+                                    id: ticket.id,
+                                    displayCode: ticket.display_code,
+                                    status: ticket.status,
+                                    customerName: ticket.temp_customer_name,
+                                    queuePosition,
+                                    estimatedWaitMinutes,
+                                    services: services || []
+                                });
+                            }
+                        );
+                    }
+                );
+            } else {
+                res.json({
+                    id: ticket.id,
+                    displayCode: ticket.display_code,
+                    status: ticket.status,
+                    customerName: ticket.temp_customer_name,
+                    queuePosition,
+                    estimatedWaitMinutes,
+                    services: services || []
+                });
+            }
+        });
+    });
+});
+
+// Generate QR Code for ticket
+app.get('/api/qrcode/:ticketId', async (req, res) => {
+    const ticketId = req.params.ticketId;
+    const trackingUrl = `${req.protocol}://${req.get('host')}/track.html?ticket=${ticketId}`;
+
+    try {
+        const qrCodeDataUrl = await QRCode.toDataURL(trackingUrl, {
+            width: 300,
+            margin: 2,
+            color: {
+                dark: '#000000',
+                light: '#FFFFFF'
+            }
+        });
+        res.json({ qrCode: qrCodeDataUrl, url: trackingUrl });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao gerar QR Code' });
+    }
+});
 
 
 // 4. Professional - Queue & Actions
