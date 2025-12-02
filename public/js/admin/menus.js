@@ -4,7 +4,7 @@ async function loadMenus() {
     const tbody = document.querySelector('#menus-table tbody');
     tbody.innerHTML = '';
 
-    // Also populate service dropdown
+    // Populate service dropdown
     const services = await fetch('/api/admin/services').then(r => r.json());
     const select = document.getElementById('menu-service');
     select.innerHTML = '<option value="">-- Container --</option>';
@@ -13,6 +13,16 @@ async function loadMenus() {
         opt.value = s.id;
         opt.innerText = s.name;
         select.appendChild(opt);
+    });
+
+    // Populate parent menu dropdown
+    const parentSelect = document.getElementById('menu-parent');
+    parentSelect.innerHTML = '<option value="">-- Raiz (nenhum) --</option>';
+    menus.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.innerText = m.label;
+        parentSelect.appendChild(opt);
     });
 
     menus.forEach(m => {
