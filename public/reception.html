@@ -28,9 +28,9 @@
         }
 
         .filter-checkboxes {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 8px;
         }
 
         .filter-checkboxes label {
@@ -178,9 +178,22 @@
         <div>
             <!-- Filtros -->
             <div class="filter-section">
-                <h3>🔍 Filtrar por Serviço</h3>
-                <div class="filter-checkboxes" id="filter-checkboxes">
-                    <!-- Checkboxes will be loaded here -->
+                <h3 style="cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between;"
+                    onclick="toggleFilterDropdown()">
+                    <span>🔍 Filtrar por Serviço</span>
+                    <span id="filter-arrow" style="transition: transform 0.3s;">▼</span>
+                </h3>
+                <div id="filter-dropdown"
+                    style="display: none; max-height: 300px; overflow-y: auto; margin-top: 10px; padding: 10px; background: #f9f9f9; border-radius: 5px;">
+                    <div style="margin-bottom: 10px;">
+                        <button class="btn" onclick="selectAllFilters()"
+                            style="font-size: 0.85rem; padding: 5px 10px;">Selecionar Todos</button>
+                        <button class="btn" onclick="clearAllFilters()"
+                            style="font-size: 0.85rem; padding: 5px 10px; margin-left: 5px;">Limpar Todos</button>
+                    </div>
+                    <div class="filter-checkboxes" id="filter-checkboxes">
+                        <!-- Checkboxes will be loaded here -->
+                    </div>
                 </div>
             </div>
 
@@ -219,12 +232,50 @@
 
             allServices.forEach(service => {
                 const label = document.createElement('label');
+                label.style.display = 'flex';
+                label.style.alignItems = 'center';
+                label.style.gap = '5px';
+                label.style.cursor = 'pointer';
                 label.innerHTML = `
                     <input type="checkbox" value="${service.id}" onchange="toggleFilter(${service.id})">
-                    ${service.name}
+                    <span style="font-size: 0.9rem;">${service.name}</span>
                 `;
                 container.appendChild(label);
             });
+        }
+
+        function toggleFilterDropdown() {
+            const dropdown = document.getElementById('filter-dropdown');
+            const arrow = document.getElementById('filter-arrow');
+
+            if (dropdown.style.display === 'none') {
+                dropdown.style.display = 'block';
+                arrow.style.transform = 'rotate(180deg)';
+            } else {
+                dropdown.style.display = 'none';
+                arrow.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        function selectAllFilters() {
+            const checkboxes = document.querySelectorAll('#filter-checkboxes input[type="checkbox"]');
+            checkboxes.forEach(cb => {
+                if (!cb.checked) {
+                    cb.checked = true;
+                    toggleFilter(parseInt(cb.value));
+                }
+            });
+        }
+
+        function clearAllFilters() {
+            const checkboxes = document.querySelectorAll('#filter-checkboxes input[type="checkbox"]');
+            checkboxes.forEach(cb => {
+                if (cb.checked) {
+                    cb.checked = false;
+                }
+            });
+            selectedFilters.clear();
+            renderTickets(filterTickets(allTickets));
         }
 
         function toggleFilter(serviceId) {
@@ -461,8 +512,6 @@
         }
 
         async function removeService(ticketServiceId) {
-            if (!confirm('Remover este serviço?')) return;
-
             await fetch(`/api/tickets/services/${ticketServiceId}`, {
                 method: 'DELETE'
             });

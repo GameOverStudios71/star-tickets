@@ -97,15 +97,9 @@ module.exports = (db, io) => {
             db.run("DELETE FROM ticket_services WHERE id = ?", [ticketServiceId], function (err) {
                 if (err) return res.status(500).json({ error: err.message });
 
-                // Check if ticket has any remaining services
-                db.get("SELECT count(*) as count FROM ticket_services WHERE ticket_id = ?", [ticketId], (err, countRow) => {
-                    if (countRow.count === 0) {
-                        // If no services left, cancel the ticket
-                        db.run("UPDATE tickets SET status = 'CANCELED' WHERE id = ?", [ticketId]);
-                    }
-                    io.emit('ticket_updated', { ticketId });
-                    res.json({ success: true });
-                });
+                // Don't auto-cancel - allow receptionist to add new services
+                io.emit('ticket_updated', { ticketId });
+                res.json({ success: true });
             });
         });
     });
