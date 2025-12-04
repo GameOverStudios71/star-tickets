@@ -152,9 +152,12 @@ db.serialize(() => {
 
     // Insert sample establishments
     const establishments = [
-        { name: 'Clínica Central', code: 'CENTRAL', address: 'Av. Principal, 100', phone: '(11) 1234-5678', email: 'central@clinica.com' },
-        { name: 'Clínica Norte', code: 'NORTE', address: 'Rua Norte, 200', phone: '(11) 2345-6789', email: 'norte@clinica.com' },
-        { name: 'Clínica Sul', code: 'SUL', address: 'Rua Sul, 300', phone: '(11) 3456-7890', email: 'sul@clinica.com' }
+        { name: 'Freguesia', code: 'FREGUESIA', address: 'Rua X', phone: '(11) 0000-0000', email: 'clinica@gmail.com' },
+        { name: 'Santana', code: 'SANTANA', address: 'Rua X', phone: '(11) 0000-0000', email: 'clinica@gmail.com' },
+        { name: 'Guarulhos Centro', code: 'GUARULHOS', address: 'Rua X', phone: '(11) 0000-0000', email: 'clinica@gmail.com' },
+        { name: 'Guarulhos Tabõao', code: 'TABOAO', address: 'Rua X', phone: '(11) 0000-0000', email: 'clinica@gmail.com' },
+        { name: 'Tatuapé', code: 'TATUAPE', address: 'Rua X', phone: '(11) 0000-0000', email: 'clinica@gmail.com' },
+        { name: 'Bela Cintra', code: 'BELACINTRA', address: 'Rua X', phone: '(11) 0000-0000', email: 'clinica@gmail.com' },
     ];
 
     const estStmt = db.prepare("INSERT INTO establishments (name, code, address, phone, email) VALUES (?, ?, ?, ?, ?)");
@@ -162,17 +165,52 @@ db.serialize(() => {
     estStmt.finalize();
 
     // Insert sample services for each establishment
-    const services = [
-        { name: 'Triagem', prefix: 'TRI', time: 10, est: 1 },
-        { name: 'Consulta Geral', prefix: 'CON', time: 30, est: 1 },
-        { name: 'Exame de Sangue', prefix: 'LAB', time: 20, est: 1 },
-        { name: 'Raio-X', prefix: 'RAD', time: 15, est: 1 },
-        { name: 'Triagem', prefix: 'TRI', time: 10, est: 2 },
-        { name: 'Consulta Geral', prefix: 'CON', time: 30, est: 2 },
-        { name: 'Exame de Sangue', prefix: 'LAB', time: 20, est: 2 },
-        { name: 'Triagem', prefix: 'TRI', time: 10, est: 3 },
-        { name: 'Consulta Geral', prefix: 'CON', time: 30, est: 3 }
-    ];
+const services = [
+    { name: 'Admissional/Demissional', prefix: 'ADM', time: 15, est: 1 },
+    { name: 'Analises Clinicas', prefix: 'ANA', time: 15, est: 1 },
+    { name: 'Atendimento Preferencial', prefix: 'ATP', time: 15, est: 1 },
+    { name: 'Cardiológicos', prefix: 'CAR', time: 15, est: 1 },
+    { name: 'Cedusp Preferencial', prefix: 'CEP', time: 15, est: 1 },
+    { name: 'Cedusp/Cadi', prefix: 'CED', time: 15, est: 1 },
+    { name: 'Colpo/ Vulvo', prefix: 'CPV', time: 15, est: 1 },
+    { name: 'Colposcopia/ Vulvoscopia', prefix: 'COL', time: 15, est: 1 },
+    { name: 'Dr. Edvaldo Preferencial', prefix: 'DRE', time: 15, est: 1 },
+    { name: 'Dr Francisco Preferencial', prefix: 'DRF', time: 15, est: 1 },
+    { name: 'Ecocardiograma / Eco Fetal', prefix: 'ECO', time: 15, est: 1 },
+    { name: 'Ecodoppler/ Teste Erg', prefix: 'EDT', time: 15, est: 1 },
+    { name: 'Ecodopplercardiograma', prefix: 'ECC', time: 15, est: 1 },
+    { name: 'Eletroneuro', prefix: 'ELE', time: 15, est: 1 },
+    { name: 'Eletroneuro / Doppler', prefix: 'ELD', time: 15, est: 1 },
+    { name: 'Endoscopia(Gastros)', prefix: 'ENG', time: 15, est: 1 },
+    { name: 'Endoscopia/Colono', prefix: 'ENC', time: 15, est: 1 },
+    { name: 'Endoscopia/Colonoscopia', prefix: 'SCO', time: 15, est: 1 },
+    { name: 'Exames Cardiológicos', prefix: 'EXC', time: 15, est: 1 },
+    { name: 'Exames de Imagem', prefix: 'EXI', time: 15, est: 1 },
+    { name: 'Exames de Sangue', prefix: 'EXS', time: 15, est: 1 },
+    { name: 'Mamo/Dens/Raio-X', prefix: 'MDR', time: 15, est: 1 },
+    { name: 'Mamo/Densi/Raio-X', prefix: 'MDX', time: 15, est: 1 },
+    { name: 'Mamografia', prefix: 'MAM', time: 15, est: 1 },
+    { name: 'Mamografia/ Raio X', prefix: 'MRX', time: 15, est: 1 },
+    { name: 'Medicina do Trabalho', prefix: 'MED', time: 15, est: 1 },
+    { name: 'Medicina do Trabalho Pref.', prefix: 'MTP', time: 15, est: 1 },
+    { name: 'Ocupacional', prefix: 'OCU', time: 15, est: 1 },
+    { name: 'Particular', prefix: 'PAR', time: 15, est: 1 },
+    { name: 'Preferencial', prefix: 'PRE', time: 15, est: 1 },
+    { name: 'Preferencial Recepção', prefix: 'PRR', time: 15, est: 1 },
+    { name: 'Raio X', prefix: 'RAI', time: 15, est: 1 },
+    { name: 'Recepcao', prefix: 'REC', time: 15, est: 1 },
+    { name: 'Resultado de Exame', prefix: 'RES', time: 15, est: 1 },
+    { name: 'Retirada de Exames', prefix: 'RET', time: 15, est: 1 },
+    { name: 'Retorno ao Trabalho', prefix: 'RAT', time: 15, est: 1 },
+    { name: 'Teste Ergométrico', prefix: 'TES', time: 15, est: 1 },
+    { name: 'Tomografia', prefix: 'TOM', time: 15, est: 1 },
+    { name: 'Triagem Coleta', prefix: 'TRC', time: 15, est: 1 },
+    { name: 'Triagem Preferencial 1', prefix: 'TP1', time: 15, est: 1 },
+    { name: 'Triagem Preferencial 2', prefix: 'TP2', time: 15, est: 1 },
+    { name: 'Ultrassom', prefix: 'ULT', time: 15, est: 1 },
+    { name: 'Ultrassom 1', prefix: 'UL1', time: 15, est: 1 },
+    { name: 'Ultrassom Preferencial', prefix: 'ULP', time: 15, est: 1 }
+];
 
     const svcStmt = db.prepare("INSERT INTO services (name, prefix, average_time_minutes, establishment_id) VALUES (?, ?, ?, ?)");
     services.forEach(s => svcStmt.run(s.name, s.prefix, s.time, s.est));
@@ -182,9 +220,6 @@ db.serialize(() => {
     const rooms = [
         { name: 'Sala 1', type: 'Consulta', est: 1 },
         { name: 'Sala 2', type: 'Exames', est: 1 },
-        { name: 'Sala 1', type: 'Consulta', est: 2 },
-        { name: 'Sala 2', type: 'Exames', est: 2 },
-        { name: 'Sala 1', type: 'Consulta', est: 3 }
     ];
 
     const roomStmt = db.prepare("INSERT INTO rooms (name, type, establishment_id) VALUES (?, ?, ?)");
@@ -199,16 +234,6 @@ db.serialize(() => {
         { label: 'Geral', parent: 1, service: 2, order: 1, est: 1 },
         { label: 'Sangue', parent: 2, service: 3, order: 1, est: 1 },
         { label: 'Raio-X', parent: 2, service: 4, order: 2, est: 1 },
-
-        // Estabelecimento 2 (Norte) - Apenas consultas e exame de sangue
-        { label: 'Atendimento', parent: null, service: null, order: 1, est: 2 },
-        { label: 'Triagem', parent: 6, service: 5, order: 1, est: 2 },
-        { label: 'Consulta', parent: 6, service: 6, order: 2, est: 2 },
-        { label: 'Exame de Sangue', parent: null, service: 7, order: 2, est: 2 },
-
-        // Estabelecimento 3 (Sul) - Apenas consultas (sem exames)
-        { label: 'Triagem', parent: null, service: 8, order: 1, est: 3 },
-        { label: 'Consulta Geral', parent: null, service: 9, order: 2, est: 3 }
     ];
 
     const menuStmt = db.prepare("INSERT INTO service_menus (label, parent_id, service_id, order_index, establishment_id) VALUES (?, ?, ?, ?, ?)");
@@ -220,8 +245,7 @@ db.serialize(() => {
 
     // Insert sample users
     const users = [
-        { name: 'Dr. João', username: 'joao', password: '123', role: 'professional', est: 1 },
-        { name: 'Dra. Maria', username: 'maria', password: '123', role: 'professional', est: 2 },
+        { name: 'Estabelecimento 1', username: 'joao', password: '123', role: 'professional', est: 1 },
         { name: 'Admin', username: 'admin', password: 'admin', role: 'admin', est: null }
     ];
 

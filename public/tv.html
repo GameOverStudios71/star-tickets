@@ -28,6 +28,10 @@
         const socket = io();
         const historyList = document.getElementById('history-list');
 
+        let calledTickets = []; // Array of tickets that have been called
+        let currentIndex = 0;
+        let rotationInterval = null;
+
         // Audio context for "ding dong"
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
@@ -48,22 +52,72 @@
             osc.stop(audioCtx.currentTime + 1);
         }
 
-        socket.on('call_ticket', (data) => {
-            // Move current to history if valid
-            const currentTicket = document.getElementById('main-ticket').innerText;
-            if (currentTicket !== '---') {
-                addToHistory({
-                    displayCode: currentTicket,
-                    roomName: document.getElementById('main-room').innerText
-                });
+        // Fetch all called tickets from backend
+        async function loadCalledTickets() {
+            try {
+                const res = await fetch('/api/called-tickets');
+                calledTickets = await res.json();
+
+                if (calledTickets.length === 0) {
+                    // No tickets called, show waiting message
+                    document.getElementById('main-customer').innerText = 'Aguardando chamada...';
+                    document.getElementById('main-ticket').innerText = '---';
+                    document.getElementById('main-room').innerText = '---';
+                    stopRotation();
+                } else if (calledTickets.length === 1) {
+                    // Only one ticket, display it statically
+                    displayTicket(calledTickets[0]);
+                    stopRotation();
+                } else {
+                    // Multiple tickets, start rotation
+                    startRotation();
+                }
+            } catch (e) {
+                console.error('Error loading called tickets:', e);
             }
+        }
 
-            // Update Main
-            document.getElementById('main-ticket').innerText = data.displayCode;
-            document.getElementById('main-customer').innerText = data.customerName || 'Cliente';
-            document.getElementById('main-room').innerText = data.roomName;
+        function displayTicket(ticket) {
+            if (!ticket) return;
 
+            document.getElementById('main-ticket').innerText = ticket.display_code;
+            document.getElementById('main-customer').innerText = ticket.temp_customer_name || 'Cliente';
+            document.getElementById('main-room').innerText = ticket.room_name || '---';
+        }
+
+        function startRotation() {
+            // Stop any existing rotation
+            stopRotation();
+
+            // Display first ticket immediately
+            currentIndex = 0;
+            displayTicket(calledTickets[currentIndex]);
+
+            // Start rotation every 5 seconds
+            rotationInterval = setInterval(() => {
+                currentIndex = (currentIndex + 1) % calledTickets.length;
+                displayTicket(calledTickets[currentIndex]);
+            }, 5000);
+        }
+
+        function stopRotation() {
+            if (rotationInterval) {
+                clearInterval(rotationInterval);
+                rotationInterval = null;
+            }
+        }
+
+        // WebSocket: When a new ticket is called
+        socket.on('call_ticket', (data) => {
             playAlert();
+
+            // Reload the called tickets list
+            loadCalledTickets();
+        });
+
+        // WebSocket: When a ticket is updated (e.g., service started)
+        socket.on('ticket_updated', () => {
+            loadCalledTickets();
         });
 
         function addToHistory(item) {
@@ -76,6 +130,12 @@
                 historyList.removeChild(historyList.lastChild);
             }
         }
+
+        // Initial load
+        loadCalledTickets();
+
+        // Refresh every 10 seconds as backup
+        setInterval(loadCalledTickets, 10000);
     </script>
     }
     </script>

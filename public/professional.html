@@ -97,6 +97,15 @@
             // Move from queue to current (simplified visual update)
             loadQueue();
             updateCurrentDisplay(ticketServiceId);
+
+            // Mark as IN_PROGRESS after a brief moment (service started)
+            setTimeout(async () => {
+                await fetch('/api/start-service', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ticketServiceId })
+                });
+            }, 2000); // 2 seconds delay
         }
 
         async function finishTicket() {

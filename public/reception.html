@@ -164,6 +164,16 @@
     </header>
 
     <div class="reception-layout">
+        <!-- Card de Atendimento Atual -->
+        <div style="grid-column: 1 / -1; margin-bottom: 20px;">
+            <div class="card">
+                <h2>Atendimento Atual na Recepção</h2>
+                <div id="current-reception-ticket" style="text-align:center; padding:20px;">
+                    <h3 style="color:gray;">Nenhum cliente em atendimento</h3>
+                </div>
+            </div>
+        </div>
+
         <!-- Lista de Senhas -->
         <div>
             <!-- Filtros -->
@@ -300,9 +310,42 @@
             const services = await res.json();
 
             const hasName = ticket.temp_customer_name;
+            const isWaiting = ticket.status === 'WAITING';
+            const isInReception = ticket.status === 'IN_RECEPTION';
+            const isBeingAttended = ticket.status === 'BEING_ATTENDED';
+
+            // Botões de controle baseados no status
+            let actionButtons = '';
+            if (isWaiting) {
+                actionButtons = `
+                    <button class="btn btn-large btn-accent" onclick="callToReception(${ticket.id})" style="width:100%; margin-bottom:15px;">
+                        📢 CHAMAR PARA RECEPÇÃO
+                    </button>
+                `;
+            } else if (isInReception) {
+                actionButtons = `
+                    <div style="background:#fff3cd; padding:15px; border-radius:5px; margin-bottom:15px; text-align:center;">
+                        <strong>🔔 Senha chamada - Rotacionando na TV</strong>
+                    </div>
+                    <button class="btn btn-large" onclick="startAttendance(${ticket.id})" style="width:100%; margin-bottom:15px; background:#2196F3; color:white;">
+                        🔔 INÍCIO DO ATENDIMENTO
+                    </button>
+                `;
+            } else if (isBeingAttended) {
+                actionButtons = `
+                    <div style="background:#d4edda; padding:15px; border-radius:5px; margin-bottom:15px; text-align:center;">
+                        <strong>✅ Cliente em atendimento</strong>
+                    </div>
+                    <button class="btn btn-large" onclick="finishReception(${ticket.id})" style="width:100%; margin-bottom:15px; background:#4CAF50; color:white;">
+                        ✓ FINALIZAR E LIBERAR PARA SERVIÇOS
+                    </button>
+                `;
+            }
 
             panel.innerHTML = `
                 <h2>Senha: ${ticket.display_code}</h2>
+                
+                ${actionButtons}
                 
                 <div class="form-group" style="margin-bottom: 20px;">
                     <label><strong>Nome do Cliente:</strong></label>
@@ -434,7 +477,116 @@
                 body: JSON.stringify({ direction })
             });
 
-            loadTickets();
+            loadQueue();
+        }
+
+        // Reception Call/Finish Functions
+        let currentReceptionTicket = null;
+
+        async function callToReception(ticketId) {
+            try {
+                const res = await fetch('/api/reception/call', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ticketId })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    currentReceptionTicket = ticketId;
+                    showToast('Senha chamada! Rotacionando na TV.', 'success');
+                    loadTickets();
+                } else {
+                    showToast(data.error || 'Erro ao chamar senha', 'error');
+                }
+            } catch (e) {
+                showToast('Erro ao chamar senha', 'error');
+            }
+        }
+
+        async function startAttendance(ticketId) {
+            try {
+                const res = await fetch('/api/reception/announce', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ticketId })
+                });
+
+                if (res.ok) {
+                    currentReceptionTicket = ticketId;
+                    updateCurrentDisplay(ticketId);
+                    showToast('Atendimento iniciado! Senha removida da TV.', 'success');
+                    loadTickets();
+                } else {
+                    showToast('Erro ao iniciar atendimento', 'error');
+                }
+            } catch (e) {
+                showToast('Erro ao iniciar atendimento', 'error');
+            }
+        }
+
+        async function finishReception(ticketId) {
+            // Buscar informações do ticket
+            const ticket = allTickets.find(t => t.id === ticketId);
+
+            // Validar nome
+            if (!ticket || !ticket.temp_customer_name) {
+                showToast('❌ É necessário vincular o nome do cliente antes de finalizar!', 'error');
+                return;
+            }
+
+            // Validar serviços
+            try {
+                const servicesRes = await fetch(`/api/tickets/${ticketId}/services`);
+                const services = await servicesRes.json();
+
+                if (!services || services.length === 0) {
+                    showToast('❌ A senha precisa ter pelo menos um serviço selecionado!', 'error');
+                    return;
+                }
+
+                // Tudo validado, prosseguir com finalização
+                const res = await fetch('/api/reception/finish', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ticketId })
+                });
+
+                if (res.ok) {
+                    currentReceptionTicket = null;
+                    document.getElementById('current-reception-ticket').innerHTML = '<h3 style="color:gray;">Nenhum cliente em atendimento</h3>';
+                    showToast('Cliente liberado para filas de serviço!', 'success');
+                    loadTickets();
+                } else {
+                    const data = await res.json();
+                    showToast(data.error || 'Erro ao finalizar', 'error');
+                }
+            } catch (e) {
+                showToast('Erro ao finalizar', 'error');
+                console.error(e);
+            }
+        }
+
+        function updateCurrentDisplay(ticketId) {
+            const ticket = allTickets.find(t => t.id === ticketId);
+            if (!ticket) return;
+
+            const isBeingAttended = ticket.status === 'BEING_ATTENDED';
+
+            document.getElementById('current-reception-ticket').innerHTML = `
+                <h1 style="color:var(--primary-color);">${ticket.display_code}</h1>
+                <p style="font-size:1.2rem;">${ticket.temp_customer_name || 'Aguardando identificação...'}</p>
+                ${isBeingAttended ? `
+                    <button class="btn btn-accent btn-large" onclick="finishReception(${ticketId})" style="margin-top:15px;">
+                        ✓ FINALIZAR E LIBERAR PARA SERVIÇOS
+                    </button>
+                ` : `
+                    <button class="btn btn-large" onclick="startAttendance(${ticketId})" style="margin-top:15px; background:#2196F3; color:white;">
+                        🔔 INÍCIO DO ATENDIMENTO
+                    </button>
+                `}
+            `;
         }
 
         // Initial load

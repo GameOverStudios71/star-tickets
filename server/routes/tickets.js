@@ -271,6 +271,97 @@ module.exports = (db, io) => {
         });
     });
 
+    // Reception - Call ticket to reception desk
+    router.post('/reception/call', (req, res) => {
+        const { ticketId } = req.body;
+
+        db.get(`
+            SELECT t.display_code, t.temp_customer_name, t.status
+            FROM tickets t
+            WHERE t.id = ?
+        `, [ticketId], (err, row) => {
+            if (err || !row) return res.status(404).json({ error: "Ticket não encontrado" });
+            if (row.status !== 'WAITING') return res.status(400).json({ error: "Ticket já foi chamado" });
+
+            // Update ticket status to indicate being attended at reception
+            db.run("UPDATE tickets SET status = 'IN_RECEPTION' WHERE id = ?", [ticketId], (err) => {
+                if (err) return res.status(500).json({ error: err.message });
+
+                // Emit to TV
+                io.emit('call_ticket', {
+                    ticketId,
+                    displayCode: row.display_code,
+                    customerName: row.temp_customer_name || 'Cliente',
+                    roomName: 'RECEPÇÃO'
+                });
+
+                res.json({ success: true });
+            });
+        });
+    });
+
+    // Reception - Announce ticket on TV (doesn't change status)
+    router.post('/reception/announce', (req, res) => {
+        const { ticketId } = req.body;
+
+        db.get(`
+            SELECT t.display_code, t.temp_customer_name, t.status
+            FROM tickets t
+            WHERE t.id = ?
+        `, [ticketId], (err, row) => {
+            if (err || !row) return res.status(404).json({ error: "Ticket não encontrado" });
+
+            // Mark as being attended (stops TV rotation)
+            db.run("UPDATE tickets SET status = 'BEING_ATTENDED' WHERE id = ?", [ticketId], (err) => {
+                if (err) return res.status(500).json({ error: err.message });
+
+                // Emit update to refresh TV
+                io.emit('ticket_updated', { ticketId });
+
+                res.json({ success: true });
+            });
+        });
+    });
+
+    // Reception - Finish initial triage and release to service queues
+    router.post('/reception/finish', (req, res) => {
+        const { ticketId } = req.body;
+
+        // Change status back to WAITING so services can be called
+        db.run("UPDATE tickets SET status = 'WAITING' WHERE id = ?", [ticketId], function (err) {
+            if (err) return res.status(500).json({ error: err.message });
+
+            io.emit('ticket_updated', { ticketId });
+            res.json({ success: true, message: 'Cliente liberado para filas de serviço' });
+        });
+    });
+
+    // Get all tickets that have been CALLED but not yet IN_PROGRESS (for TV rotation)
+    router.get('/called-tickets', (req, res) => {
+        const query = `
+            SELECT DISTINCT
+                t.display_code,
+                t.temp_customer_name,
+                CASE 
+                    WHEN t.status = 'IN_RECEPTION' THEN 'RECEPÇÃO'
+                    ELSE r.name
+                END as room_name,
+                ts.created_at
+            FROM tickets t
+            LEFT JOIN ticket_services ts ON ts.ticket_id = t.id
+            LEFT JOIN room_services rs ON rs.service_id = ts.service_id
+            LEFT JOIN rooms r ON rs.room_id = r.id
+            WHERE (t.status = 'IN_RECEPTION' OR ts.status = 'CALLED')
+            AND t.status != 'BEING_ATTENDED'
+            ORDER BY ts.created_at ASC
+        `;
+
+        db.all(query, [], (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json(rows || []);
+        });
+    });
+
     router.post('/call', (req, res) => {
         const { ticketServiceId, roomId } = req.body;
 
@@ -284,7 +375,7 @@ module.exports = (db, io) => {
         `, [ticketServiceId, roomId], (err, row) => {
             if (err || !row) return res.status(500).json({ error: "Error fetching ticket info" });
 
-            // Update status to CALLED or IN_PROGRESS
+            // Update status to CALLED
             db.run("UPDATE ticket_services SET status = 'CALLED' WHERE id = ?", [ticketServiceId], (err) => {
                 if (err) return res.status(500).json({ error: err.message });
 
@@ -297,6 +388,18 @@ module.exports = (db, io) => {
 
                 res.json({ success: true });
             });
+        });
+    });
+
+    // Start service - marks ticket as IN_PROGRESS (removes from TV rotation)
+    router.post('/start-service', (req, res) => {
+        const { ticketServiceId } = req.body;
+
+        db.run("UPDATE ticket_services SET status = 'IN_PROGRESS' WHERE id = ?", [ticketServiceId], function (err) {
+            if (err) return res.status(500).json({ error: err.message });
+
+            io.emit('ticket_updated', { ticketServiceId });
+            res.json({ success: true });
         });
     });
 

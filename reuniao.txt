@@ -1,0 +1,28 @@
+
+1. Descobrir no menu em qual lugar que irá ficar se é convenio ou particular
+
+	Atendentes farão rodízio para atendimento conveniado (Adicionar Nome do Convênio se fez WebChekin na Página Atendente na lista de senhas e adicionar filtro de busca pelos convenios)
+
+2. Adicionar botão chamada senha na página da atendente
+
+
+3. Criar correção de senha 1.1 referencia para quem teve que corrigir a senha e reentrar na fila certa porque outro já tinha tirado outra senha
+
+
+5. quando uma pessoa for emborsa e faltar um exame e a pessoa voltar e ter que ser reencaminhada para a fila do exame que ela vai fazer
+
+6. Sistema de Termos de Consentimento (Descobrir quais serviços)
+	quando tiver um servico que necessita de termnos precisa de um termo de consentimento
+	que cada termo é um diferente do outro para cada serviço, no final de cada atendimento do totem
+	quando aperta concluido a tela do preencchimento do termo na lista de senhas na página da atendente, o status da senha aparece em verde de que o atendimento do termo já foi respondido
+
+
+7. Fazer encaminhamento automático para outra sala através do totem dependendo do serviço que ele for fazer
+
+4. Uma página que faz grupo de senhas já geradas poder encaminhar as pessoas para outros exames se uma sala estiver com muitas pesosas para serem atendidas, em grupo ou individualmente
+
+9. Uma página em que elas podem mudar a ordem de prioridade de como que as filas das salas estarao sendo atendidas primeiro sala 1 depoois 2 depois 3 e 
+   entao o sistema se modifica para agendas de hora de chegada e agendas de ordem marcada vindo pela API
+
+10. Fazer webcheckin que apos um determinado serviços 
+	Um qrcode é aberto e move o cliente para um link para poder preencher algumas informações coloca telefone, so para convenio, coloca o numero da carteirinha
