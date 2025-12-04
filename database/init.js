@@ -73,7 +73,7 @@ db.serialize(() => {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             display_code TEXT NOT NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            status TEXT DEFAULT 'WAITING',
+            status TEXT DEFAULT 'WAITING_RECEPTION',
             customer_id INTEGER,
             temp_customer_name TEXT,
             is_priority INTEGER DEFAULT 0,

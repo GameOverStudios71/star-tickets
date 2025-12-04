@@ -19,7 +19,7 @@ module.exports = (db, io) => {
                 const number = (countRow.count + 1).toString().padStart(3, '0');
                 const displayCode = `${prefix}${number}`;
 
-                db.run("INSERT INTO tickets (display_code, status, is_priority, establishment_id) VALUES (?, 'WAITING', ?, ?)",
+                db.run("INSERT INTO tickets (display_code, status, is_priority, establishment_id) VALUES (?, 'WAITING_RECEPTION', ?, ?)",
                     [displayCode, isPriority ? 1 : 0, establishmentId],
                     function (err) {
                         if (err) return res.status(500).json({ error: err.message });
@@ -248,7 +248,9 @@ module.exports = (db, io) => {
             JOIN room_services rs ON rs.service_id = s.id
             WHERE rs.room_id = ?
             AND ts.status = 'PENDING'
-            AND t.status != 'CANCELED'
+            AND t.status = 'WAITING_PROFESSIONAL'
+            AND t.temp_customer_name IS NOT NULL
+            AND t.temp_customer_name != ''
             -- Ensure previous services for this ticket are completed
             AND NOT EXISTS (
                 SELECT 1 FROM ticket_services ts_prev 
@@ -275,10 +277,10 @@ module.exports = (db, io) => {
             WHERE t.id = ?
         `, [ticketId], (err, row) => {
             if (err || !row) return res.status(404).json({ error: "Ticket não encontrado" });
-            if (row.status !== 'WAITING') return res.status(400).json({ error: "Ticket já foi chamado" });
+            if (row.status !== 'WAITING_RECEPTION') return res.status(400).json({ error: "Ticket já foi chamado" });
 
-            // Update ticket status to indicate being attended at reception
-            db.run("UPDATE tickets SET status = 'IN_RECEPTION' WHERE id = ?", [ticketId], (err) => {
+            // Update ticket status to CALLED_RECEPTION (shows on TV)
+            db.run("UPDATE tickets SET status = 'CALLED_RECEPTION' WHERE id = ?", [ticketId], (err) => {
                 if (err) return res.status(500).json({ error: err.message });
 
                 // Emit to TV
@@ -294,7 +296,7 @@ module.exports = (db, io) => {
         });
     });
 
-    // Reception - Announce ticket on TV (doesn't change status)
+    // Reception - Start attendance (client sat down, start service)
     router.post('/reception/announce', (req, res) => {
         const { ticketId } = req.body;
 
@@ -304,9 +306,10 @@ module.exports = (db, io) => {
             WHERE t.id = ?
         `, [ticketId], (err, row) => {
             if (err || !row) return res.status(404).json({ error: "Ticket não encontrado" });
+            if (row.status !== 'CALLED_RECEPTION') return res.status(400).json({ error: "Ticket precisa ser chamado primeiro" });
 
-            // Mark as being attended (stops TV rotation)
-            db.run("UPDATE tickets SET status = 'BEING_ATTENDED' WHERE id = ?", [ticketId], (err) => {
+            // Mark as IN_RECEPTION (attendance started, stops TV rotation)
+            db.run("UPDATE tickets SET status = 'IN_RECEPTION' WHERE id = ?", [ticketId], (err) => {
                 if (err) return res.status(500).json({ error: err.message });
 
                 // Emit update to refresh TV
@@ -321,8 +324,8 @@ module.exports = (db, io) => {
     router.post('/reception/finish', (req, res) => {
         const { ticketId } = req.body;
 
-        // Change status back to WAITING so services can be called
-        db.run("UPDATE tickets SET status = 'WAITING' WHERE id = ?", [ticketId], function (err) {
+        // Change status to WAITING_PROFESSIONAL so services can be called
+        db.run("UPDATE tickets SET status = 'WAITING_PROFESSIONAL' WHERE id = ?", [ticketId], function (err) {
             if (err) return res.status(500).json({ error: err.message });
 
             io.emit('ticket_updated', { ticketId });
@@ -330,7 +333,7 @@ module.exports = (db, io) => {
         });
     });
 
-    // Get all tickets that have been CALLED but not yet IN_PROGRESS (for TV rotation)
+    // Get all tickets that have been CALLED but not yet started (for TV rotation)
     router.get('/called-tickets', (req, res) => {
         const { establishment_id } = req.query;
 
@@ -339,16 +342,15 @@ module.exports = (db, io) => {
                 t.display_code,
                 t.temp_customer_name,
                 CASE 
-                    WHEN t.status = 'IN_RECEPTION' THEN 'RECEPÇÃO'
+                    WHEN t.status = 'CALLED_RECEPTION' THEN 'RECEPÇÃO'
                     ELSE r.name
                 END as room_name,
-                ts.created_at
+                COALESCE(ts.created_at, t.created_at) as created_at
             FROM tickets t
-            LEFT JOIN ticket_services ts ON ts.ticket_id = t.id
+            LEFT JOIN ticket_services ts ON ts.ticket_id = t.id AND ts.status = 'CALLED'
             LEFT JOIN room_services rs ON rs.service_id = ts.service_id
             LEFT JOIN rooms r ON rs.room_id = r.id
-            WHERE (t.status = 'IN_RECEPTION' OR ts.status = 'CALLED')
-            AND t.status != 'BEING_ATTENDED'
+            WHERE (t.status = 'CALLED_RECEPTION' OR ts.status = 'CALLED')
         `;
 
         const params = [];
@@ -357,7 +359,7 @@ module.exports = (db, io) => {
             params.push(establishment_id);
         }
 
-        query += ` ORDER BY ts.created_at ASC`;
+        query += ` ORDER BY created_at ASC`;
 
         db.all(query, params, (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
