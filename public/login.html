@@ -91,13 +91,26 @@
 
         <div class="users-hint">
             <h4>Usuários de Teste:</h4>
-            <p><strong>joao</strong> / 123 (Clínica Central)</p>
-            <p><strong>maria</strong> / 123 (Clínica Norte)</p>
-            <p><strong>admin</strong> / admin (Todos estabelecimentos)</p>
+            <p><strong>freguesia</strong> / 123 (Freguesia)</p>
+            <p><strong>santana</strong> / 123 (Santana)</p>
+            <p><strong>guarulhos</strong> / 123 (Guarulhos Centro)</p>
+            <p><strong>taboao</strong> / 123 (Guarulhos Tabõão)</p>
+            <p><strong>tatuape</strong> / 123 (Tatuapé)</p>
+            <p><strong>bela</strong> / 123 (Bela Cintra)</p>
         </div>
     </div>
 
     <script>
+        // Check if already logged in
+        fetch('/api/auth/check')
+            .then(res => res.json())
+            .then(data => {
+                if (data.authenticated) {
+                    const redirect = new URLSearchParams(window.location.search).get('redirect');
+                    window.location.href = redirect || '/index.html';
+                }
+            });
+
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -115,11 +128,18 @@
                 const data = await res.json();
 
                 if (res.ok) {
-                    // Redirect based on role
-                    if (data.user.role === 'admin') {
-                        window.location.href = '/dashboard.html';
+                    // Check for redirect parameter
+                    const redirect = new URLSearchParams(window.location.search).get('redirect');
+
+                    if (redirect) {
+                        window.location.href = decodeURIComponent(redirect);
                     } else {
-                        window.location.href = '/reception.html';
+                        // Default redirects based on role
+                        if (data.user.role === 'admin') {
+                            window.location.href = '/dashboard.html';
+                        } else {
+                            window.location.href = '/index.html';
+                        }
                     }
                 } else {
                     errorMsg.textContent = data.error || 'Erro ao fazer login';

@@ -60,8 +60,34 @@
                 <h2>Administração</h2>
                 <p>Gestão do sistema</p>
             </a>
+            <a href="automation.html" class="card nav-card">
+                <span class="icon">🤖</span>
+                <h2>Automação</h2>
+                <p>Configurar inicialização automática</p>
+            </a>
         </div>
     </div>
+
+    <script src="js/auth-helper.js"></script>
+    <script>
+        // Check for auto-redirect configuration
+        const autoRedirect = localStorage.getItem('star_tickets_auto_redirect');
+        if (autoRedirect && autoRedirect !== 'none') {
+            window.location.href = autoRedirect;
+        }
+
+        // Check authentication
+        checkAuth().then(user => {
+            if (!user) return;
+
+            // Show user info in header
+            const header = document.querySelector('header');
+            const userInfoDiv = document.createElement('div');
+            userInfoDiv.style.cssText = 'text-align: right; margin-top: 10px;';
+            userInfoDiv.innerHTML = showUserInfo(user);
+            header.appendChild(userInfoDiv);
+        });
+    </script>
 </body>
 
 </html>

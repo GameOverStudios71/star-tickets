@@ -332,7 +332,9 @@ module.exports = (db, io) => {
 
     // Get all tickets that have been CALLED but not yet IN_PROGRESS (for TV rotation)
     router.get('/called-tickets', (req, res) => {
-        const query = `
+        const { establishment_id } = req.query;
+
+        let query = `
             SELECT DISTINCT
                 t.display_code,
                 t.temp_customer_name,
@@ -347,10 +349,17 @@ module.exports = (db, io) => {
             LEFT JOIN rooms r ON rs.room_id = r.id
             WHERE (t.status = 'IN_RECEPTION' OR ts.status = 'CALLED')
             AND t.status != 'BEING_ATTENDED'
-            ORDER BY ts.created_at ASC
         `;
 
-        db.all(query, [], (err, rows) => {
+        const params = [];
+        if (establishment_id) {
+            query += ` AND t.establishment_id = ?`;
+            params.push(establishment_id);
+        }
+
+        query += ` ORDER BY ts.created_at ASC`;
+
+        db.all(query, params, (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json(rows || []);
         });

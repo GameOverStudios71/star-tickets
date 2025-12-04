@@ -55,7 +55,11 @@
         // Fetch all called tickets from backend
         async function loadCalledTickets() {
             try {
-                const res = await fetch('/api/called-tickets');
+                // Check if TV has a configured establishment
+                const configuredEst = localStorage.getItem('star_tickets_tv_establishment');
+                const params = configuredEst ? `?establishment_id=${configuredEst}` : '';
+
+                const res = await fetch(`/api/called-tickets${params}`);
                 calledTickets = await res.json();
 
                 if (calledTickets.length === 0) {

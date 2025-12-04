@@ -202,6 +202,15 @@ module.exports = (db) => {
         });
     });
 
+    // ==================== ESTABLISHMENTS ====================
+
+    router.get('/establishments', (req, res) => {
+        db.all("SELECT * FROM establishments ORDER BY name", [], (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json(rows);
+        });
+    });
+
     // ==================== USERS ====================
 
     router.get('/users', (req, res) => {
