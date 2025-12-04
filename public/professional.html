@@ -16,13 +16,17 @@
         </select>
     </header>
     <div class="container">
-        <div class="grid">
+        <!-- Card de Atendimento Atual -->
+        <div style="margin-bottom: 20px;">
             <div class="card">
-                <h2>Em Atendimento</h2>
+                <h2>Atendimento Atual</h2>
                 <div id="current-ticket" style="text-align:center; padding:20px;">
-                    <h3 style="color:gray;">Nenhum atendimento iniciado</h3>
+                    <h3 style="color:gray;">Nenhum cliente em atendimento</h3>
                 </div>
             </div>
+        </div>
+
+        <div class="grid">
             <div class="card">
                 <h2>Fila da Sala</h2>
                 <div id="queue-list"></div>
@@ -96,16 +100,19 @@
 
             // Move from queue to current (simplified visual update)
             loadQueue();
-            updateCurrentDisplay(ticketServiceId);
+            updateCurrentDisplay(ticketServiceId, false); // false = not started yet
+        }
 
-            // Mark as IN_PROGRESS after a brief moment (service started)
-            setTimeout(async () => {
-                await fetch('/api/start-service', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ticketServiceId })
-                });
-            }, 2000); // 2 seconds delay
+        async function startService() {
+            if (!currentTicketServiceId) return;
+
+            await fetch('/api/start-service', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ticketServiceId: currentTicketServiceId })
+            });
+
+            updateCurrentDisplay(currentTicketServiceId, true); // true = service started
         }
 
         async function finishTicket() {
@@ -118,17 +125,37 @@
             });
 
             currentTicketServiceId = null;
-            document.getElementById('current-ticket').innerHTML = '<h3 style="color:gray;">Atendimento Finalizado</h3>';
+            document.getElementById('current-ticket').innerHTML = '<h3 style="color:gray;">Nenhum cliente em atendimento</h3>';
             loadQueue();
         }
 
-        function updateCurrentDisplay(id) {
+        function updateCurrentDisplay(id, isServiceStarted) {
             // In a real app we'd fetch details, here we just show generic
-            document.getElementById('current-ticket').innerHTML = `
-                <h1>Em Atendimento</h1>
-                <p>Ticket ID: ${id}</p>
-                <button class="btn btn-accent btn-large" onclick="finishTicket()">FINALIZAR ATENDIMENTO</button>
-            `;
+            if (isServiceStarted) {
+                // Service already started - show finish button
+                document.getElementById('current-ticket').innerHTML = `
+                    <div style="background:#d4edda; padding:15px; border-radius:5px; margin-bottom:15px; text-align:center;">
+                        <strong>✅ Cliente em atendimento</strong>
+                    </div>
+                    <h1>Em Atendimento</h1>
+                    <p>Ticket ID: ${id}</p>
+                    <button class="btn btn-large" onclick="finishTicket()" style="width:100%; background:#4CAF50; color:white;">
+                        ✓ FINALIZAR ATENDIMENTO
+                    </button>
+                `;
+            } else {
+                // Just called - show start button
+                document.getElementById('current-ticket').innerHTML = `
+                    <div style="background:#fff3cd; padding:15px; border-radius:5px; margin-bottom:15px; text-align:center;">
+                        <strong>🔔 Senha chamada - Rotacionando na TV</strong>
+                    </div>
+                    <h1>Chamado</h1>
+                    <p>Ticket ID: ${id}</p>
+                    <button class="btn btn-large" onclick="startService()" style="width:100%; background:#2196F3; color:white;">
+                        🔔 INÍCIO DO ATENDIMENTO
+                    </button>
+                `;
+            }
         }
 
         // Auto refresh queue every 5s
