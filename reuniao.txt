@@ -26,3 +26,14 @@
 
 10. Fazer webcheckin que apos um determinado serviços 
 	Um qrcode é aberto e move o cliente para um link para poder preencher algumas informações coloca telefone, so para convenio, coloca o numero da carteirinha
+
+
+fazer página do gerente,
+	Gerente Seleciona Prioridade de salas que estarao recebendo proximas senhas a partir de agora
+	Gerente Seleciona varias senhas de uma sala para outra remaneija
+		Botao de IA Sugestiona Gerente em remaneijar
+		Botao IA Automatiza tudo automaticamente
+
+proteger os endpoints
+
+as salas estão relacionadas pelos serviços podem ser 1 ou muitascolocar filtro de servico pagina profissional

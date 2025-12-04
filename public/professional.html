@@ -118,15 +118,24 @@
         async function finishTicket() {
             if (!currentTicketServiceId) return;
 
+            // Save ID before clearing
+            const ticketServiceId = currentTicketServiceId;
+
+            // Immediately clear the display
+            currentTicketServiceId = null;
+            document.getElementById('current-ticket').innerHTML = '<h3 style="color:gray;">Nenhum cliente em atendimento</h3>';
+
+            // Send finish request to backend
             await fetch('/api/finish', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ticketServiceId: currentTicketServiceId })
+                body: JSON.stringify({ ticketServiceId })
             });
 
-            currentTicketServiceId = null;
-            document.getElementById('current-ticket').innerHTML = '<h3 style="color:gray;">Nenhum cliente em atendimento</h3>';
-            loadQueue();
+            // Wait a moment for backend to process, then refresh queue
+            setTimeout(() => {
+                loadQueue();
+            }, 300);
         }
 
         function updateCurrentDisplay(id, isServiceStarted) {
