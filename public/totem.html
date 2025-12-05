@@ -234,56 +234,7 @@
             </div>
         </div>
 
-        <!-- Insurance Input Screen (Hidden initially) -->
-        <div id="insurance-input-screen" class="insurance-input-screen" style="display:none;">
-            <h2 style="text-align:center; margin-bottom:30px;">💳 Digite o nome do seu Convênio</h2>
-            <input type="text" id="insurance-name-input" class="insurance-input" placeholder="Nome do Convênio"
-                readonly>
 
-            <div class="virtual-keyboard">
-                <!-- Letters -->
-                <button class="key-btn" onclick="addChar('Q')">Q</button>
-                <button class="key-btn" onclick="addChar('W')">W</button>
-                <button class="key-btn" onclick="addChar('E')">E</button>
-                <button class="key-btn" onclick="addChar('R')">R</button>
-                <button class="key-btn" onclick="addChar('T')">T</button>
-                <button class="key-btn" onclick="addChar('Y')">Y</button>
-                <button class="key-btn" onclick="addChar('U')">U</button>
-                <button class="key-btn" onclick="addChar('I')">I</button>
-                <button class="key-btn" onclick="addChar('O')">O</button>
-                <button class="key-btn" onclick="addChar('P')">P</button>
-
-                <button class="key-btn" onclick="addChar('A')">A</button>
-                <button class="key-btn" onclick="addChar('S')">S</button>
-                <button class="key-btn" onclick="addChar('D')">D</button>
-                <button class="key-btn" onclick="addChar('F')">F</button>
-                <button class="key-btn" onclick="addChar('G')">G</button>
-                <button class="key-btn" onclick="addChar('H')">H</button>
-                <button class="key-btn" onclick="addChar('J')">J</button>
-                <button class="key-btn" onclick="addChar('K')">K</button>
-                <button class="key-btn" onclick="addChar('L')">L</button>
-                <button class="key-btn" onclick="addChar('Ç')">Ç</button>
-
-                <button class="key-btn" onclick="addChar('Z')">Z</button>
-                <button class="key-btn" onclick="addChar('X')">X</button>
-                <button class="key-btn" onclick="addChar('C')">C</button>
-                <button class="key-btn" onclick="addChar('V')">V</button>
-                <button class="key-btn" onclick="addChar('B')">B</button>
-                <button class="key-btn" onclick="addChar('N')">N</button>
-                <button class="key-btn" onclick="addChar('M')">M</button>
-                <button class="key-btn backspace" onclick="backspace()">⌫ APAGAR</button>
-
-                <button class="key-btn space" onclick="addChar(' ')">ESPAÇO</button>
-                <button class="key-btn" onclick="addChar('.')">.</button>
-                <button class="key-btn" onclick="addChar('-')">-</button>
-                <button class="key-btn clear" onclick="clearInput()">✖ LIMPAR</button>
-            </div>
-
-            <button class="btn btn-large btn-accent" onclick="confirmInsurance()"
-                style="width:100%; font-size:1.3rem; padding:20px;">
-                CONFIRMAR E CONTINUAR ➡️
-            </button>
-        </div>
 
         <!-- Menu and Selection Summary Container -->
         <div class="totem-content-wrapper" id="totem-content-wrapper" style="display:none;">
@@ -552,15 +503,14 @@
         `;
 
                 div.onclick = () => {
-                    // Check if this is the "Convênio" menu item (id 10)
-                    if (item.id === 10 && item.children && item.children.length > 0) {
-                        // Show insurance input screen
-                        pendingConvenioMenuId = item.id;
-                        document.getElementById('menu-container').style.display = 'none';
-                        document.getElementById('insurance-input-screen').style.display = 'block';
-                        document.getElementById('insurance-name-input').value = healthInsuranceName; // Restore if exists
-                        currentScreen = 'insurance';
-                    } else if (item.children && item.children.length > 0) {
+                    // Logic for Insurance/Private selection
+                    if (item.id === 10) { // Convênio
+                        healthInsuranceName = 'Convênio';
+                    } else if (item.id === 11) { // Particular
+                        healthInsuranceName = null;
+                    }
+
+                    if (item.children && item.children.length > 0) {
                         currentMenuId = item.id;
                         menuHistory.push(item);
                         renderMenu(item.children);

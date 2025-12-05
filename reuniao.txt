@@ -46,3 +46,9 @@ na pagina da gerente fazer uma opção para poder habilitar ou nao os serviços 
 
 aplicativo tracking avisar ao cliente que se ele ligar o trclking e pedir pra ele avisar com 15 minutos antes de 
 voltar para fila,  que se o sistema remaneijar as pessoas da fila para melhorar eficienncia ele nao fara parte do processo
+
+
+
+
+
+

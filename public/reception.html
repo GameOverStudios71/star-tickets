@@ -601,32 +601,56 @@
                 `;
             }
 
+            const priorityBadge = ticket.is_priority === 1 ?
+                `<span class="tag tag-priority">🚨 Prioritário</span>` :
+                `<span class="tag tag-normal">✅ Normal</span>`;
+
+            const insuranceDisplay = ticket.health_insurance_name ?
+                `<span class="tag tag-insurance">💳 Convênio</span>` :
+                `<span class="tag tag-private">💵 Particular</span>`;
+
             panel.innerHTML = `
-                <h2>Senha: ${ticket.display_code}</h2>
-                
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px;">
+                    <div>
+                        <h2 style="font-size:3rem; color:var(--primary-color); margin-bottom:5px;">${ticket.display_code}</h2>
+                        <div style="display:flex; gap:10px; align-items:center;">
+                            ${priorityBadge}
+                            ${insuranceDisplay}
+                        </div>
+                        <div style="margin-top:10px; font-size:0.9rem; color:#666;">
+                            Chegada: ${new Date(ticket.created_at).toLocaleTimeString()}
+                        </div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-size:2rem; font-weight:bold; color:${ticket.status === 'WAITING_RECEPTION' ? '#f1c40f' : '#2ecc71'}">
+                            ${ticket.status.replace('_', ' ')}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="customer-link-section">
+                    <h3>👤 Identificação do Cliente</h3>
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" id="customer-name-input"
+                            value="${ticket.temp_customer_name || ''}"
+                            placeholder="Digite o nome do cliente..."
+                            onblur="linkCustomerName()">
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <h3>📋 Tipo de Atendimento</h3>
+                    <div style="padding: 10px; background: #f9f9f9; border-radius: 5px; font-size: 1.1rem;">
+                        ${insuranceDisplay}
+                    </div>
+                </div>
+
                 ${actionButtons}
-                
-                <div class="form-group" style="margin-bottom: 20px;">
-                    <label><strong>Nome do Cliente:</strong></label>
-                    <input type="text" id="customer-name-input" 
-                           value="${ticket.temp_customer_name || ''}" 
-                           placeholder="Digite o nome do cliente" 
-                           onblur="linkCustomerName()"
-                           style="width:100%; padding:10px; margin-top:5px;">
+
+                <div class="services-section">
+                    <h3>🩺 Serviços Solicitados</h3>
+                    <div id="services-list" class="services-list"></div>
                 </div>
-
-                <div class="form-group" style="margin-bottom: 20px;">
-                    <label><strong>💳 Convênio:</strong></label>
-                    <input type="text" id="insurance-name-input" 
-                           value="${ticket.health_insurance_name || ''}" 
-                           placeholder="Digite o nome do convênio (deixe vazio para Particular)" 
-                           onblur="updateInsuranceName()"
-                           style="width:100%; padding:10px; margin-top:5px;">
-                </div>
-
-                <h3>Serviços Selecionados:</h3>
-                <div id="services-list"></div>
-
                 <div class="add-service-section">
                     <h3>➕ Adicionar Serviço</h3>
                     <select id="add-service-select">
@@ -677,6 +701,7 @@
             });
         }
 
+
         async function linkCustomerName() {
             const input = document.getElementById('customer-name-input');
             const name = input.value.trim();
@@ -695,19 +720,7 @@
             loadTickets();
         }
 
-        async function updateInsuranceName() {
-            const input = document.getElementById('insurance-name-input');
-            const insuranceName = input.value.trim();
 
-            // Allow empty value (Particular)
-            await fetch(`/api/tickets/${selectedTicket.id}/insurance`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ healthInsuranceName: insuranceName || null })
-            });
-
-            loadTickets();
-        }
 
         async function addService() {
             const select = document.getElementById('add-service-select');
