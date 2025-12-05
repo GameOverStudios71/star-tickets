@@ -233,14 +233,14 @@
             <div class="card">
                 <!-- Tabs Header -->
                 <div class="tabs">
-                    <button class="tab-btn active" onclick="switchTab('waiting')" id="tab-waiting">
-                        ⏳ Aguardando
+                    <button class="tab-btn active" onclick="switchTab('active')" id="tab-active">
+                        ⏳ Aguardando e Atendimento
                     </button>
-                    <button class="tab-btn" onclick="switchTab('processed')" id="tab-processed">
-                        ✅ Em Atendimento / Finalizados
+                    <button class="tab-btn" onclick="switchTab('finished')" id="tab-finished">
+                        ✅ Finalizados
                     </button>
                 </div>
-                
+
                 <h2>Senhas Emitidas</h2>
                 <div id="ticket-list"></div>
             </div>
@@ -262,7 +262,7 @@
         let allTickets = [];
         let allServices = [];
         let selectedFilters = new Set();
-        let currentTab = 'waiting'; // 'waiting' or 'processed'
+        let currentTab = 'active'; // 'active' or 'finished'
 
         async function loadServices() {
             const res = await fetch('/api/admin/services');
@@ -335,10 +335,12 @@
             let filtered = tickets;
 
             // 1. Filter by Tab
-            if (currentTab === 'waiting') {
-                filtered = filtered.filter(t => t.status === 'WAITING_RECEPTION');
+            if (currentTab === 'active') {
+                // Show Waiting, Called, and In Reception
+                filtered = filtered.filter(t => ['WAITING_RECEPTION', 'CALLED_RECEPTION', 'IN_RECEPTION'].includes(t.status));
             } else {
-                filtered = filtered.filter(t => t.status !== 'WAITING_RECEPTION');
+                // Show everything else (Processed/Finished by reception)
+                filtered = filtered.filter(t => !['WAITING_RECEPTION', 'CALLED_RECEPTION', 'IN_RECEPTION'].includes(t.status));
             }
 
             // 2. Filter by Services
@@ -359,7 +361,7 @@
 
         function switchTab(tabName) {
             currentTab = tabName;
-            
+
             // Update UI
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById(`tab-${tabName}`).classList.add('active');
