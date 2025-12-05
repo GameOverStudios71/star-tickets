@@ -36,6 +36,8 @@
 
         .priority-selection {
             padding: 60px 20px 40px 20px;
+            width: 100%;
+            max-width: 1000px;
         }
 
         .priority-btn {
@@ -100,6 +102,7 @@
             padding: 60px 20px 40px 20px;
             max-width: 800px;
             margin: 0 auto;
+            width: 100%;
         }
 
         .insurance-input {
@@ -160,22 +163,46 @@
             background: #d32f2f;
         }
 
-        /* Two-column layout for menu and selection summary */
-        .totem-content-wrapper {
-            display: grid;
-            grid-template-columns: 1fr 380px;
-            gap: 15px;
-            padding: 15px;
-            max-width: 1600px;
-            margin: 0 auto;
+        /* NEW LAYOUT STRUCTURE */
+        .totem-layout {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow-y: auto;
+            position: relative;
+            padding: 20px;
+            background-color: var(--bg-color);
+        }
+
+        .sidebar {
+            width: 400px;
+            height: 100%;
+            background: white;
+            border-left: 1px solid #ddd;
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+            box-shadow: -5px 0 15px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .sidebar.hidden {
+            display: none;
         }
 
         #selection-summary {
-            position: sticky;
-            top: 15px;
-            height: fit-content;
-            max-height: calc(100vh - 30px);
-            overflow-y: auto;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
             padding: 20px;
         }
 
@@ -183,17 +210,40 @@
             margin-top: 0;
             margin-bottom: 15px;
             font-size: 1.3rem;
+            color: var(--primary-color);
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
         }
 
         #selected-list {
-            padding-left: 20px;
+            padding-left: 0;
+            list-style: none;
             margin: 10px 0;
+            flex: 1;
+            overflow-y: auto;
         }
 
         #selected-list li {
-            margin-bottom: 8px;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-color);
             line-height: 1.4;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
         }
 
         .menu-icon-large {
@@ -207,6 +257,24 @@
             font-weight: bold;
             line-height: 1.2;
         }
+
+        /* Menu Grid adjustments for centered layout */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 1024px) {
+            .menu-grid {
+                grid-template-columns: 1fr;
+                max-width: 500px;
+            }
+        }
     </style>
 </head>
 
@@ -217,42 +285,98 @@
         <button id="back-button" onclick="goBack()">⬅️ VOLTAR</button>
     </div>
 
-    <div class="container">
-        <!-- Priority Selection Screen (First Screen) -->
-        <div id="priority-selection" class="priority-selection">
-            <h2 style="text-align:center; margin-bottom:40px;">Selecione o tipo de atendimento</h2>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:30px; max-width:800px; margin:0 auto;">
-                <button class="priority-btn normal-btn" onclick="selectPriority(false)">
-                    <div class="priority-icon">👤</div>
-                    <div class="priority-label">ATENDIMENTO<br>NORMAL</div>
-                </button>
-                <button class="priority-btn priority-btn-special" onclick="selectPriority(true)">
-                    <div class="priority-icon">⭐</div>
-                    <div class="priority-label">ATENDIMENTO<br>PREFERENCIAL</div>
-                    <div class="priority-subtitle">Idosos, Gestantes,<br>Lactantes, PcD</div>
-                </button>
+    <div class="totem-layout">
+        <!-- Main Content Area (Center) -->
+        <div class="main-content" id="main-content-area">
+
+            <!-- Priority Selection Screen (First Screen) -->
+            <div id="priority-selection" class="priority-selection">
+                <h2 style="text-align:center; margin-bottom:40px; font-size: 2.5rem; color: var(--primary-color);">
+                    Selecione o tipo de atendimento</h2>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:30px; max-width:800px; margin:0 auto;">
+                    <button class="priority-btn normal-btn" onclick="selectPriority(false)">
+                        <div class="priority-icon">👤</div>
+                        <div class="priority-label">ATENDIMENTO<br>NORMAL</div>
+                    </button>
+                    <button class="priority-btn priority-btn-special" onclick="selectPriority(true)">
+                        <div class="priority-icon">⭐</div>
+                        <div class="priority-label">ATENDIMENTO<br>PREFERENCIAL</div>
+                        <div class="priority-subtitle">Idosos, Gestantes,<br>Lactantes, PcD</div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Insurance Input Screen (Hidden by default) -->
+            <div id="insurance-input-screen" class="insurance-input-screen" style="display:none;">
+                <h2 style="text-align:center; margin-bottom:30px;">Digite o nome do Convênio</h2>
+                <input type="text" id="insurance-name-input" class="insurance-input" placeholder="Digite aqui..."
+                    readonly>
+
+                <div class="virtual-keyboard">
+                    <!-- Row 1 -->
+                    <button class="key-btn" onclick="addChar('Q')">Q</button>
+                    <button class="key-btn" onclick="addChar('W')">W</button>
+                    <button class="key-btn" onclick="addChar('E')">E</button>
+                    <button class="key-btn" onclick="addChar('R')">R</button>
+                    <button class="key-btn" onclick="addChar('T')">T</button>
+                    <button class="key-btn" onclick="addChar('Y')">Y</button>
+                    <button class="key-btn" onclick="addChar('U')">U</button>
+                    <button class="key-btn" onclick="addChar('I')">I</button>
+                    <button class="key-btn" onclick="addChar('O')">O</button>
+                    <button class="key-btn" onclick="addChar('P')">P</button>
+
+                    <!-- Row 2 -->
+                    <button class="key-btn" onclick="addChar('A')">A</button>
+                    <button class="key-btn" onclick="addChar('S')">S</button>
+                    <button class="key-btn" onclick="addChar('D')">D</button>
+                    <button class="key-btn" onclick="addChar('F')">F</button>
+                    <button class="key-btn" onclick="addChar('G')">G</button>
+                    <button class="key-btn" onclick="addChar('H')">H</button>
+                    <button class="key-btn" onclick="addChar('J')">J</button>
+                    <button class="key-btn" onclick="addChar('K')">K</button>
+                    <button class="key-btn" onclick="addChar('L')">L</button>
+                    <button class="key-btn backspace" onclick="backspace()">⌫</button>
+
+                    <!-- Row 3 -->
+                    <button class="key-btn" onclick="addChar('Z')">Z</button>
+                    <button class="key-btn" onclick="addChar('X')">X</button>
+                    <button class="key-btn" onclick="addChar('C')">C</button>
+                    <button class="key-btn" onclick="addChar('V')">V</button>
+                    <button class="key-btn" onclick="addChar('B')">B</button>
+                    <button class="key-btn" onclick="addChar('N')">N</button>
+                    <button class="key-btn" onclick="addChar('M')">M</button>
+                    <button class="key-btn clear" onclick="clearInput()">LIMPAR</button>
+
+                    <!-- Space -->
+                    <button class="key-btn space" onclick="addChar(' ')">ESPAÇO</button>
+                    <button class="key-btn" style="grid-column: span 3; background: #4CAF50; color: white;"
+                        onclick="confirmInsurance()">CONFIRMAR</button>
+                </div>
+            </div>
+
+            <!-- Menu Container (Hidden by default) -->
+            <div id="menu-container" class="menu-grid" style="display:none;">
+                <!-- Menus will be loaded here -->
             </div>
         </div>
 
-
-
-        <!-- Menu and Selection Summary Container -->
-        <div class="totem-content-wrapper" id="totem-content-wrapper" style="display:none;">
-            <!-- Menu Container -->
-            <div id="menu-container" class="menu-grid">
-                <!-- Menus will be loaded here -->
-            </div>
-
-            <!-- Selection Summary (Right Side) -->
-            <div id="selection-summary" class="card">
-                <h3>Serviços Selecionados:</h3>
-                <ul id="selected-list"></ul>
-                <div style="margin-top: 15px;">
+        <!-- Right Sidebar (Selection Summary) -->
+        <div id="sidebar-panel" class="sidebar hidden">
+            <div id="selection-summary">
+                <h3>Serviços Selecionados</h3>
+                <ul id="selected-list">
+                    <li style="color:#999; background:none; border:none; text-align:center; padding-top:50px;">
+                        Nenhum serviço selecionado
+                    </li>
+                </ul>
+                <div style="margin-top: auto; padding-top: 20px; border-top: 1px solid #eee;">
                     <button class="btn btn-large btn-accent" onclick="confirmTicket()"
-                        style="width:100%; margin-bottom:8px;">
-                        CONFIRMAR E IMPRIMIR
+                        style="width:100%; margin-bottom:15px; box-shadow: 0 4px 10px rgba(231, 76, 60, 0.3);">
+                        CONFIRMAR
                     </button>
-                    <button class="btn" onclick="resetSelection()" style="width:100%;">Limpar Tudo</button>
+                    <button class="btn" onclick="resetSelection()" style="width:100%; background-color: #95a5a6;">
+                        Limpar Tudo
+                    </button>
                 </div>
             </div>
         </div>
@@ -277,24 +401,34 @@
     <div id="print-modal"
         style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); color:white; flex-direction:column; justify-content:center; align-items:center; z-index:1000;">
         <div
-            style="background:white; color:black; padding:40px; border-radius:15px; text-align:center; margin:20px; max-width:500px; width:90%; max-height:90vh; overflow-y:auto; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
-            <h2 style="color:#4CAF50; margin-top:0;">✓ Senha Gerada com Sucesso!</h2>
-            <h1 id="modal-ticket-code" style="font-size:5rem; margin:20px 0; color:var(--primary-color);">---</h1>
-            <p style="font-size:1.2rem; margin:20px 0;">Aguarde ser chamado no painel.</p>
+            style="background:white; color:black; padding:30px; border-radius:15px; text-align:center; margin:20px; max-width:700px; width:90%; max-height:90vh; overflow-y:auto; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+            <h2 style="color:#4CAF50; margin-top:0; margin-bottom: 20px;">✓ Senha Gerada com Sucesso!</h2>
 
-            <div style="border-top:2px dashed #ddd; margin:30px 0; padding-top:30px;">
-                <p style="font-size:1rem; color:#666; margin-bottom:15px;">
-                    📱 <strong>Acompanhe pelo celular!</strong><br>
-                    Escaneie o QR Code abaixo:
-                </p>
-                <div id="qr-code-container" style="display:flex; justify-content:center; margin:20px 0;">
-                    <img id="qr-code-image" src="" alt="QR Code"
-                        style="max-width:200px; border:3px solid #eee; border-radius:10px; padding:10px; display:none;">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 30px; margin-bottom: 20px;">
+                <!-- Ticket Code Section -->
+                <div style="flex: 1;">
+                    <h1 id="modal-ticket-code"
+                        style="font-size:5rem; margin:0; color:var(--primary-color); line-height: 1;">---</h1>
+                    <p style="font-size:1.2rem; margin:10px 0 0 0;">Aguarde ser chamado no painel.</p>
+                </div>
+
+                <!-- Divider -->
+                <div style="width: 2px; height: 150px; background-color: #eee;"></div>
+
+                <!-- QR Code Section -->
+                <div style="flex: 1; display: flex; flex-direction: column; align-items: center;">
+                    <p style="font-size:1rem; color:#666; margin-bottom:10px;">
+                        📱 <strong>Acompanhe pelo celular!</strong>
+                    </p>
+                    <div id="qr-code-container" style="display:flex; justify-content:center;">
+                        <img id="qr-code-image" src="" alt="QR Code"
+                            style="max-width:150px; border:3px solid #eee; border-radius:10px; padding:5px; display:none;">
+                    </div>
                 </div>
             </div>
 
             <button class="btn btn-large btn-accent" onclick="window.location.reload()"
-                style="margin-top:20px; width:100%;">
+                style="margin-top:10px; width:100%;">
                 FINALIZAR ATENDIMENTO
             </button>
         </div>
@@ -349,10 +483,11 @@
 
             // Hide insurance screen
             document.getElementById('insurance-input-screen').style.display = 'none';
-            // Show wrapper (menu + summary)
-            document.getElementById('totem-content-wrapper').style.display = 'grid';
-            // Make sure menu-container is visible
+            // Show menu container
             document.getElementById('menu-container').style.display = 'grid';
+            // Show sidebar
+            document.getElementById('sidebar-panel').classList.remove('hidden');
+
             // Show back button
             document.getElementById('back-button-container').style.display = 'block';
             currentScreen = 'menu';
@@ -397,7 +532,8 @@
             if (currentScreen === 'insurance') {
                 // Go back to menu
                 document.getElementById('insurance-input-screen').style.display = 'none';
-                document.getElementById('totem-content-wrapper').style.display = 'grid';
+                document.getElementById('menu-container').style.display = 'grid';
+                document.getElementById('sidebar-panel').classList.remove('hidden');
                 currentScreen = 'menu';
                 // Go back in menu history
                 if (menuHistory.length > 1) {
@@ -423,7 +559,8 @@
                     renderMenu(menuData);
                 } else {
                     // Go back to priority selection
-                    document.getElementById('totem-content-wrapper').style.display = 'none';
+                    document.getElementById('menu-container').style.display = 'none';
+                    document.getElementById('sidebar-panel').classList.add('hidden');
                     document.getElementById('priority-selection').style.display = 'block';
                     document.getElementById('back-button-container').style.display = 'none';
                     currentScreen = 'priority';
@@ -437,10 +574,12 @@
             document.getElementById('priority-selection').style.display = 'none';
             // Show back button
             document.getElementById('back-button-container').style.display = 'block';
-            // Show wrapper (menu + summary)
-            document.getElementById('totem-content-wrapper').style.display = 'grid';
-            // Make sure menu-container is visible
+
+            // Show menu container
             document.getElementById('menu-container').style.display = 'grid';
+            // Show sidebar
+            document.getElementById('sidebar-panel').classList.remove('hidden');
+
             currentScreen = 'menu';
             // Load menu
             loadConfig();
