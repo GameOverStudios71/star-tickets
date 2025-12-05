@@ -76,6 +76,7 @@ db.serialize(() => {
             status TEXT DEFAULT 'WAITING_RECEPTION',
             customer_id INTEGER,
             temp_customer_name TEXT,
+            health_insurance_name TEXT,
             is_priority INTEGER DEFAULT 0,
             establishment_id INTEGER NOT NULL,
             FOREIGN KEY (customer_id) REFERENCES customers(id),
@@ -92,6 +93,7 @@ db.serialize(() => {
             order_sequence INTEGER NOT NULL,
             status TEXT DEFAULT 'PENDING',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME,
             FOREIGN KEY (ticket_id) REFERENCES tickets(id),
             FOREIGN KEY (service_id) REFERENCES services(id)
         )
@@ -115,6 +117,7 @@ db.serialize(() => {
         CREATE TABLE service_menus (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             label TEXT NOT NULL,
+            description TEXT,
             parent_id INTEGER,
             service_id INTEGER,
             order_index INTEGER DEFAULT 0,
@@ -226,18 +229,142 @@ db.serialize(() => {
     rooms.forEach(r => roomStmt.run(r.name, r.type, r.est));
     roomStmt.finalize();
 
-    // Insert sample menus for all establishments
+    // Insert comprehensive menu structure for all services
+    // Service IDs will be:
+    // 1=Admissional/Demissional, 2=Analises Clinicas, 3=Atendimento Preferencial, 4=Cardiológicos,
+    // 5=Cedusp Preferencial, 6=Cedusp/Cadi, 7=Colpo/Vulvo, 8=Colposcopia/Vulvoscopia,
+    // 9=Dr. Edvaldo Pref, 10=Dr Francisco Pref, 11=Ecocardiograma/Eco Fetal, 12=Ecodoppler/Teste Erg,
+    // 13=Ecodopplercardiograma, 14=Eletroneuro, 15=Eletroneuro/Doppler, 16=Endoscopia(Gastros),
+    // 17=Endoscopia/Colono, 18=Endoscopia/Colonoscopia, 19=Exames Cardiológicos, 20=Exames de Imagem,
+    // 21=Exames de Sangue, 22=Mamo/Dens/Raio-X, 23=Mamo/Densi/Raio-X, 24=Mamografia,
+    // 25=Mamografia/Raio X, 26=Medicina do Trabalho, 27=Medicina do Trabalho Pref, 28=Ocupacional,
+    // 29=Particular, 30=Preferencial, 31=Preferencial Recepção, 32=Raio X, 33=Recepcao,
+    // 34=Resultado de Exame, 35=Retirada de Exames, 36=Retorno ao Trabalho, 37=Teste Ergométrico,
+    // 38=Tomografia, 39=Triagem Coleta, 40=Triagem Preferencial 1, 41=Triagem Preferencial 2,
+    // 42=Ultrassom, 43=Ultrassom 1, 44=Ultrassom Preferencial
+
     const menus = [
-        // Estabelecimento 1 (Central) - Menu completo
-        { label: 'Consultas', parent: null, service: null, order: 1, est: 1 },
-        { label: 'Exames', parent: null, service: null, order: 2, est: 1 },
-        { label: 'Geral', parent: 1, service: 2, order: 1, est: 1 },
-        { label: 'Sangue', parent: 2, service: 3, order: 1, est: 1 },
-        { label: 'Raio-X', parent: 2, service: 4, order: 2, est: 1 },
+        // === NÍVEL 1: TIPO DE SERVIÇO ===
+        { id: 1, label: '🔬 Análises Clínicas', desc: 'Exames de laboratório, imagem e procedimentos médicos', parent: null, service: null, order: 1, est: 1 },
+        { id: 2, label: '💼 Medicina do Trabalho', desc: 'Admissional, demissional, ocupacional e retorno', parent: null, service: null, order: 2, est: 1 },
+
+        // === ANÁLISES CLÍNICAS - NÍVEL 2: CONVÊNIO OU PARTICULAR ===
+        { id: 10, label: '💳 Convênio', desc: 'Atendimento por plano de saúde', parent: 1, service: null, order: 1, est: 1 },
+        { id: 11, label: '💵 Particular', desc: 'Pagamento direto', parent: 1, service: null, order: 2, est: 1 },
+
+        // === CONVÊNIO - NÍVEL 3: NOME DO CONVÊNIO (placeholder, será input no frontend) ===
+        // Após inserir o nome, vai para as categorias id:100+
+
+        // === PARTICULAR E CONVÊNIO - NÍVEL 3/4: CATEGORIAS DE EXAMES ===
+        { id: 100, label: '🩺 Exames Cardiológicos', desc: 'Ecocardiograma, teste ergométrico e exames do coração', parent: 10, service: null, order: 1, est: 1 },
+        { id: 101, label: '🔬 Exames de Laboratório', desc: 'Análises clínicas, exames de sangue e coletas', parent: 10, service: null, order: 2, est: 1 },
+        { id: 102, label: '📸 Exames de Imagem', desc: 'Raio-X, ultrassom, mamografia e tomografia', parent: 10, service: null, order: 3, est: 1 },
+        { id: 103, label: '🏥 Procedimentos Especiais', desc: 'Endoscopia, colonoscopia, colposcopia e eletroneuro', parent: 10, service: null, order: 4, est: 1 },
+        { id: 104, label: '📋 Recepção e Resultados', desc: 'Retirada de exames e atendimento em recepção', parent: 10, service: null, order: 5, est: 1 },
+        { id: 105, label: '👨‍⚕️ Consultas Especializadas', desc: 'Consultas particulares e especializadas', parent: 10, service: null, order: 6, est: 1 },
+
+        // Mesmas categorias para PARTICULAR (parent: 11)
+        { id: 110, label: '🩺 Exames Cardiológicos', desc: 'Ecocardiograma, teste ergométrico e exames do coração', parent: 11, service: null, order: 1, est: 1 },
+        { id: 111, label: '🔬 Exames de Laboratório', desc: 'Análises clínicas, exames de sangue e coletas', parent: 11, service: null, order: 2, est: 1 },
+        { id: 112, label: '📸 Exames de Imagem', desc: 'Raio-X, ultrassom, mamografia e tomografia', parent: 11, service: null, order: 3, est: 1 },
+        { id: 113, label: '🏥 Procedimentos Especiais', desc: 'Endoscopia, colonoscopia, colposcopia e eletroneuro', parent: 11, service: null, order: 4, est: 1 },
+        { id: 114, label: '📋 Recepção e Resultados', desc: 'Retirada de exames e atendimento em recepção', parent: 11, service: null, order: 5, est: 1 },
+        { id: 115, label: '👨‍⚕️ Consultas Especializadas', desc: 'Consultas particulares e especializadas', parent: 11, service: null, order: 6, est: 1 },
+
+        // === CONVÊNIO - EXAMES CARDIOLÓGICOS ===
+        { id: 1000, label: 'Cardiológicos', desc: null, parent: 100, service: 4, order: 1, est: 1 },
+        { id: 1001, label: 'Ecocardiograma / Eco Fetal', desc: null, parent: 100, service: 11, order: 2, est: 1 },
+        { id: 1002, label: 'Ecodoppler / Teste Ergométrico', desc: null, parent: 100, service: 12, order: 3, est: 1 },
+        { id: 1003, label: 'Ecodopplercardiograma', desc: null, parent: 100, service: 13, order: 4, est: 1 },
+        { id: 1004, label: 'Exames Cardiológicos Gerais', desc: null, parent: 100, service: 19, order: 5, est: 1 },
+        { id: 1005, label: 'Teste Ergométrico', desc: null, parent: 100, service: 37, order: 6, est: 1 },
+
+        // === CONVÊNIO - EXAMES DE LABORATÓRIO ===
+        { id: 1010, label: 'Análises Clínicas', desc: null, parent: 101, service: 2, order: 1, est: 1 },
+        { id: 1011, label: 'Exames de Sangue', desc: null, parent: 101, service: 21, order: 2, est: 1 },
+        { id: 1012, label: 'Triagem Coleta', desc: null, parent: 101, service: 39, order: 3, est: 1 },
+
+        // === CONVÊNIO - EXAMES DE IMAGEM ===
+        { id: 1020, label: 'Raio X', desc: null, parent: 102, service: 32, order: 1, est: 1 },
+        { id: 1021, label: 'Mamografia', desc: null, parent: 102, service: 24, order: 2, est: 1 },
+        { id: 1022, label: 'Mamografia / Raio X', desc: null, parent: 102, service: 25, order: 3, est: 1 },
+        { id: 1023, label: 'Mamo/Dens/Raio-X', desc: null, parent: 102, service: 22, order: 4, est: 1 },
+        { id: 1024, label: 'Mamo/Densi/Raio-X', desc: null, parent: 102, service: 23, order: 5, est: 1 },
+        { id: 1025, label: 'Ultrassom', desc: null, parent: 102, service: 42, order: 6, est: 1 },
+        { id: 1026, label: 'Ultrassom 1', desc: null, parent: 102, service: 43, order: 7, est: 1 },
+        { id: 1027, label: 'Tomografia', desc: null, parent: 102, service: 38, order: 8, est: 1 },
+        { id: 1028, label: 'Exames de Imagem Gerais', desc: null, parent: 102, service: 20, order: 9, est: 1 },
+
+        // === CONVÊNIO - PROCEDIMENTOS ESPECIAIS ===
+        { id: 1030, label: 'Eletroneuro', desc: null, parent: 103, service: 14, order: 1, est: 1 },
+        { id: 1031, label: 'Eletroneuro / Doppler', desc: null, parent: 103, service: 15, order: 2, est: 1 },
+        { id: 1032, label: 'Endoscopia (Gastros)', desc: null, parent: 103, service: 16, order: 3, est: 1 },
+        { id: 1033, label: 'Endoscopia/Colono', desc: null, parent: 103, service: 17, order: 4, est: 1 },
+        { id: 1034, label: 'Endoscopia/Colonoscopia', desc: null, parent: 103, service: 18, order: 5, est: 1 },
+        { id: 1035, label: 'Colpo/Vulvo', desc: null, parent: 103, service: 7, order: 6, est: 1 },
+        { id: 1036, label: 'Colposcopia/Vulvoscopia', desc: null, parent: 103, service: 8, order: 7, est: 1 },
+
+        // === CONVÊNIO - RECEPÇÃO E RESULTADOS ===
+        { id: 1040, label: 'Recepção', desc: null, parent: 104, service: 33, order: 1, est: 1 },
+        { id: 1041, label: 'Resultado de Exame', desc: null, parent: 104, service: 34, order: 2, est: 1 },
+        { id: 1042, label: 'Retirada de Exames', desc: null, parent: 104, service: 35, order: 3, est: 1 },
+
+        // === CONVÊNIO - CONSULTAS ESPECIALIZADAS ===
+        { id: 1050, label: 'Cedusp/Cadi', desc: null, parent: 105, service: 6, order: 1, est: 1 },
+        { id: 1051, label: 'Particular', desc: null, parent: 105, service: 29, order: 2, est: 1 },
+
+        // === PARTICULAR - EXAMES CARDIOLÓGICOS ===
+        { id: 1100, label: 'Cardiológicos', desc: null, parent: 110, service: 4, order: 1, est: 1 },
+        { id: 1101, label: 'Ecocardiograma / Eco Fetal', desc: null, parent: 110, service: 11, order: 2, est: 1 },
+        { id: 1102, label: 'Ecodoppler / Teste Ergométrico', desc: null, parent: 110, service: 12, order: 3, est: 1 },
+        { id: 1103, label: 'Ecodopplercardiograma', desc: null, parent: 110, service: 13, order: 4, est: 1 },
+        { id: 1104, label: 'Exames Cardiológicos Gerais', desc: null, parent: 110, service: 19, order: 5, est: 1 },
+        { id: 1105, label: 'Teste Ergométrico', desc: null, parent: 110, service: 37, order: 6, est: 1 },
+
+        // === PARTICULAR - EXAMES DE LABORATÓRIO ===
+        { id: 1110, label: 'Análises Clínicas', desc: null, parent: 111, service: 2, order: 1, est: 1 },
+        { id: 1111, label: 'Exames de Sangue', desc: null, parent: 111, service: 21, order: 2, est: 1 },
+        { id: 1112, label: 'Triagem Coleta', desc: null, parent: 111, service: 39, order: 3, est: 1 },
+
+        // === PARTICULAR - EXAMES DE IMAGEM ===
+        { id: 1120, label: 'Raio X', desc: null, parent: 112, service: 32, order: 1, est: 1 },
+        { id: 1121, label: 'Mamografia', desc: null, parent: 112, service: 24, order: 2, est: 1 },
+        { id: 1122, label: 'Mamografia / Raio X', desc: null, parent: 112, service: 25, order: 3, est: 1 },
+        { id: 1123, label: 'Mamo/Dens/Raio-X', desc: null, parent: 112, service: 22, order: 4, est: 1 },
+        { id: 1124, label: 'Mamo/Densi/Raio-X', desc: null, parent: 112, service: 23, order: 5, est: 1 },
+        { id: 1125, label: 'Ultrassom', desc: null, parent: 112, service: 42, order: 6, est: 1 },
+        { id: 1126, label: 'Ultrassom 1', desc: null, parent: 112, service: 43, order: 7, est: 1 },
+        { id: 1127, label: 'Tomografia', desc: null, parent: 112, service: 38, order: 8, est: 1 },
+        { id: 1128, label: 'Exames de Imagem Gerais', desc: null, parent: 112, service: 20, order: 9, est: 1 },
+
+        // === PARTICULAR - PROCEDIMENTOS ESPECIAIS ===
+        { id: 1130, label: 'Eletroneuro', desc: null, parent: 113, service: 14, order: 1, est: 1 },
+        { id: 1131, label: 'Eletroneuro / Doppler', desc: null, parent: 113, service: 15, order: 2, est: 1 },
+        { id: 1132, label: 'Endoscopia (Gastros)', desc: null, parent: 113, service: 16, order: 3, est: 1 },
+        { id: 1133, label: 'Endoscopia/Colono', desc: null, parent: 113, service: 17, order: 4, est: 1 },
+        { id: 1134, label: 'Endoscopia/Colonoscopia', desc: null, parent: 113, service: 18, order: 5, est: 1 },
+        { id: 1135, label: 'Colpo/Vulvo', desc: null, parent: 113, service: 7, order: 6, est: 1 },
+        { id: 1136, label: 'Colposcopia/Vulvoscopia', desc: null, parent: 113, service: 8, order: 7, est: 1 },
+
+        // === PARTICULAR - RECEPÇÃO E RESULTADOS ===
+        { id: 1140, label: 'Recepção', desc: null, parent: 114, service: 33, order: 1, est: 1 },
+        { id: 1141, label: 'Resultado de Exame', desc: null, parent: 114, service: 34, order: 2, est: 1 },
+        { id: 1142, label: 'Retirada de Exames', desc: null, parent: 114, service: 35, order: 3, est: 1 },
+
+        // === PARTICULAR - CONSULTAS ESPECIALIZADAS ===
+        { id: 1150, label: 'Cedusp/Cadi', desc: null, parent: 115, service: 6, order: 1, est: 1 },
+        { id: 1151, label: 'Particular', desc: null, parent: 115, service: 29, order: 2, est: 1 },
+
+        // === MEDICINA DO TRABALHO - CATEGORIAS ===
+        { id: 200, label: 'Admissional/Demissional', desc: null, parent: 2, service: 1, order: 1, est: 1 },
+        { id: 201, label: 'Medicina do Trabalho', desc: null, parent: 2, service: 26, order: 2, est: 1 },
+        { id: 202, label: 'Medicina do Trabalho Preferencial', desc: null, parent: 2, service: 27, order: 3, est: 1 },
+        { id: 203, label: 'Ocupacional', desc: null, parent: 2, service: 28, order: 4, est: 1 },
+        { id: 204, label: 'Retorno ao Trabalho', desc: null, parent: 2, service: 36, order: 5, est: 1 },
     ];
 
-    const menuStmt = db.prepare("INSERT INTO service_menus (label, parent_id, service_id, order_index, establishment_id) VALUES (?, ?, ?, ?, ?)");
-    menus.forEach(m => menuStmt.run(m.label, m.parent, m.service, m.order, m.est));
+    const menuStmt = db.prepare("INSERT INTO service_menus (id, label, description, parent_id, service_id, order_index, establishment_id) VALUES (?, ?, ?, ?, ?, ?, ?)");
+    menus.forEach(m => menuStmt.run(m.id, m.label, m.desc, m.parent, m.service, m.order, m.est));
     menuStmt.finalize();
 
     // Insert room-service mappings

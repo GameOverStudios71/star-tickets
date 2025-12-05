@@ -7,6 +7,32 @@
     <title>Star Tickets - Autoatendimento</title>
     <link rel="stylesheet" href="style.css">
     <style>
+        /* Back Button - Always visible in top left */
+        #back-button-container {
+            position: fixed;
+            top: 100px;
+            left: 20px;
+            z-index: 999;
+        }
+
+        #back-button {
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s;
+        }
+
+        #back-button:hover {
+            background: #d32f2f;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+        }
+
         .priority-selection {
             padding: 40px 20px;
         }
@@ -67,6 +93,71 @@
         .priority-btn-special:hover .priority-subtitle {
             color: white;
         }
+
+        /* Insurance Input Screen */
+        .insurance-input-screen {
+            padding: 40px 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .insurance-input {
+            width: 100%;
+            padding: 20px;
+            font-size: 1.5rem;
+            border: 3px solid #2196F3;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .virtual-keyboard {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .key-btn {
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 20px 10px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+        }
+
+        .key-btn:hover {
+            background: #2196F3;
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .key-btn.space {
+            grid-column: span 5;
+        }
+
+        .key-btn.backspace {
+            grid-column: span 2;
+            background: #ff9800;
+            color: white;
+        }
+
+        .key-btn.backspace:hover {
+            background: #f57c00;
+        }
+
+        .key-btn.clear {
+            grid-column: span 2;
+            background: #f44336;
+            color: white;
+        }
+
+        .key-btn.clear:hover {
+            background: #d32f2f;
+        }
     </style>
 </head>
 
@@ -75,6 +166,11 @@
         <h1>Bem-vindo ao Star Tickets</h1>
         <p>Toque para selecionar seu atendimento</p>
     </header>
+
+    <!-- Back Button Container (Always in top left when visible) -->
+    <div id="back-button-container" style="display:none;">
+        <button id="back-button" onclick="goBack()">⬅️ VOLTAR</button>
+    </div>
 
     <div class="container">
         <!-- Priority Selection Screen (First Screen) -->
@@ -91,6 +187,57 @@
                     <div class="priority-subtitle">Idosos, Gestantes,<br>Lactantes, PcD</div>
                 </button>
             </div>
+        </div>
+
+        <!-- Insurance Input Screen (Hidden initially) -->
+        <div id="insurance-input-screen" class="insurance-input-screen" style="display:none;">
+            <h2 style="text-align:center; margin-bottom:30px;">💳 Digite o nome do seu Convênio</h2>
+            <input type="text" id="insurance-name-input" class="insurance-input" placeholder="Nome do Convênio"
+                readonly>
+
+            <div class="virtual-keyboard">
+                <!-- Letters -->
+                <button class="key-btn" onclick="addChar('Q')">Q</button>
+                <button class="key-btn" onclick="addChar('W')">W</button>
+                <button class="key-btn" onclick="addChar('E')">E</button>
+                <button class="key-btn" onclick="addChar('R')">R</button>
+                <button class="key-btn" onclick="addChar('T')">T</button>
+                <button class="key-btn" onclick="addChar('Y')">Y</button>
+                <button class="key-btn" onclick="addChar('U')">U</button>
+                <button class="key-btn" onclick="addChar('I')">I</button>
+                <button class="key-btn" onclick="addChar('O')">O</button>
+                <button class="key-btn" onclick="addChar('P')">P</button>
+
+                <button class="key-btn" onclick="addChar('A')">A</button>
+                <button class="key-btn" onclick="addChar('S')">S</button>
+                <button class="key-btn" onclick="addChar('D')">D</button>
+                <button class="key-btn" onclick="addChar('F')">F</button>
+                <button class="key-btn" onclick="addChar('G')">G</button>
+                <button class="key-btn" onclick="addChar('H')">H</button>
+                <button class="key-btn" onclick="addChar('J')">J</button>
+                <button class="key-btn" onclick="addChar('K')">K</button>
+                <button class="key-btn" onclick="addChar('L')">L</button>
+                <button class="key-btn" onclick="addChar('Ç')">Ç</button>
+
+                <button class="key-btn" onclick="addChar('Z')">Z</button>
+                <button class="key-btn" onclick="addChar('X')">X</button>
+                <button class="key-btn" onclick="addChar('C')">C</button>
+                <button class="key-btn" onclick="addChar('V')">V</button>
+                <button class="key-btn" onclick="addChar('B')">B</button>
+                <button class="key-btn" onclick="addChar('N')">N</button>
+                <button class="key-btn" onclick="addChar('M')">M</button>
+                <button class="key-btn backspace" onclick="backspace()">⌫ APAGAR</button>
+
+                <button class="key-btn space" onclick="addChar(' ')">ESPAÇO</button>
+                <button class="key-btn" onclick="addChar('.')">.</button>
+                <button class="key-btn" onclick="addChar('-')">-</button>
+                <button class="key-btn clear" onclick="clearInput()">✖ LIMPAR</button>
+            </div>
+
+            <button class="btn btn-large btn-accent" onclick="confirmInsurance()"
+                style="width:100%; font-size:1.3rem; padding:20px;">
+                CONFIRMAR E CONTINUAR ➡️
+            </button>
         </div>
 
         <!-- Menu Container (Hidden initially) -->
@@ -162,13 +309,118 @@
         let menuData = [];
         let menuHistory = []; // Track navigation history
         let isPriorityTicket = false; // Track if user selected priority
+        let healthInsuranceName = ''; // Track insurance name
+        let currentScreen = 'priority'; // Track current screen: 'priority', 'insurance', 'menu', 'summary'
+        let pendingConvenioMenuId = null; // Store the menu ID to navigate to after insurance input
+
+        // Virtual Keyboard Functions
+        function addChar(char) {
+            const input = document.getElementById('insurance-name-input');
+            input.value += char;
+        }
+
+        function backspace() {
+            const input = document.getElementById('insurance-name-input');
+            input.value = input.value.slice(0, -1);
+        }
+
+        function clearInput() {
+            const input = document.getElementById('insurance-name-input');
+            input.value = '';
+        }
+
+        function confirmInsurance() {
+            const input = document.getElementById('insurance-name-input');
+            healthInsuranceName = input.value.trim();
+
+            if (!healthInsuranceName) {
+                alert('Por favor, digite o nome do convênio.');
+                return;
+            }
+
+            // Continue to menu that was pending
+            if (pendingConvenioMenuId) {
+                navigateToMenu(pendingConvenioMenuId);
+            }
+        }
+
+        function navigateToMenu(menuId) {
+            // Hide insurance screen
+            document.getElementById('insurance-input-screen').style.display = 'none';
+            // Show menu container
+            document.getElementById('menu-container').style.display = 'grid';
+            // Show back button
+            document.getElementById('back-button-container').style.display = 'block';
+            currentScreen = 'menu';
+
+            // Find and render the menu
+            const menu = findMenuById(menuId, menuData);
+            if (menu && menu.children) {
+                currentMenuId = menuId;
+                menuHistory.push(menu);
+                renderMenu(menu.children);
+            }
+        }
+
+        function findMenuById(id, items) {
+            for (const item of items) {
+                if (item.id === id) return item;
+                if (item.children) {
+                    const found = findMenuById(id, item.children);
+                    if (found) return found;
+                }
+            }
+            return null;
+        }
+
+        // Back button function
+        function goBack() {
+            if (currentScreen === 'insurance') {
+                // Go back to menu
+                document.getElementById('insurance-input-screen').style.display = 'none';
+                document.getElementById('menu-container').style.display = 'grid';
+                currentScreen = 'menu';
+                // Go back in menu history
+                if (menuHistory.length > 1) {
+                    menuHistory.pop();
+                    const previous = menuHistory[menuHistory.length - 1];
+                    currentMenuId = previous.id;
+                    renderMenu(previous.children || menuData);
+                } else {
+                    currentMenuId = null;
+                    renderMenu(menuData);
+                }
+            } else if (currentScreen === 'menu') {
+                // Go back in menu history
+                if (menuHistory.length > 1) {
+                    menuHistory.pop();
+                    const previous = menuHistory[menuHistory.length - 1];
+                    currentMenuId = previous.id;
+                    renderMenu(previous.children || menuData);
+                } else if (menuHistory.length === 1) {
+                    // Go back to root menu
+                    menuHistory = [];
+                    currentMenuId = null;
+                    renderMenu(menuData);
+                } else {
+                    // Go back to priority selection
+                    document.getElementById('menu-container').style.display = 'none';
+                    document.getElementById('priority-selection').style.display = 'block';
+                    document.getElementById('back-button-container').style.display = 'none';
+                    currentScreen = 'priority';
+                }
+            }
+        }
 
         function selectPriority(priority) {
             isPriorityTicket = priority;
             // Hide priority selection
             document.getElementById('priority-selection').style.display = 'none';
+            // Show back button
+            document.getElementById('back-button-container').style.display = 'block';
             // Show menu container
             document.getElementById('menu-container').style.display = 'grid';
+            currentScreen = 'menu';
             // Load menu
             loadConfig();
         }
@@ -183,26 +435,6 @@
             const container = document.getElementById('menu-container');
             container.innerHTML = '';
 
-            // Back button if not root
-            if (currentMenuId) {
-                const backBtn = document.createElement('div');
-                backBtn.className = 'menu-item';
-                backBtn.innerText = '⬅️ Voltar';
-                backBtn.onclick = () => {
-                    // Go back in history
-                    menuHistory.pop();
-                    const previous = menuHistory[menuHistory.length - 1];
-                    if (previous) {
-                        currentMenuId = previous.id;
-                        renderMenu(previous.children);
-                    } else {
-                        currentMenuId = null;
-                        renderMenu(menuData);
-                    }
-                };
-                container.appendChild(backBtn);
-            }
-
             items.forEach(item => {
                 const div = document.createElement('div');
                 div.className = 'menu-item';
@@ -213,14 +445,26 @@
                     div.classList.add('selected');
                 }
 
+                // Show description if available
+                const descText = item.description ?
+                    `<small style="display:block; color:#666; margin-top:5px; font-size:0.85rem;">${item.description}</small>` : '';
+
                 // Show wait time for services
                 const waitTimeText = item.service_id && item.estimated_wait_minutes ?
                     `<small style="display:block; color:#666; margin-top:5px;">⏱️ Tempo estimado: ${item.estimated_wait_minutes} min</small>` : '';
 
-                div.innerHTML = `<div>${item.icon ? '' : ''} ${item.label}${waitTimeText}</div>`;
+                div.innerHTML = `<div>${item.icon ? '' : ''} ${item.label}${descText}${waitTimeText}</div>`;
 
                 div.onclick = () => {
-                    if (item.children && item.children.length > 0) {
+                    // Check if this is the "Convênio" menu item (id 10)
+                    if (item.id === 10 && item.children && item.children.length > 0) {
+                        // Show insurance input screen
+                        pendingConvenioMenuId = item.id;
+                        document.getElementById('menu-container').style.display = 'none';
+                        document.getElementById('insurance-input-screen').style.display = 'block';
+                        document.getElementById('insurance-name-input').value = healthInsuranceName; // Restore if exists
+                        currentScreen = 'insurance';
+                    } else if (item.children && item.children.length > 0) {
                         currentMenuId = item.id;
                         menuHistory.push(item);
                         renderMenu(item.children);
@@ -330,7 +574,11 @@
                 const res = await fetch('/api/tickets', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ serviceIds, isPriority: isPriorityTicket })
+                    body: JSON.stringify({
+                        serviceIds,
+                        isPriority: isPriorityTicket,
+                        healthInsuranceName: healthInsuranceName || null
+                    })
                 });
                 const data = await res.json();
 

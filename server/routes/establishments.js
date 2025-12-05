@@ -71,6 +71,22 @@ module.exports = (db) => {
         });
     });
 
+    // Get services for a specific room
+    router.get('/rooms/:id/services', (req, res) => {
+        const roomId = req.params.id;
+        const query = `
+            SELECT DISTINCT s.id, s.name, s.prefix, s.average_time_minutes
+            FROM services s
+            JOIN room_services rs ON s.id = rs.service_id
+            WHERE rs.room_id = ?
+            ORDER BY s.name
+        `;
+        db.all(query, [roomId], (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json(rows || []);
+        });
+    });
+
     // Establishments API
     router.get('/establishments', (req, res) => {
         db.all("SELECT * FROM establishments WHERE is_active = 1 ORDER BY name", [], (err, rows) => {

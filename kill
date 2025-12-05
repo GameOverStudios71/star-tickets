@@ -1,0 +1,3 @@
+#!/bin/bash
+#kill -9 $(lsof -t -i:3000)
+lsof -ti:3000 | xargs -r kill -9 && npm run dev

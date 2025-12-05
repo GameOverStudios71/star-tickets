@@ -6,6 +6,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Star Tickets - Profissional</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* Tabs Styles */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 0;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            color: #666;
+            transition: all 0.3s;
+        }
+
+        .tab-btn:hover {
+            color: var(--primary-color);
+            background: #f5f5f5;
+            border-radius: 5px 5px 0 0;
+        }
+
+        .tab-btn.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+            font-weight: bold;
+        }
+    </style>
 </head>
 
 <body>
@@ -28,7 +62,16 @@
 
         <div class="grid">
             <div class="card">
-                <h2>Fila da Sala</h2>
+                <div class="tabs">
+                    <button class="tab-btn active" onclick="switchTab('queue')" id="tab-queue">
+                        ⏳ Fila de Espera
+                    </button>
+                    <button class="tab-btn" onclick="switchTab('history')" id="tab-history">
+                        ✅ Finalizados Hoje
+                    </button>
+                </div>
+
+                <h2 id="list-title">Fila da Sala</h2>
                 <div id="queue-list"></div>
             </div>
         </div>
@@ -37,6 +80,7 @@
     <script>
         let currentRoomId = null;
         let currentTicketServiceId = null;
+        let currentTab = 'queue'; // 'queue' or 'history'
 
         async function loadRooms() {
             const res = await fetch('/api/rooms');
@@ -55,9 +99,32 @@
             currentRoomId = select.value;
             if (!currentRoomId) return;
 
-            const res = await fetch(`/api/queue/${currentRoomId}`);
-            const queue = await res.json();
-            renderQueue(queue);
+            if (currentTab === 'queue') {
+                const res = await fetch(`/api/queue/${currentRoomId}`);
+                const queue = await res.json();
+                renderQueue(queue);
+            } else {
+                loadHistory();
+            }
+        }
+
+        async function loadHistory() {
+            if (!currentRoomId) return;
+            const res = await fetch(`/api/queue/${currentRoomId}/history`);
+            const history = await res.json();
+            renderHistory(history);
+        }
+
+        function switchTab(tabName) {
+            currentTab = tabName;
+
+            // Update UI
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+
+            document.getElementById('list-title').innerText = tabName === 'queue' ? 'Fila da Sala' : 'Atendimentos Finalizados';
+
+            loadQueue(); // This will dispatch to loadQueue or loadHistory based on currentTab
         }
 
         function renderQueue(queue) {
@@ -79,6 +146,30 @@
                         <br><small>${item.service_name}</small>
                     </div>
                     <button class="btn" onclick="callTicket(${item.ticket_service_id})">CHAMAR</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function renderHistory(history) {
+            const container = document.getElementById('queue-list');
+            container.innerHTML = '';
+
+            if (history.length === 0) {
+                container.innerHTML = '<p>Nenhum atendimento finalizado hoje.</p>';
+                return;
+            }
+
+            history.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'ticket-list-item';
+                div.style.opacity = '0.7';
+                div.innerHTML = `
+                    <div>
+                        <strong>${item.display_code}</strong> - ${item.temp_customer_name || 'Sem nome'}
+                        <br><small>${item.service_name}</small>
+                        <br><small style="color:green;">Finalizado às ${new Date(item.finished_at).toLocaleTimeString()}</small>
+                    </div>
                 `;
                 container.appendChild(div);
             });

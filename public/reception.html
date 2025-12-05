@@ -211,6 +211,18 @@
         <div>
             <!-- Filtros -->
             <div class="filter-section">
+                <!-- Filtro de Convênio -->
+                <div style="margin-bottom: 15px;">
+                    <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                        <input type="checkbox" id="insurance-filter-checkbox" onchange="toggleInsuranceFilter()">
+                        <strong>💳 Filtrar por Convênio</strong>
+                    </label>
+                    <select id="insurance-filter-select" style="width: 100%; padding: 8px;" disabled
+                        onchange="applyFilters()">
+                        <option value="">Todos os convênios</option>
+                    </select>
+                </div>
+
                 <h3 style="cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between;"
                     onclick="toggleFilterDropdown()">
                     <span>🔍 Filtrar por Serviço</span>
@@ -343,7 +355,14 @@
                 filtered = filtered.filter(t => !['WAITING_RECEPTION', 'CALLED_RECEPTION', 'IN_RECEPTION'].includes(t.status));
             }
 
-            // 2. Filter by Services
+            // 2. Filter by Insurance
+            const insuranceCheckbox = document.getElementById('insurance-filter-checkbox');
+            const insuranceSelect = document.getElementById('insurance-filter-select');
+            if (insuranceCheckbox && insuranceCheckbox.checked && insuranceSelect.value) {
+                filtered = filtered.filter(t => t.health_insurance_name === insuranceSelect.value);
+            }
+
+            // 3. Filter by Services
             if (selectedFilters.size > 0) {
                 filtered = filtered.filter(ticket => {
                     const ticketServiceIds = ticket.services_list ?
@@ -380,6 +399,10 @@
         async function loadTickets() {
             const res = await fetch('/api/tickets');
             allTickets = await res.json();
+
+            // Populate insurance filter dropdown with unique values
+            populateInsuranceFilter();
+
             renderTickets(filterTickets(allTickets));
 
             // Re-render detail if a ticket is selected
@@ -390,6 +413,49 @@
                     showTicketDetail(selectedTicket);
                 }
             }
+        }
+
+        function populateInsuranceFilter() {
+            const select = document.getElementById('insurance-filter-select');
+            const currentValue = select.value;
+
+            // Get unique insurance names
+            const insuranceNames = new Set();
+            allTickets.forEach(t => {
+                if (t.health_insurance_name) {
+                    insuranceNames.add(t.health_insurance_name);
+                }
+            });
+
+            // Clear and repopulate
+            select.innerHTML = '<option value="">Todos os convênios</option>';
+            Array.from(insuranceNames).sort().forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                select.appendChild(option);
+            });
+
+            // Restore previous selection if it still exists
+            if (currentValue && Array.from(insuranceNames).includes(currentValue)) {
+                select.value = currentValue;
+            }
+        }
+
+        function toggleInsuranceFilter() {
+            const checkbox = document.getElementById('insurance-filter-checkbox');
+            const select = document.getElementById('insurance-filter-select');
+            select.disabled = !checkbox.checked;
+
+            if (!checkbox.checked) {
+                select.value = '';
+            }
+
+            applyFilters();
+        }
+
+        function applyFilters() {
+            renderTickets(filterTickets(allTickets));
         }
 
         function renderTickets(tickets) {
@@ -411,10 +477,14 @@
                 const statusClass = t.temp_customer_name ? 'linked' : '';
                 const statusText = t.temp_customer_name ? `Cliente: ${t.temp_customer_name}` : 'Sem nome';
 
+                const insuranceHtml = t.health_insurance_name ?
+                    `<div style="font-size:0.85rem; color:#2196F3; margin-top:5px;">💳 ${t.health_insurance_name}</div>` : '';
+
                 div.innerHTML = `
                     <div class="ticket-code">${t.display_code}</div>
                     <div class="ticket-services">${t.services_list || 'Sem serviços'}</div>
                     <span class="ticket-status ${statusClass}">${statusText}</span>
+                    ${insuranceHtml}
                 `;
 
                 div.onclick = () => selectTicket(t);
@@ -483,6 +553,13 @@
                         <button class="btn" onclick="linkCustomerName()" style="white-space:nowrap;">
                             ${hasName ? '✏️ Atualizar' : '✓ Vincular'}
                         </button>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label><strong>💳 Convênio:</strong></label>
+                    <div style="font-size:1.1rem; padding:10px; background:#f5f5f5; border-radius:5px; margin-top:5px;">
+                        ${ticket.health_insurance_name || '<span style="color:#999;">Particular (sem convênio)</span>'}
                     </div>
                 </div>
 
