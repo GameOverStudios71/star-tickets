@@ -211,61 +211,89 @@
         <div>
             <!-- Filtros -->
             <div class="filter-section">
-                <!-- Filtro de Convênio -->
-                <div style="margin-bottom: 15px;">
-                    <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                        <input type="checkbox" id="insurance-filter-checkbox" onchange="toggleInsuranceFilter()">
-                        <strong>💳 Filtrar por Convênio</strong>
-                    </label>
-                    <select id="insurance-filter-select" style="width: 100%; padding: 8px;" disabled
-                        onchange="applyFilters()">
-                        <option value="">Todos os convênios</option>
-                    </select>
-                </div>
+            </div>
 
+            <!-- Advanced Filters -->
+            <div style="margin-bottom: 15px;">
                 <h3 style="cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between;"
-                    onclick="toggleFilterDropdown()">
-                    <span>🔍 Filtrar por Serviço</span>
-                    <span id="filter-arrow" style="transition: transform 0.3s;">▼</span>
+                    onclick="toggleTypeFilterDropdown()">
+                    <span>🏷️ Filtrar por Tipo</span>
+                    <span id="type-filter-arrow" style="transition: transform 0.3s;">▼</span>
                 </h3>
-                <div id="filter-dropdown"
-                    style="display: none; max-height: 300px; overflow-y: auto; margin-top: 10px; padding: 10px; background: #f9f9f9; border-radius: 5px;">
-                    <div style="margin-bottom: 10px;">
-                        <button class="btn" onclick="selectAllFilters()"
-                            style="font-size: 0.85rem; padding: 5px 10px;">Selecionar Todos</button>
-                        <button class="btn" onclick="clearAllFilters()"
-                            style="font-size: 0.85rem; padding: 5px 10px; margin-left: 5px;">Limpar Todos</button>
-                    </div>
-                    <div class="filter-checkboxes" id="filter-checkboxes">
-                        <!-- Checkboxes will be loaded here -->
+                <div id="type-filter-dropdown"
+                    style="display: none; margin-top: 10px; background: #f5f5f5; padding: 10px; border-radius: 5px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                            <input type="checkbox" id="filter-insurance" onchange="applyFilters()">
+                            <span>💳 Convênio</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                            <input type="checkbox" id="filter-private" onchange="applyFilters()">
+                            <span>💵 Particular</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                            <input type="checkbox" id="filter-normal" onchange="applyFilters()">
+                            <span>👤 Normal</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                            <input type="checkbox" id="filter-priority" onchange="applyFilters()">
+                            <span>⭐ Preferencial</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                            <input type="checkbox" id="filter-work-medicine" onchange="applyFilters()">
+                            <span>💼 Med. Trabalho</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                            <input type="checkbox" id="filter-clinical-analysis" onchange="applyFilters()">
+                            <span>🔬 Análises Clín.</span>
+                        </label>
                     </div>
                 </div>
             </div>
 
-            <div class="card">
-                <!-- Tabs Header -->
-                <div class="tabs">
-                    <button class="tab-btn active" onclick="switchTab('active')" id="tab-active">
-                        ⏳ Aguardando e Atendimento
-                    </button>
-                    <button class="tab-btn" onclick="switchTab('finished')" id="tab-finished">
-                        ✅ Finalizados
-                    </button>
+            <h3 style="cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between;"
+                onclick="toggleFilterDropdown()">
+                <span>🔍 Filtrar por Serviço</span>
+                <span id="filter-arrow" style="transition: transform 0.3s;">▼</span>
+            </h3>
+            <div id="filter-dropdown"
+                style="display: none; max-height: 300px; overflow-y: auto; margin-top: 10px; padding: 10px; background: #f9f9f9; border-radius: 5px;">
+                <div style="margin-bottom: 10px;">
+                    <button class="btn" onclick="selectAllFilters()"
+                        style="font-size: 0.85rem; padding: 5px 10px;">Selecionar Todos</button>
+                    <button class="btn" onclick="clearAllFilters()"
+                        style="font-size: 0.85rem; padding: 5px 10px; margin-left: 5px;">Limpar Todos</button>
                 </div>
-
-                <h2>Senhas Emitidas</h2>
-                <div id="ticket-list"></div>
+                <div class="filter-checkboxes" id="filter-checkboxes">
+                    <!-- Checkboxes will be loaded here -->
+                </div>
             </div>
         </div>
 
-        <!-- Painel de Detalhes -->
-        <div>
-            <div class="detail-panel" id="detail-panel">
-                <div class="empty-state">
-                    <p>👈 Selecione uma senha para ver os detalhes</p>
-                </div>
+        <div class="card">
+            <!-- Tabs Header -->
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('active')" id="tab-active">
+                    ⏳ Aguardando e Atendimento
+                </button>
+                <button class="tab-btn" onclick="switchTab('finished')" id="tab-finished">
+                    ✅ Finalizados
+                </button>
+            </div>
+
+            <h2>Senhas Emitidas</h2>
+            <div id="ticket-list"></div>
+        </div>
+    </div>
+
+    <!-- Painel de Detalhes -->
+    <div>
+        <div class="detail-panel" id="detail-panel">
+            <div class="empty-state">
+                <p>👈 Selecione uma senha para ver os detalhes</p>
             </div>
         </div>
+    </div>
     </div>
 
     <script>
@@ -298,6 +326,30 @@
                 `;
                 container.appendChild(label);
             });
+        }
+
+        function toggleTypeFilterDropdown() {
+            const dropdown = document.getElementById('type-filter-dropdown');
+            const arrow = document.getElementById('type-filter-arrow');
+            if (dropdown.style.display === 'none') {
+                dropdown.style.display = 'block';
+                arrow.style.transform = 'rotate(180deg)';
+            } else {
+                dropdown.style.display = 'none';
+                arrow.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        function toggleTypeFilterDropdown() {
+            const dropdown = document.getElementById('type-filter-dropdown');
+            const arrow = document.getElementById('type-filter-arrow');
+            if (dropdown.style.display === 'none') {
+                dropdown.style.display = 'block';
+                arrow.style.transform = 'rotate(180deg)';
+            } else {
+                dropdown.style.display = 'none';
+                arrow.style.transform = 'rotate(0deg)';
+            }
         }
 
         function toggleFilterDropdown() {
@@ -355,11 +407,59 @@
                 filtered = filtered.filter(t => !['WAITING_RECEPTION', 'CALLED_RECEPTION', 'IN_RECEPTION'].includes(t.status));
             }
 
-            // 2. Filter by Insurance
-            const insuranceCheckbox = document.getElementById('insurance-filter-checkbox');
-            const insuranceSelect = document.getElementById('insurance-filter-select');
-            if (insuranceCheckbox && insuranceCheckbox.checked && insuranceSelect.value) {
-                filtered = filtered.filter(t => t.health_insurance_name === insuranceSelect.value);
+            // 2. Advanced Filters
+            const filterInsurance = document.getElementById('filter-insurance').checked;
+            const filterPrivate = document.getElementById('filter-private').checked;
+            const filterNormal = document.getElementById('filter-normal').checked;
+            const filterPriority = document.getElementById('filter-priority').checked;
+            const filterWorkMedicine = document.getElementById('filter-work-medicine').checked;
+            const filterClinicalAnalysis = document.getElementById('filter-clinical-analysis').checked;
+
+            // Only apply if at least one is checked
+            if (filterInsurance || filterPrivate || filterNormal || filterPriority || filterWorkMedicine || filterClinicalAnalysis) {
+                filtered = filtered.filter(t => {
+                    let matches = false;
+
+                    // Ticket Type Logic (OR)
+                    if (filterInsurance && t.health_insurance_name) matches = true;
+                    if (filterPrivate && !t.health_insurance_name) matches = true;
+                    if (filterNormal && t.is_priority === 0) matches = true;
+                    if (filterPriority && t.is_priority === 1) matches = true;
+
+                    // Service Category Logic (OR)
+                    // We need to check if the ticket has services belonging to these categories
+                    // Med Trabalho = Category ID 2
+                    // Analises Clinicas = Category ID 1
+                    if (filterWorkMedicine || filterClinicalAnalysis) {
+                        const ticketServiceIds = t.services_list ? t.services_list.split(', ').map(name => {
+                            const s = allServices.find(srv => srv.name === name);
+                            return s ? s.id : null;
+                        }).filter(id => id) : [];
+
+                        // We need to find the parent category for these services
+                        // Since we don't have the full tree here easily, we can infer from service IDs or prefixes if possible,
+                        // OR we can fetch the service details.
+                        // However, a simpler way given the current data structure might be to check service prefixes if they are consistent,
+                        // OR rely on the fact that we loaded `allServices` which might have `establishment_id` or we can try to match names.
+
+                        // BETTER APPROACH: The user said "Medicina do Trabalho" and "Analises Clinicas".
+                        // In `init.js`, Med Trabalho services have specific prefixes or IDs.
+                        // Let's check against the known prefixes from init.js for robustness.
+
+                        const medTrabalhoPrefixes = ['ADM', 'MED', 'MTP', 'OCU', 'RAT'];
+                        const analisesPrefixes = ['ANA', 'EXS', 'TRC'];
+
+                        const ticketPrefixes = ticketServiceIds.map(id => {
+                            const s = allServices.find(srv => srv.id === id);
+                            return s ? s.prefix : '';
+                        });
+
+                        if (filterWorkMedicine && ticketPrefixes.some(p => medTrabalhoPrefixes.includes(p))) matches = true;
+                        if (filterClinicalAnalysis && ticketPrefixes.some(p => analisesPrefixes.includes(p))) matches = true;
+                    }
+
+                    return matches;
+                });
             }
 
             // 3. Filter by Services
@@ -401,7 +501,7 @@
             allTickets = await res.json();
 
             // Populate insurance filter dropdown with unique values
-            populateInsuranceFilter();
+            // populateInsuranceFilter(); // REMOVED: Replaced by advanced filters
 
             renderTickets(filterTickets(allTickets));
 
@@ -415,44 +515,7 @@
             }
         }
 
-        function populateInsuranceFilter() {
-            const select = document.getElementById('insurance-filter-select');
-            const currentValue = select.value;
 
-            // Get unique insurance names
-            const insuranceNames = new Set();
-            allTickets.forEach(t => {
-                if (t.health_insurance_name) {
-                    insuranceNames.add(t.health_insurance_name);
-                }
-            });
-
-            // Clear and repopulate
-            select.innerHTML = '<option value="">Todos os convênios</option>';
-            Array.from(insuranceNames).sort().forEach(name => {
-                const option = document.createElement('option');
-                option.value = name;
-                option.textContent = name;
-                select.appendChild(option);
-            });
-
-            // Restore previous selection if it still exists
-            if (currentValue && Array.from(insuranceNames).includes(currentValue)) {
-                select.value = currentValue;
-            }
-        }
-
-        function toggleInsuranceFilter() {
-            const checkbox = document.getElementById('insurance-filter-checkbox');
-            const select = document.getElementById('insurance-filter-select');
-            select.disabled = !checkbox.checked;
-
-            if (!checkbox.checked) {
-                select.value = '';
-            }
-
-            applyFilters();
-        }
 
         function applyFilters() {
             renderTickets(filterTickets(allTickets));

@@ -192,7 +192,20 @@
 
         #selected-list li {
             margin-bottom: 8px;
-            line-height: 1.5;
+            line-height: 1.4;
+            font-size: 0.9rem;
+        }
+
+        .menu-icon-large {
+            font-size: 4rem;
+            line-height: 1;
+            margin-bottom: 10px;
+        }
+
+        .menu-label-text {
+            font-size: 1.3rem;
+            font-weight: bold;
+            line-height: 1.2;
         }
     </style>
 </head>
@@ -298,11 +311,11 @@
     <div id="confirmation-modal"
         style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); color:white; flex-direction:column; justify-content:center; align-items:center; z-index:1000;">
         <div
-            style="background:white; color:black; padding:40px; border-radius:10px; text-align:center; margin:20px; max-width:600px;">
+            style="background:white; color:black; padding:30px; border-radius:10px; text-align:center; margin:20px; max-width:500px; width:90%; max-height:90vh; overflow-y:auto; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
             <h2>Confirme seus serviços</h2>
             <div id="confirmation-services" style="text-align:left; margin:20px 0;"></div>
             <div id="confirmation-total"
-                style="font-size:1.5rem; font-weight:bold; margin:20px 0; padding:20px; background:#f0f0f0; border-radius:5px;">
+                style="font-size:1.2rem; font-weight:bold; margin:20px 0; padding:15px; background:#f0f0f0; border-radius:5px;">
             </div>
             <button class="btn btn-large btn-accent" onclick="finalConfirm()">CONFIRMAR E IMPRIMIR</button>
             <button class="btn" onclick="closeConfirmation()">CANCELAR</button>
@@ -313,7 +326,7 @@
     <div id="print-modal"
         style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); color:white; flex-direction:column; justify-content:center; align-items:center; z-index:1000;">
         <div
-            style="background:white; color:black; padding:50px; border-radius:15px; text-align:center; margin:20px; max-width:500px;">
+            style="background:white; color:black; padding:40px; border-radius:15px; text-align:center; margin:20px; max-width:500px; width:90%; max-height:90vh; overflow-y:auto; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
             <h2 style="color:#4CAF50; margin-top:0;">✓ Senha Gerada com Sucesso!</h2>
             <h1 id="modal-ticket-code" style="font-size:5rem; margin:20px 0; color:var(--primary-color);">---</h1>
             <p style="font-size:1.2rem; margin:20px 0;">Aguarde ser chamado no painel.</p>
@@ -514,7 +527,29 @@
                 const waitTimeText = item.service_id && item.estimated_wait_minutes ?
                     `<small style="display:block; color:#666; margin-top:5px;">⏱️ Tempo estimado: ${item.estimated_wait_minutes} min</small>` : '';
 
-                div.innerHTML = `<div>${item.icon ? '' : ''} ${item.label}${descText}${waitTimeText}</div>`;
+                // Extract emoji icon from label if present
+                let iconHtml = '';
+                let labelText = item.label;
+
+                // Regex to find emoji at start of string
+                const emojiRegex = /^([\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27BF]|\uD83C[\uDF00-\uDFFF]|\uD83D[\uDC00-\uDE4F]|\uD83D[\uDE80-\uDEFF])\s+(.*)/;
+                const match = item.label.match(emojiRegex);
+
+                if (match) {
+                    iconHtml = `<div class="menu-icon-large">${match[1]}</div>`;
+                    labelText = match[2];
+                } else if (item.icon) {
+                    iconHtml = `<div class="menu-icon-large">${item.icon}</div>`;
+                }
+
+                div.innerHTML = `
+            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%;">
+                ${iconHtml}
+                <div class="menu-label-text">${labelText}</div>
+                ${descText}
+                ${waitTimeText}
+            </div>
+        `;
 
                 div.onclick = () => {
                     // Check if this is the "Convênio" menu item (id 10)

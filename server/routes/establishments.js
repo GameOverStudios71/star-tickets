@@ -26,6 +26,7 @@ module.exports = (db) => {
                 FROM ticket_services ts
                 JOIN services s ON ts.service_id = s.id
                 WHERE ts.status = 'PENDING'
+                AND date(ts.created_at, 'localtime') = date('now', 'localtime')
                 GROUP BY ts.service_id
             `;
 

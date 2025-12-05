@@ -15,7 +15,7 @@ module.exports = (db, io) => {
             const prefix = row ? row.prefix : 'GEN';
 
             // Get today's count for this prefix to generate number
-            db.get("SELECT count(*) as count FROM tickets WHERE display_code LIKE ? AND date(created_at) = date('now')", [`${prefix}%`], (err, countRow) => {
+            db.get("SELECT count(*) as count FROM tickets WHERE display_code LIKE ? AND date(created_at, 'localtime') = date('now', 'localtime')", [`${prefix}%`], (err, countRow) => {
                 const number = (countRow.count + 1).toString().padStart(3, '0');
                 const displayCode = `${prefix}${number}`;
 
@@ -41,7 +41,7 @@ module.exports = (db, io) => {
         });
     });
 
-    // 3. Reception - List Tickets
+    // 3. Reception - List Tickets (only today's tickets)
     router.get('/tickets', (req, res) => {
         const query = `
             SELECT t.*, c.name as customer_name, 
@@ -49,6 +49,7 @@ module.exports = (db, io) => {
             FROM tickets t
             LEFT JOIN customers c ON t.customer_id = c.id
             WHERE t.status != 'DONE' AND t.status != 'CANCELED'
+            AND date(t.created_at, 'localtime') = date('now', 'localtime')
             ORDER BY t.created_at DESC
         `;
         db.all(query, [], (err, rows) => {
@@ -263,6 +264,7 @@ module.exports = (db, io) => {
             AND t.status = 'WAITING_PROFESSIONAL'
             AND t.temp_customer_name IS NOT NULL
             AND t.temp_customer_name != ''
+            AND date(t.created_at, 'localtime') = date('now', 'localtime')
             -- Ensure previous services for this ticket are completed
             AND NOT EXISTS (
                 SELECT 1 FROM ticket_services ts_prev 
@@ -291,7 +293,7 @@ module.exports = (db, io) => {
             JOIN room_services rs ON rs.service_id = s.id
             WHERE rs.room_id = ?
             AND ts.status = 'COMPLETED'
-            AND date(ts.updated_at) = date('now')
+            AND date(ts.updated_at, 'localtime') = date('now', 'localtime')
             ORDER BY ts.updated_at DESC
             LIMIT 50
         `;
@@ -386,6 +388,7 @@ module.exports = (db, io) => {
             LEFT JOIN room_services rs ON rs.service_id = ts.service_id
             LEFT JOIN rooms r ON rs.room_id = r.id
             WHERE (t.status = 'CALLED_RECEPTION' OR ts.status = 'CALLED')
+            AND date(t.created_at, 'localtime') = date('now', 'localtime')
         `;
 
         const params = [];
@@ -472,7 +475,7 @@ module.exports = (db, io) => {
             FROM rooms r
             LEFT JOIN room_services rs ON r.id = rs.room_id
             LEFT JOIN ticket_services ts ON rs.service_id = ts.service_id AND ts.status = 'PENDING'
-            LEFT JOIN tickets t ON ts.ticket_id = t.id AND t.status = 'WAITING_PROFESSIONAL'
+            LEFT JOIN tickets t ON ts.ticket_id = t.id AND t.status = 'WAITING_PROFESSIONAL' AND date(t.created_at, 'localtime') = date('now', 'localtime')
             -- Ensure this is the current active service for the ticket
             AND NOT EXISTS (
                 SELECT 1 FROM ticket_services ts_prev 
@@ -501,6 +504,7 @@ module.exports = (db, io) => {
             WHERE rs.room_id = ?
             AND ts.status = 'PENDING'
             AND t.status = 'WAITING_PROFESSIONAL'
+            AND date(t.created_at, 'localtime') = date('now', 'localtime')
             AND NOT EXISTS (
                 SELECT 1 FROM ticket_services ts_prev 
                 WHERE ts_prev.ticket_id = ts.ticket_id 
@@ -578,6 +582,7 @@ module.exports = (db, io) => {
                 rs_target.room_id = ? 
                 AND ts_target.status = 'PENDING'
                 AND t.status = 'WAITING_PROFESSIONAL'
+                AND date(t.created_at, 'localtime') = date('now', 'localtime')
                 -- Only show tickets that have been processed by reception (have customer name)
                 AND t.temp_customer_name IS NOT NULL
                 AND t.temp_customer_name != ''

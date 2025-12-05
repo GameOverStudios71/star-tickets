@@ -34,14 +34,15 @@ fazer página do gerente,
 proteger os endpoints
 
 
-
 descobrir se as salas que fazem mais de um exame em um cliente fazem tudo de uma vez e se sim tem que dar um jeito
 de pegar 2 registro para serviços direfentes da mesma sala e fazer che in e check out de uma vez ao inves
 do profissional ter que ficar chamando, iniciando e fechando o atendimento para a mesma pessoa em cada senha e fila do serviço
 
 as salas estão relacionadas pelos serviços podem ser 1 ou muitascolocar filtro de servico pagina profissional
 
+fazer usuarios por recepcionistas entao tera como ver quem atendeu mais no final do mes 
 
+na pagina da gerente fazer uma opção para poder habilitar ou nao os serviços dos menus que estarao dispoiniveis para senha 
 
 aplicativo tracking avisar ao cliente que se ele ligar o trclking e pedir pra ele avisar com 15 minutos antes de 
 voltar para fila,  que se o sistema remaneijar as pessoas da fila para melhorar eficienncia ele nao fara parte do processo
