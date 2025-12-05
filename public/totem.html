@@ -10,31 +10,32 @@
         /* Back Button - Always visible in top left */
         #back-button-container {
             position: fixed;
-            top: 100px;
+            top: 20px;
             left: 20px;
             z-index: 999;
         }
 
         #back-button {
-            background: #f44336;
+            background: #2196F3;
             color: white;
             border: none;
-            padding: 15px 25px;
+            padding: 15px 30px;
             border-radius: 10px;
-            font-size: 1.2rem;
+            font-size: 1.3rem;
             cursor: pointer;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
             transition: all 0.3s;
+            font-weight: bold;
         }
 
         #back-button:hover {
-            background: #d32f2f;
+            background: #1976D2;
             transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 6px 16px rgba(33, 150, 243, 0.4);
         }
 
         .priority-selection {
-            padding: 40px 20px;
+            padding: 60px 20px 40px 20px;
         }
 
         .priority-btn {
@@ -96,7 +97,7 @@
 
         /* Insurance Input Screen */
         .insurance-input-screen {
-            padding: 40px 20px;
+            padding: 60px 20px 40px 20px;
             max-width: 800px;
             margin: 0 auto;
         }
@@ -158,14 +159,44 @@
         .key-btn.clear:hover {
             background: #d32f2f;
         }
+
+        /* Two-column layout for menu and selection summary */
+        .totem-content-wrapper {
+            display: grid;
+            grid-template-columns: 1fr 450px;
+            gap: 30px;
+            padding: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        #selection-summary {
+            position: sticky;
+            top: 20px;
+            height: fit-content;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+            padding: 25px;
+        }
+
+        #selection-summary h3 {
+            margin-top: 0;
+            font-size: 1.4rem;
+        }
+
+        #selected-list {
+            padding-left: 20px;
+            margin: 15px 0;
+        }
+
+        #selected-list li {
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
     </style>
 </head>
 
 <body>
-    <header>
-        <h1>Bem-vindo ao Star Tickets</h1>
-        <p>Toque para selecionar seu atendimento</p>
-    </header>
 
     <!-- Back Button Container (Always in top left when visible) -->
     <div id="back-button-container" style="display:none;">
@@ -240,23 +271,28 @@
             </button>
         </div>
 
-        <!-- Menu Container (Hidden initially) -->
-        <div id="menu-container" class="menu-grid" style="display:none;">
-            <!-- Menus will be loaded here -->
-        </div>
-
-        <div id="selection-summary" class="card" style="display:none; margin-top: 20px;">
-            <h3>Serviços Selecionados:</h3>
-            <ul id="selected-list"></ul>
-            <div style="display:flex; gap:10px; margin-bottom:10px;">
-                <button id="back-to-menu-btn" class="btn btn-large" onclick="backToMenu()" style="flex:1;">
-                    ⬅️ VOLTAR E ADICIONAR OUTROS SERVIÇOS
-                </button>
-                <button class="btn btn-large btn-accent" onclick="confirmTicket()" style="flex:1;">
-                    CONFIRMAR E IMPRIMIR
-                </button>
+        <!-- Menu and Selection Summary Container -->
+        <div class="totem-content-wrapper" id="totem-content-wrapper" style="display:none;">
+            <!-- Menu Container -->
+            <div id="menu-container" class="menu-grid">
+                <!-- Menus will be loaded here -->
             </div>
-            <button class="btn" onclick="resetSelection()" style="width:100%;">Limpar Tudo</button>
+
+            <!-- Selection Summary (Right Side) -->
+            <div id="selection-summary" class="card">
+                <h3>Serviços Selecionados:</h3>
+                <ul id="selected-list"></ul>
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <button id="back-to-menu-btn" class="btn btn-large" onclick="backToMenu()"
+                        style="flex:1; display:none;">
+                        ⬅️ VOLTAR E ADICIONAR OUTROS SERVIÇOS
+                    </button>
+                    <button class="btn btn-large btn-accent" onclick="confirmTicket()" style="flex:1;">
+                        CONFIRMAR E IMPRIMIR
+                    </button>
+                </div>
+                <button class="btn" onclick="resetSelection()" style="width:100%;">Limpar Tudo</button>
+            </div>
         </div>
     </div>
 
@@ -345,9 +381,15 @@
         }
 
         function navigateToMenu(menuId) {
+            console.log('=== navigateToMenu called ===');
+            console.log('menuId:', menuId);
+            console.log('menuData length:', menuData.length);
+
             // Hide insurance screen
             document.getElementById('insurance-input-screen').style.display = 'none';
-            // Show menu container
+            // Show wrapper (menu + summary)
+            document.getElementById('totem-content-wrapper').style.display = 'grid';
+            // Make sure menu-container is visible
             document.getElementById('menu-container').style.display = 'grid';
             // Show back button
             document.getElementById('back-button-container').style.display = 'block';
@@ -355,10 +397,25 @@
 
             // Find and render the menu
             const menu = findMenuById(menuId, menuData);
-            if (menu && menu.children) {
+            console.log('Found menu:', menu);
+
+            if (menu) {
                 currentMenuId = menuId;
-                menuHistory.push(menu);
-                renderMenu(menu.children);
+                // Add to history if not already there
+                if (menuHistory.length === 0 || menuHistory[menuHistory.length - 1].id !== menuId) {
+                    menuHistory.push(menu);
+                }
+                // Render children if they exist, otherwise show empty state
+                if (menu.children && menu.children.length > 0) {
+                    console.log('Rendering', menu.children.length, 'children');
+                    renderMenu(menu.children);
+                } else {
+                    console.error('❌ Menu has no children:', menu);
+                    const container = document.getElementById('menu-container');
+                    container.innerHTML = '<p style="text-align:center; padding:40px; color:#999;">Nenhum item disponível neste menu.</p>';
+                }
+            } else {
+                console.error('❌ Menu not found with id:', menuId);
             }
         }
 
@@ -378,7 +435,7 @@
             if (currentScreen === 'insurance') {
                 // Go back to menu
                 document.getElementById('insurance-input-screen').style.display = 'none';
-                document.getElementById('menu-container').style.display = 'grid';
+                document.getElementById('totem-content-wrapper').style.display = 'grid';
                 currentScreen = 'menu';
                 // Go back in menu history
                 if (menuHistory.length > 1) {
@@ -404,7 +461,7 @@
                     renderMenu(menuData);
                 } else {
                     // Go back to priority selection
-                    document.getElementById('menu-container').style.display = 'none';
+                    document.getElementById('totem-content-wrapper').style.display = 'none';
                     document.getElementById('priority-selection').style.display = 'block';
                     document.getElementById('back-button-container').style.display = 'none';
                     currentScreen = 'priority';
@@ -418,7 +475,9 @@
             document.getElementById('priority-selection').style.display = 'none';
             // Show back button
             document.getElementById('back-button-container').style.display = 'block';
-            // Show menu container
+            // Show wrapper (menu + summary)
+            document.getElementById('totem-content-wrapper').style.display = 'grid';
+            // Make sure menu-container is visible
             document.getElementById('menu-container').style.display = 'grid';
             currentScreen = 'menu';
             // Load menu
@@ -432,10 +491,14 @@
         }
 
         function renderMenu(items) {
+            console.log('=== renderMenu called with', items.length, 'items ===');
             const container = document.getElementById('menu-container');
+            console.log('menu-container element:', container);
+            console.log('menu-container display:', container ? window.getComputedStyle(container).display : 'N/A');
             container.innerHTML = '';
 
-            items.forEach(item => {
+            items.forEach((item, index) => {
+                console.log(`Creating menu item ${index}:`, item.label);
                 const div = document.createElement('div');
                 div.className = 'menu-item';
 
