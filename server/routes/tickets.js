@@ -84,6 +84,18 @@ module.exports = (db, io) => {
         });
     });
 
+    // Update health insurance name for a ticket
+    router.put('/tickets/:id/insurance', (req, res) => {
+        const { healthInsuranceName } = req.body;
+        const ticketId = req.params.id;
+
+        db.run("UPDATE tickets SET health_insurance_name = ? WHERE id = ?", [healthInsuranceName, ticketId], function (err) {
+            if (err) return res.status(500).json({ error: err.message });
+            io.emit('ticket_updated', { ticketId, healthInsuranceName });
+            res.json({ success: true });
+        });
+    });
+
     // Remove a service from a ticket
     router.delete('/tickets/services/:id', (req, res) => {
         const ticketServiceId = req.params.id;

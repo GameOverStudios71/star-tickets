@@ -545,22 +545,20 @@
                 
                 <div class="form-group" style="margin-bottom: 20px;">
                     <label><strong>Nome do Cliente:</strong></label>
-                    <div style="display:flex; gap:10px; align-items:center; margin-top:5px;">
-                        <input type="text" id="customer-name-input" 
-                               value="${ticket.temp_customer_name || ''}" 
-                               placeholder="Digite o nome do cliente" 
-                               style="flex:1; padding:10px;">
-                        <button class="btn" onclick="linkCustomerName()" style="white-space:nowrap;">
-                            ${hasName ? '✏️ Atualizar' : '✓ Vincular'}
-                        </button>
-                    </div>
+                    <input type="text" id="customer-name-input" 
+                           value="${ticket.temp_customer_name || ''}" 
+                           placeholder="Digite o nome do cliente" 
+                           onblur="linkCustomerName()"
+                           style="width:100%; padding:10px; margin-top:5px;">
                 </div>
 
                 <div class="form-group" style="margin-bottom: 20px;">
                     <label><strong>💳 Convênio:</strong></label>
-                    <div style="font-size:1.1rem; padding:10px; background:#f5f5f5; border-radius:5px; margin-top:5px;">
-                        ${ticket.health_insurance_name || '<span style="color:#999;">Particular (sem convênio)</span>'}
-                    </div>
+                    <input type="text" id="insurance-name-input" 
+                           value="${ticket.health_insurance_name || ''}" 
+                           placeholder="Digite o nome do convênio (deixe vazio para Particular)" 
+                           onblur="updateInsuranceName()"
+                           style="width:100%; padding:10px; margin-top:5px;">
                 </div>
 
                 <h3>Serviços Selecionados:</h3>
@@ -629,6 +627,20 @@
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ customerName: name })
+            });
+
+            loadTickets();
+        }
+
+        async function updateInsuranceName() {
+            const input = document.getElementById('insurance-name-input');
+            const insuranceName = input.value.trim();
+
+            // Allow empty value (Particular)
+            await fetch(`/api/tickets/${selectedTicket.id}/insurance`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ healthInsuranceName: insuranceName || null })
             });
 
             loadTickets();
