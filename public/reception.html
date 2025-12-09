@@ -197,16 +197,6 @@
     </header>
 
     <div class="reception-layout">
-        <!-- Card de Atendimento Atual -->
-        <div style="grid-column: 1 / -1; margin-bottom: 20px;">
-            <div class="card">
-                <h2>Atendimento Atual na Recepção</h2>
-                <div id="current-reception-ticket" style="text-align:center; padding:20px;">
-                    <h3 style="color:gray;">Nenhum cliente em atendimento</h3>
-                </div>
-            </div>
-        </div>
-
         <!-- Left Column: Filters + Ticket List -->
         <div class="left-column" style="display: flex; flex-direction: column; gap: 20px;">
             <!-- Filtros -->
@@ -619,9 +609,6 @@
                             ${priorityBadge}
                             ${insuranceDisplay}
                         </div>
-                        <div style="margin-top:10px; font-size:0.9rem; color:#666;">
-                            Chegada: ${new Date(ticket.created_at).toLocaleTimeString()}
-                        </div>
                     </div>
                     <div style="text-align:right;">
                         <div style="font-size:2rem; font-weight:bold; color:${ticket.status === 'WAITING_RECEPTION' ? '#f1c40f' : '#2ecc71'}">
@@ -630,24 +617,65 @@
                     </div>
                 </div>
 
-                <div class="customer-link-section">
-                    <h3>👤 Identificação do Cliente</h3>
+                ${actionButtons}
+
+                <div class="customer-link-section" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 25px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+                    <h3 style="color: white; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; font-size: 1.2rem;">
+                        <span style="font-size: 1.5rem;">👤</span>
+                        <span>Identificação do Cliente</span>
+                    </h3>
                     <div style="display:flex; gap:10px;">
                         <input type="text" id="customer-name-input"
                             value="${ticket.temp_customer_name || ''}"
                             placeholder="Digite o nome do cliente..."
-                            onblur="linkCustomerName()">
+                            onblur="linkCustomerName()"
+                            style="flex: 1; padding: 14px 18px; border: 2px solid rgba(255,255,255,0.3); border-radius: 8px; font-size: 1rem; background: rgba(255,255,255,0.95); color: #333; transition: all 0.3s; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"
+                            onfocus="this.style.borderColor='white'; this.style.background='white';"
+                            onblur="this.style.borderColor='rgba(255,255,255,0.3)'; this.style.background='rgba(255,255,255,0.95)'; linkCustomerName();">
+                    </div>
+                    ${ticket.temp_customer_name ? `
+                        <div style="margin-top: 12px; padding: 10px 15px; background: rgba(255,255,255,0.2); border-radius: 6px; color: white; display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 1.2rem;">✓</span>
+                            <span style="font-weight: 500;">Cliente identificado</span>
+                        </div>
+                    ` : `
+                        <div style="margin-top: 12px; padding: 10px 15px; background: rgba(255,255,255,0.15); border-radius: 6px; color: rgba(255,255,255,0.9); display: flex; align-items: center; gap: 8px; font-size: 0.9rem;">
+                            <span>⚠️</span>
+                            <span>Insira o nome do cliente para prosseguir</span>
+                        </div>
+                    `}
+                </div>
+
+                <div style="margin-bottom: 20px; padding: 12px; background: #f5f5f5; border-radius: 8px; border-left: 4px solid var(--primary-color);">
+                    <div style="font-size:0.9rem; color:#666; display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 1.1rem;">🕐</span>
+                        <span><strong>Chegada:</strong> ${new Date(ticket.created_at).toLocaleTimeString()}</span>
                     </div>
                 </div>
 
-                <div style="margin-bottom: 20px;">
-                    <h3>📋 Tipo de Atendimento</h3>
-                    <div style="padding: 10px; background: #f9f9f9; border-radius: 5px; font-size: 1.1rem;">
-                        ${insuranceDisplay}
+                <div style="margin-bottom: 20px; padding: 20px; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <h3 style="margin-top: 0; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; color: #2c3e50;">
+                        <span style="font-size: 1.3rem;">🔄</span>
+                        <span>Alterar Status</span>
+                    </h3>
+                    <div style="display: flex; gap: 10px; align-items: stretch;">
+                        <select id="status-select" style="flex: 1; padding: 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 0.95rem; background: white; cursor: pointer;">
+                            <option value="WAITING_RECEPTION" ${ticket.status === 'WAITING_RECEPTION' ? 'selected' : ''}>⏳ Aguardando Recepção</option>
+                            <option value="CALLED_RECEPTION" ${ticket.status === 'CALLED_RECEPTION' ? 'selected' : ''}>🔔 Chamado para Recepção</option>
+                            <option value="IN_RECEPTION" ${ticket.status === 'IN_RECEPTION' ? 'selected' : ''}>👥 Em Atendimento na Recepção</option>
+                            <option value="WAITING_PROFESSIONAL" ${ticket.status === 'WAITING_PROFESSIONAL' ? 'selected' : ''}>⏸️ Aguardando Profissional</option>
+                            <option value="DONE" ${ticket.status === 'DONE' ? 'selected' : ''}>✅ Finalizado</option>
+                            <option value="CANCELED" ${ticket.status === 'CANCELED' ? 'selected' : ''}>❌ Cancelado</option>
+                        </select>
+                        <button class="btn" onclick="changeTicketStatus(${ticket.id})" style="padding: 12px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; white-space: nowrap; font-weight: 500;">
+                            Atualizar
+                        </button>
+                    </div>
+                    <div style="margin-top: 10px; font-size: 0.85rem; color: #666; display: flex; align-items: center; gap: 5px;">
+                        <span>ℹ️</span>
+                        <span>Status atual: <strong>${getStatusLabel(ticket.status)}</strong></span>
                     </div>
                 </div>
-
-                ${actionButtons}
 
                 <div class="services-section">
                     <h3>🩺 Serviços Solicitados</h3>
@@ -722,6 +750,48 @@
             loadTickets();
         }
 
+        function getStatusLabel(status) {
+            const statusLabels = {
+                'WAITING_RECEPTION': 'Aguardando Recepção',
+                'CALLED_RECEPTION': 'Chamado para Recepção',
+                'IN_RECEPTION': 'Em Atendimento na Recepção',
+                'WAITING_PROFESSIONAL': 'Aguardando Profissional',
+                'DONE': 'Finalizado',
+                'CANCELED': 'Cancelado'
+            };
+            return statusLabels[status] || status;
+        }
+
+        async function changeTicketStatus(ticketId) {
+            const select = document.getElementById('status-select');
+            const newStatus = select.value;
+
+            if (!newStatus) {
+                showToast('Selecione um status', 'warning');
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/tickets/${ticketId}/status`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: newStatus })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    showToast('✅ Status atualizado com sucesso!', 'success');
+                    loadTickets();
+                } else {
+                    showToast(data.error || 'Erro ao atualizar status', 'error');
+                }
+            } catch (e) {
+                showToast('Erro ao atualizar status', 'error');
+                console.error(e);
+            }
+        }
+
 
 
         async function addService() {
@@ -768,7 +838,7 @@
                 body: JSON.stringify({ direction })
             });
 
-            loadQueue();
+            loadTickets();
         }
 
         // Reception Call/Finish Functions
@@ -806,7 +876,6 @@
 
                 if (res.ok) {
                     currentReceptionTicket = ticketId;
-                    updateCurrentDisplay(ticketId);
                     showToast('Atendimento iniciado! Senha removida da TV.', 'success');
                     loadTickets();
                 } else {
@@ -846,7 +915,6 @@
 
                 if (res.ok) {
                     currentReceptionTicket = null;
-                    document.getElementById('current-reception-ticket').innerHTML = '<h3 style="color:gray;">Nenhum cliente em atendimento</h3>';
                     showToast('Cliente liberado para filas de serviço!', 'success');
                     loadTickets();
                 } else {
@@ -859,26 +927,7 @@
             }
         }
 
-        function updateCurrentDisplay(ticketId) {
-            const ticket = allTickets.find(t => t.id === ticketId);
-            if (!ticket) return;
 
-            const isInReception = ticket.status === 'IN_RECEPTION';
-
-            document.getElementById('current-reception-ticket').innerHTML = `
-                <h1 style="color:var(--primary-color);">${ticket.display_code}</h1>
-                <p style="font-size:1.2rem;">${ticket.temp_customer_name || 'Aguardando identificação...'}</p>
-                ${isInReception ? `
-                    <button class="btn btn-accent btn-large" onclick="finishReception(${ticketId})" style="margin-top:15px;">
-                        ✓ FINALIZAR E LIBERAR PARA SERVIÇOS
-                    </button>
-                ` : `
-                    <button class="btn btn-large" onclick="startAttendance(${ticketId})" style="margin-top:15px; background:#2196F3; color:white;">
-                        🔔 INÍCIO DO ATENDIMENTO
-                    </button>
-                `}
-            `;
-        }
 
         // Initial load
         loadServices();

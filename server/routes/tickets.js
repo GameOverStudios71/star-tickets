@@ -97,6 +97,24 @@ module.exports = (db, io) => {
         });
     });
 
+    // Update ticket status
+    router.put('/tickets/:id/status', (req, res) => {
+        const { status } = req.body;
+        const ticketId = req.params.id;
+
+        // Validate status
+        const validStatuses = ['WAITING_RECEPTION', 'CALLED_RECEPTION', 'IN_RECEPTION', 'WAITING_PROFESSIONAL', 'DONE', 'CANCELED'];
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({ error: 'Status inválido' });
+        }
+
+        db.run("UPDATE tickets SET status = ? WHERE id = ?", [status, ticketId], function (err) {
+            if (err) return res.status(500).json({ error: err.message });
+            io.emit('ticket_updated', { ticketId, status });
+            res.json({ success: true, message: 'Status atualizado com sucesso' });
+        });
+    });
+
     // Remove a service from a ticket
     router.delete('/tickets/services/:id', (req, res) => {
         const ticketServiceId = req.params.id;
