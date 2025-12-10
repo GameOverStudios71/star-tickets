@@ -91,6 +91,15 @@ app.use('/api', establishmentRoutes(db)); // Config, Rooms, Establishments
 app.use('/api', qrcodeRoutes()); // QR Code
 app.use('/api/admin', adminRoutes(db));
 
+// WebSocket handlers
+io.on('connection', (socket) => {
+    // Handle TV sound preset change
+    socket.on('change_tv_sound', (data) => {
+        // Broadcast to all connected clients (TVs)
+        io.emit('tv_sound_changed', data);
+    });
+});
+
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);

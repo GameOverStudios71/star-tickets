@@ -182,6 +182,9 @@
     <header style="display:flex; justify-content:space-between; align-items:center; padding: 0 20px;">
         <h1>Gerenciamento de Filas</h1>
         <div>
+            <button class="btn" onclick="openSoundModal()" style="margin-right: 10px; background: #9C27B0;">
+                🔔 Som da TV
+            </button>
             <button id="toggle-mode-btn" class="btn" onclick="toggleRelocationMode()" style="margin-right: 10px;">
                 🔄 Modo Remanejamento
             </button>
@@ -251,7 +254,227 @@
         </div>
     </div>
 
+    <!-- Sound Selection Modal -->
+    <div id="sound-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <button class="close-modal" onclick="closeSoundModal()">×</button>
+            <h2>🔔 Som da TV</h2>
+            <p style="color: #666; margin-bottom: 20px;">Selecione o som de alerta para chamadas na TV:</p>
+
+            <div id="sound-presets" style="display: flex; flex-direction: column; gap: 10px;">
+                <label class="sound-option"
+                    style="display: flex; align-items: center; padding: 15px; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                    <input type="radio" name="sound" value="ding-dong"
+                        style="margin-right: 15px; transform: scale(1.3);">
+                    <div>
+                        <strong>🎵 Ding Dong</strong>
+                        <div style="font-size: 0.85rem; color: #666;">Som clássico de campainha</div>
+                    </div>
+                    <button onclick="previewSound('ding-dong'); event.stopPropagation();" class="btn"
+                        style="margin-left: auto; padding: 5px 10px; font-size: 0.8rem;">▶ Ouvir</button>
+                </label>
+
+                <label class="sound-option"
+                    style="display: flex; align-items: center; padding: 15px; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                    <input type="radio" name="sound" value="triple-beep"
+                        style="margin-right: 15px; transform: scale(1.3);">
+                    <div>
+                        <strong>📢 Triple Beep</strong>
+                        <div style="font-size: 0.85rem; color: #666;">Três bipes rápidos</div>
+                    </div>
+                    <button onclick="previewSound('triple-beep'); event.stopPropagation();" class="btn"
+                        style="margin-left: auto; padding: 5px 10px; font-size: 0.8rem;">▶ Ouvir</button>
+                </label>
+
+                <label class="sound-option"
+                    style="display: flex; align-items: center; padding: 15px; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                    <input type="radio" name="sound" value="chime" style="margin-right: 15px; transform: scale(1.3);">
+                    <div>
+                        <strong>🎶 Chime</strong>
+                        <div style="font-size: 0.85rem; color: #666;">Melodia suave ascendente</div>
+                    </div>
+                    <button onclick="previewSound('chime'); event.stopPropagation();" class="btn"
+                        style="margin-left: auto; padding: 5px 10px; font-size: 0.8rem;">▶ Ouvir</button>
+                </label>
+
+                <label class="sound-option"
+                    style="display: flex; align-items: center; padding: 15px; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                    <input type="radio" name="sound" value="bell" style="margin-right: 15px; transform: scale(1.3);">
+                    <div>
+                        <strong>🔔 Sino</strong>
+                        <div style="font-size: 0.85rem; color: #666;">Som de sino longo</div>
+                    </div>
+                    <button onclick="previewSound('bell'); event.stopPropagation();" class="btn"
+                        style="margin-left: auto; padding: 5px 10px; font-size: 0.8rem;">▶ Ouvir</button>
+                </label>
+
+                <label class="sound-option"
+                    style="display: flex; align-items: center; padding: 15px; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                    <input type="radio" name="sound" value="fanfare" style="margin-right: 15px; transform: scale(1.3);">
+                    <div>
+                        <strong>🎺 Fanfarra</strong>
+                        <div style="font-size: 0.85rem; color: #666;">Toque de celebração</div>
+                    </div>
+                    <button onclick="previewSound('fanfare'); event.stopPropagation();" class="btn"
+                        style="margin-left: auto; padding: 5px 10px; font-size: 0.8rem;">▶ Ouvir</button>
+                </label>
+
+                <label class="sound-option"
+                    style="display: flex; align-items: center; padding: 15px; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                    <input type="radio" name="sound" value="hospital"
+                        style="margin-right: 15px; transform: scale(1.3);">
+                    <div>
+                        <strong>🏥 Hospital</strong>
+                        <div style="font-size: 0.85rem; color: #666;">Tom profissional de clínica</div>
+                    </div>
+                    <button onclick="previewSound('hospital'); event.stopPropagation();" class="btn"
+                        style="margin-left: auto; padding: 5px 10px; font-size: 0.8rem;">▶ Ouvir</button>
+                </label>
+
+                <label class="sound-option"
+                    style="display: flex; align-items: center; padding: 15px; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                    <input type="radio" name="sound" value="silent" style="margin-right: 15px; transform: scale(1.3);">
+                    <div>
+                        <strong>🔇 Silencioso</strong>
+                        <div style="font-size: 0.85rem; color: #666;">Sem som de alerta</div>
+                    </div>
+                </label>
+            </div>
+
+            <button onclick="saveSoundPreset()" class="btn btn-large"
+                style="width: 100%; margin-top: 20px; background: #4CAF50;">
+                💾 Salvar Configuração
+            </button>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
     <script>
+        const socket = io();
+
+        // Audio context for previewing sounds
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        // Sound Presets (same as TV)
+        const soundPresets = {
+            'ding-dong': () => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(660, audioCtx.currentTime);
+                osc.frequency.setValueAtTime(440, audioCtx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.8);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.8);
+            },
+            'triple-beep': () => {
+                for (let i = 0; i < 3; i++) {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(880, audioCtx.currentTime + i * 0.2);
+                    gain.gain.setValueAtTime(0.3, audioCtx.currentTime + i * 0.2);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + i * 0.2 + 0.15);
+                    osc.start(audioCtx.currentTime + i * 0.2);
+                    osc.stop(audioCtx.currentTime + i * 0.2 + 0.15);
+                }
+            },
+            'chime': () => {
+                const notes = [523, 659, 784, 1047];
+                notes.forEach((freq, i) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, audioCtx.currentTime + i * 0.15);
+                    gain.gain.setValueAtTime(0.4, audioCtx.currentTime + i * 0.15);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + i * 0.15 + 0.4);
+                    osc.start(audioCtx.currentTime + i * 0.15);
+                    osc.stop(audioCtx.currentTime + i * 0.15 + 0.4);
+                });
+            },
+            'bell': () => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 1.5);
+                gain.gain.setValueAtTime(0.6, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.5);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 1.5);
+            },
+            'fanfare': () => {
+                const notes = [392, 523, 659, 784];
+                notes.forEach((freq, i) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(freq, audioCtx.currentTime + i * 0.2);
+                    gain.gain.setValueAtTime(0.25, audioCtx.currentTime + i * 0.2);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + i * 0.2 + 0.3);
+                    osc.start(audioCtx.currentTime + i * 0.2);
+                    osc.stop(audioCtx.currentTime + i * 0.2 + 0.3);
+                });
+            },
+            'hospital': () => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+                osc.frequency.setValueAtTime(550, audioCtx.currentTime + 0.4);
+                osc.frequency.setValueAtTime(440, audioCtx.currentTime + 0.8);
+                gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.2);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 1.2);
+            },
+            'silent': () => { }
+        };
+
+        function previewSound(preset) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            if (soundPresets[preset]) soundPresets[preset]();
+        }
+
+        function openSoundModal() {
+            document.getElementById('sound-modal').classList.add('active');
+            // Load current setting
+            const current = localStorage.getItem('star_tickets_tv_sound') || 'ding-dong';
+            const radio = document.querySelector(`input[name="sound"][value="${current}"]`);
+            if (radio) radio.checked = true;
+        }
+
+        function closeSoundModal() {
+            document.getElementById('sound-modal').classList.remove('active');
+        }
+
+        function saveSoundPreset() {
+            const selected = document.querySelector('input[name="sound"]:checked');
+            if (selected) {
+                const preset = selected.value;
+                localStorage.setItem('star_tickets_tv_sound', preset);
+
+                // Emit to all TVs via WebSocket
+                socket.emit('change_tv_sound', { preset });
+
+                alert('✅ Som configurado com sucesso!\n\nA TV será atualizada automaticamente.');
+                closeSoundModal();
+            }
+        }
+
         let currentRoomId = null;
         let selectedTicketId = null;
         let isRelocationMode = false;
