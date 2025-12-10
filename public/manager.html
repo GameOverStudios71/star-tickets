@@ -352,9 +352,15 @@
         </div>
     </div>
 
+    <script src="auth-helper.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
+
+        // Check authentication on page load
+        checkAuth().then(user => {
+            if (!user) return; // Will redirect to login
+        });
 
         // Audio context for previewing sounds
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -511,8 +517,6 @@
         let isRelocationMode = false;
         let selectedTargetRoomId = null;
         let selectedCandidateIds = new Set();
-
-        let userEstablishmentId = null;
 
         // Load rooms - backend now filters by session automatically
         async function loadRooms() {

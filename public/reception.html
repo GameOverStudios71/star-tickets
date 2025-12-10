@@ -296,6 +296,8 @@
         </div>
     </div>
 
+    <script src="auth-helper.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
         let selectedTicket = null;
@@ -304,6 +306,11 @@
         let allDesks = [];
         let selectedFilters = new Set();
         let currentTab = 'active'; // 'active' or 'finished'
+
+        // Check authentication on page load
+        checkAuth().then(user => {
+            if (!user) return; // Will redirect to login
+        });
 
         // Load reception desks - backend now filters by session automatically
         async function loadDesks() {

@@ -77,10 +77,16 @@
         </div>
     </div>
 
+    <script src="auth-helper.js"></script>
     <script>
         let currentRoomId = null;
         let currentTicketServiceId = null;
         let currentTab = 'queue'; // 'queue' or 'history'
+
+        // Check authentication on page load
+        checkAuth().then(user => {
+            if (!user) return; // Will redirect to login
+        });
 
         async function loadRooms() {
             const res = await fetch('/api/rooms');
