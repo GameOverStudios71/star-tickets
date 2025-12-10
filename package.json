@@ -9,7 +9,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server/index.js",
-    "dev": "nodemon server/index.js"
+    "dev": "nodemon server/index.js",
+    "db:reset": "node database/init.js",
+    "db:seed": "node database/seed.js"
   },
   "repository": {
     "type": "git",
