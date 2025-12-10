@@ -246,6 +246,13 @@
 
         // WebSocket: When a new ticket is called
         socket.on('call_ticket', (data) => {
+            // Verificar se a TV deve reagir a este estabelecimento
+            const configuredEst = localStorage.getItem('star_tickets_tv_establishment');
+            if (configuredEst && data.establishmentId && parseInt(configuredEst) !== data.establishmentId) {
+                // Ticket de outro estabelecimento, ignorar
+                return;
+            }
+            
             playAlert();
 
             // Reload the called tickets list

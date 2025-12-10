@@ -170,7 +170,7 @@ const ticketServiceQueries = {
      */
     getCallInfo(ticketServiceId, roomId, establishmentId) {
         let query = `
-            SELECT t.display_code, t.temp_customer_name, r.name as room_name 
+            SELECT t.display_code, t.temp_customer_name, t.establishment_id, r.name as room_name 
             FROM ticket_services ts
             JOIN tickets t ON ts.ticket_id = t.id
             JOIN room_services rs ON rs.service_id = ts.service_id

@@ -454,7 +454,8 @@ module.exports = (db, io) => {
                 io.emit('call_ticket', {
                     displayCode: row.display_code,
                     customerName: row.temp_customer_name,
-                    roomName: row.room_name
+                    roomName: row.room_name,
+                    establishmentId: row.establishment_id
                 });
                 res.json({ success: true });
             });
