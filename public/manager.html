@@ -185,6 +185,10 @@
             <button class="btn" onclick="openSoundModal()" style="margin-right: 10px; background: #9C27B0;">
                 🔔 Som da TV
             </button>
+            <button id="tts-toggle-btn" class="btn" onclick="toggleTTS()"
+                style="margin-right: 10px; background: #607D8B;">
+                🔇 Voz Desligada
+            </button>
             <button id="toggle-mode-btn" class="btn" onclick="toggleRelocationMode()" style="margin-right: 10px;">
                 🔄 Modo Remanejamento
             </button>
@@ -448,6 +452,33 @@
             if (audioCtx.state === 'suspended') audioCtx.resume();
             if (soundPresets[preset]) soundPresets[preset]();
         }
+
+        // TTS Toggle
+        function toggleTTS() {
+            const current = localStorage.getItem('star_tickets_tv_tts') === 'true';
+            const newValue = !current;
+            localStorage.setItem('star_tickets_tv_tts', newValue ? 'true' : 'false');
+
+            // Emit to all TVs via WebSocket
+            socket.emit('change_tv_tts', { enabled: newValue });
+
+            updateTTSButton();
+        }
+
+        function updateTTSButton() {
+            const enabled = localStorage.getItem('star_tickets_tv_tts') === 'true';
+            const btn = document.getElementById('tts-toggle-btn');
+            if (enabled) {
+                btn.innerHTML = '🔊 Voz Ligada';
+                btn.style.background = '#4CAF50';
+            } else {
+                btn.innerHTML = '🔇 Voz Desligada';
+                btn.style.background = '#607D8B';
+            }
+        }
+
+        // Update button on page load
+        setTimeout(updateTTSButton, 100);
 
         function openSoundModal() {
             document.getElementById('sound-modal').classList.add('active');

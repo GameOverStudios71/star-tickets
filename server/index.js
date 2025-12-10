@@ -98,6 +98,12 @@ io.on('connection', (socket) => {
         // Broadcast to all connected clients (TVs)
         io.emit('tv_sound_changed', data);
     });
+
+    // Handle TV TTS toggle
+    socket.on('change_tv_tts', (data) => {
+        // Broadcast to all connected clients (TVs)
+        io.emit('tv_tts_changed', data);
+    });
 });
 
 const PORT = process.env.PORT || 3000;

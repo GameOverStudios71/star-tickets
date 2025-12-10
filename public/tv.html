@@ -171,12 +171,49 @@
 
         let lastDisplayedCode = null; // Rastrear último ticket exibido
 
+        // Text-to-Speech function
+        function speakTicketCall(ticket) {
+            const ttsEnabled = localStorage.getItem('star_tickets_tv_tts') === 'true';
+            if (!ttsEnabled || !('speechSynthesis' in window)) return;
+
+            // Build the speech text
+            let text;
+            if (ticket.temp_customer_name && ticket.temp_customer_name !== 'Cliente') {
+                text = `${ticket.temp_customer_name}, dirija-se à ${ticket.room_name}`;
+            } else {
+                text = `Senha ${ticket.display_code}, dirija-se à ${ticket.room_name}`;
+            }
+
+            // Cancel any ongoing speech
+            speechSynthesis.cancel();
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'pt-BR';
+            utterance.rate = 0.9;
+            utterance.pitch = 1;
+            utterance.volume = 1;
+
+            // Try to find a Portuguese voice
+            const voices = speechSynthesis.getVoices();
+            const ptVoice = voices.find(v => v.lang.startsWith('pt')) || voices[0];
+            if (ptVoice) utterance.voice = ptVoice;
+
+            speechSynthesis.speak(utterance);
+        }
+
+        // Listen for TTS toggle via WebSocket
+        socket.on('tv_tts_changed', (data) => {
+            localStorage.setItem('star_tickets_tv_tts', data.enabled ? 'true' : 'false');
+        });
+
         function displayTicket(ticket, silent = false) {
             if (!ticket) return;
 
-            // Tocar som se o ticket mudou
+            // Tocar som e falar se o ticket mudou
             if (!silent && lastDisplayedCode !== ticket.display_code) {
                 playAlert();
+                // Delay speech slightly to let alert sound finish
+                setTimeout(() => speakTicketCall(ticket), 800);
             }
             lastDisplayedCode = ticket.display_code;
 
