@@ -377,25 +377,52 @@ module.exports = (db, io) => {
             });
         };
 
-        const { query, params } = queries.ticketQueries.getTicketWithStatus(ticketId, req.establishmentId);
-        db.get(query, params, (err, row) => {
+        // Buscar ticket com informação da mesa atual
+        const ticketQuery = `
+            SELECT t.id, t.display_code, t.temp_customer_name, t.status, t.reception_desk_id,
+                   rd.name as current_desk_name
+            FROM tickets t
+            LEFT JOIN reception_desks rd ON t.reception_desk_id = rd.id
+            WHERE t.id = ? ${req.establishmentId ? 'AND t.establishment_id = ?' : ''}
+        `;
+        const ticketParams = req.establishmentId ? [ticketId, req.establishmentId] : [ticketId];
+
+        db.get(ticketQuery, ticketParams, (err, row) => {
             if (err || !row) return queries.handleNotFound(res);
-            if (row.status !== 'WAITING_RECEPTION') return res.status(400).json({ error: "Ticket já foi chamado" });
+
+            // Verificar se já está sendo atendido
+            if (row.status !== 'WAITING_RECEPTION') {
+                return res.status(409).json({
+                    error: 'already_in_progress',
+                    message: `Esta senha já está sendo atendida${row.current_desk_name ? ' pela ' + row.current_desk_name : ''}`,
+                    attendingDesk: row.current_desk_name
+                });
+            }
 
             getDeskName((err, deskName) => {
                 const updateQuery = deskId
-                    ? "UPDATE tickets SET status = 'CALLED_RECEPTION', reception_desk_id = ? WHERE id = ?"
-                    : "UPDATE tickets SET status = 'CALLED_RECEPTION' WHERE id = ?";
+                    ? "UPDATE tickets SET status = 'CALLED_RECEPTION', reception_desk_id = ? WHERE id = ? AND status = 'WAITING_RECEPTION'"
+                    : "UPDATE tickets SET status = 'CALLED_RECEPTION' WHERE id = ? AND status = 'WAITING_RECEPTION'";
                 const updateParams = deskId ? [deskId, ticketId] : [ticketId];
 
-                db.run(updateQuery, updateParams, (err) => {
+                db.run(updateQuery, updateParams, function (err) {
                     if (err) return queries.handleDbError(res, err);
+
+                    // Verificar se realmente atualizou (proteção extra contra race condition)
+                    if (this.changes === 0) {
+                        return res.status(409).json({
+                            error: 'already_in_progress',
+                            message: 'Esta senha acabou de ser atendida por outra recepcionista'
+                        });
+                    }
+
                     io.emit('call_ticket', {
                         ticketId,
                         displayCode: row.display_code,
                         customerName: row.temp_customer_name || 'Cliente',
                         roomName: deskName
                     });
+                    io.emit('ticket_updated'); // Para atualizar outras telas
                     res.json({ success: true });
                 });
             });

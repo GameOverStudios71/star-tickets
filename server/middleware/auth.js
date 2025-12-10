@@ -76,10 +76,40 @@ function buildEstablishmentFilter(column, establishmentId, isAdmin) {
     };
 }
 
+// Role-based access control middleware
+// Usage: requireRole('admin', 'manager', 'receptionist')
+function requireRole(...allowedRoles) {
+    return (req, res, next) => {
+        if (!req.session || !req.session.user) {
+            return res.status(401).json({ error: 'Não autenticado' });
+        }
+
+        const userRole = req.session.user.role;
+
+        // Admin always has access
+        if (userRole === 'admin') {
+            req.user = req.session.user;
+            req.establishmentId = req.query.establishment_id ? parseInt(req.query.establishment_id) : null;
+            req.isAdmin = true;
+            return next();
+        }
+
+        if (!allowedRoles.includes(userRole)) {
+            return res.status(403).json({ error: 'Acesso negado para este perfil' });
+        }
+
+        req.user = req.session.user;
+        req.establishmentId = req.session.user.establishment_id;
+        req.isAdmin = false;
+        next();
+    };
+}
+
 module.exports = {
     requireAuth,
     optionalAuth,
     requireAdmin,
     requireEstablishmentScope,
-    buildEstablishmentFilter
+    buildEstablishmentFilter,
+    requireRole
 };

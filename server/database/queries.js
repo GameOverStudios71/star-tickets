@@ -46,9 +46,11 @@ const ticketQueries = {
 
         let query = `
             SELECT t.*, c.name as customer_name, 
+            rd.name as attending_desk_name,
             (SELECT group_concat(s.name, ', ') FROM ticket_services ts JOIN services s ON ts.service_id = s.id WHERE ts.ticket_id = t.id) as services_list
             FROM tickets t
             LEFT JOIN customers c ON t.customer_id = c.id
+            LEFT JOIN reception_desks rd ON t.reception_desk_id = rd.id
             WHERE ${excludeStatus.map(() => 't.status != ?').join(' AND ')}
             AND date(t.created_at, 'localtime') = date('now', 'localtime')
         `;

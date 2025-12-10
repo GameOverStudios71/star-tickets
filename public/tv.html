@@ -7,6 +7,7 @@
     <title>Star Tickets - Painel</title>
     <link rel="stylesheet" href="style.css">
     <script src="/socket.io/socket.io.js"></script>
+    <script src="auth-helper.js"></script>
 </head>
 
 <body>
@@ -140,12 +141,14 @@
             playAlert(); // Play sample of new sound
         });
 
+        // Establishment ID do usuário logado (será preenchido após checkAuth)
+        let userEstablishmentId = null;
+
         // Fetch all called tickets from backend
         async function loadCalledTickets() {
             try {
-                // Check if TV has a configured establishment
-                const configuredEst = localStorage.getItem('star_tickets_tv_establishment');
-                const params = configuredEst ? `?establishment_id=${configuredEst}` : '';
+                // Usar establishment do usuário logado
+                const params = userEstablishmentId ? `?establishment_id=${userEstablishmentId}` : '';
 
                 const res = await fetch(`/api/called-tickets${params}`);
                 calledTickets = await res.json();
@@ -252,7 +255,7 @@
                 // Ticket de outro estabelecimento, ignorar
                 return;
             }
-            
+
             playAlert();
 
             // Reload the called tickets list
@@ -275,13 +278,16 @@
             }
         }
 
-        // Initial load
-        loadCalledTickets();
+        // Verificar autenticação e obter establishment
+        checkAuth().then(user => {
+            if (!user) return;
+            userEstablishmentId = user.establishment_id;
+            // Initial load after authentication
+            loadCalledTickets();
+        });
 
         // Refresh every 10 seconds as backup
         setInterval(loadCalledTickets, 10000);
-    </script>
-    }
     </script>
     <script src="js/common/trace.js"></script>
     <script src="js/common/toast.js"></script>

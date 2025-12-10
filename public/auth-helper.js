@@ -1,4 +1,23 @@
-// Authentication helper - Include this in pages that require auth
+// Permissões de página por role
+const pagePermissions = {
+    'reception.html': ['admin', 'manager', 'receptionist'],
+    'professional.html': ['admin', 'manager', 'professional'],
+    'manager.html': ['admin', 'manager'],
+    'dashboard.html': ['admin', 'manager'],
+    'tv.html': ['admin', 'manager', 'tv'],
+    'admin.html': ['admin'],
+    'automation.html': ['admin', 'manager'],
+    'index.html': ['admin', 'manager'] // Menu principal só para admin e manager
+};
+
+// Redirect por role (quando acesso negado)
+const roleRedirects = {
+    'admin': '/index.html',
+    'manager': '/index.html',
+    'receptionist': '/reception.html',
+    'professional': '/professional.html',
+    'tv': '/tv.html'
+};
 
 async function checkAuth() {
     try {
@@ -8,7 +27,20 @@ async function checkAuth() {
             return null;
         }
         const data = await res.json();
-        return data.user;
+        const user = data.user;
+
+        // Verificar permissão para página atual
+        const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+        const allowedRoles = pagePermissions[currentPage];
+
+        if (allowedRoles && !allowedRoles.includes(user.role)) {
+            // Usuário não tem permissão para esta página
+            alert('Você não tem permissão para acessar esta página.');
+            window.location.href = roleRedirects[user.role] || '/login.html';
+            return null;
+        }
+
+        return user;
     } catch (err) {
         window.location.href = '/login.html';
         return null;

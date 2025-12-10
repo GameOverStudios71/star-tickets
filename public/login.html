@@ -90,13 +90,12 @@
         </form>
 
         <div class="users-hint">
-            <h4>Usuários de Teste:</h4>
-            <p><strong>freguesia</strong> / 123 (Freguesia)</p>
-            <p><strong>santana</strong> / 123 (Santana)</p>
-            <p><strong>guarulhos</strong> / 123 (Guarulhos Centro)</p>
-            <p><strong>taboao</strong> / 123 (Guarulhos Tabõão)</p>
-            <p><strong>tatuape</strong> / 123 (Tatuapé)</p>
-            <p><strong>bela</strong> / 123 (Bela Cintra)</p>
+            <h4>Usuários de Teste (senha: 123):</h4>
+            <p><strong>gerente1</strong> - Gerente Freguesia</p>
+            <p><strong>recepcao1</strong> - Recepção Freguesia</p>
+            <p><strong>profissional1</strong> - Profissional Freguesia</p>
+            <p><strong>tv1</strong> - TV Freguesia</p>
+            <p style="margin-top:10px;"><strong>admin</strong> / admin - Administrador</p>
         </div>
     </div>
 
@@ -128,18 +127,21 @@
                 const data = await res.json();
 
                 if (res.ok) {
-                    // Check for redirect parameter
-                    const redirect = new URLSearchParams(window.location.search).get('redirect');
+                    // Redirect baseado no role do usuário
+                    const redirectMap = {
+                        'admin': '/index.html',
+                        'manager': '/index.html',
+                        'receptionist': '/reception.html',
+                        'professional': '/professional.html',
+                        'tv': '/tv.html'
+                    };
 
-                    if (redirect) {
-                        window.location.href = decodeURIComponent(redirect);
+                    // Check for redirect parameter (takes priority)
+                    const redirectParam = new URLSearchParams(window.location.search).get('redirect');
+                    if (redirectParam) {
+                        window.location.href = decodeURIComponent(redirectParam);
                     } else {
-                        // Default redirects based on role
-                        if (data.user.role === 'admin') {
-                            window.location.href = '/dashboard.html';
-                        } else {
-                            window.location.href = '/index.html';
-                        }
+                        window.location.href = redirectMap[data.user.role] || '/index.html';
                     }
                 } else {
                     errorMsg.textContent = data.error || 'Erro ao fazer login';

@@ -366,15 +366,46 @@ db.serialize(() => {
     receptionDesks.forEach(d => deskStmt.run(d.name, d.est));
     deskStmt.finalize();
 
-    // 5. Insert Users
+    // 5. Insert Users (com roles: admin, manager, receptionist, professional, tv)
     const users = [
-        { name: 'Freguesia', username: 'freguesia', password: '123', role: 'professional', est: 1 },
-        { name: 'Santana', username: 'santana', password: '123', role: 'professional', est: 2 },
-        { name: 'Guarulhos Centro', username: 'guarulhos', password: '123', role: 'professional', est: 3 },
-        { name: 'Guarulhos Tabõao', username: 'taboao', password: '123', role: 'professional', est: 4 },
-        { name: 'Tatuapé', username: 'tatuape', password: '123', role: 'professional', est: 5 },
-        { name: 'Bela Cintra', username: 'bela', password: '123', role: 'professional', est: 6 },
-        { name: 'Administrador', username: 'admin', password: 'admin', role: 'admin', est: null }
+        // Admin geral
+        { name: 'Administrador', username: 'admin', password: 'admin', role: 'admin', est: null },
+
+        // Freguesia (est 1)
+        { name: 'Gerente Freguesia', username: 'gerente1', password: '123', role: 'manager', est: 1 },
+        { name: 'Recepção Freguesia', username: 'recepcao1', password: '123', role: 'receptionist', est: 1 },
+        { name: 'Profissional Freguesia', username: 'profissional1', password: '123', role: 'professional', est: 1 },
+        { name: 'TV Freguesia', username: 'tv1', password: '123', role: 'tv', est: 1 },
+
+        // Santana (est 2)
+        { name: 'Gerente Santana', username: 'gerente2', password: '123', role: 'manager', est: 2 },
+        { name: 'Recepção Santana', username: 'recepcao2', password: '123', role: 'receptionist', est: 2 },
+        { name: 'Profissional Santana', username: 'profissional2', password: '123', role: 'professional', est: 2 },
+        { name: 'TV Santana', username: 'tv2', password: '123', role: 'tv', est: 2 },
+
+        // Guarulhos Centro (est 3)
+        { name: 'Gerente Guarulhos', username: 'gerente3', password: '123', role: 'manager', est: 3 },
+        { name: 'Recepção Guarulhos', username: 'recepcao3', password: '123', role: 'receptionist', est: 3 },
+        { name: 'Profissional Guarulhos', username: 'profissional3', password: '123', role: 'professional', est: 3 },
+        { name: 'TV Guarulhos', username: 'tv3', password: '123', role: 'tv', est: 3 },
+
+        // Taboão (est 4)
+        { name: 'Gerente Taboão', username: 'gerente4', password: '123', role: 'manager', est: 4 },
+        { name: 'Recepção Taboão', username: 'recepcao4', password: '123', role: 'receptionist', est: 4 },
+        { name: 'Profissional Taboão', username: 'profissional4', password: '123', role: 'professional', est: 4 },
+        { name: 'TV Taboão', username: 'tv4', password: '123', role: 'tv', est: 4 },
+
+        // Tatuapé (est 5)
+        { name: 'Gerente Tatuapé', username: 'gerente5', password: '123', role: 'manager', est: 5 },
+        { name: 'Recepção Tatuapé', username: 'recepcao5', password: '123', role: 'receptionist', est: 5 },
+        { name: 'Profissional Tatuapé', username: 'profissional5', password: '123', role: 'professional', est: 5 },
+        { name: 'TV Tatuapé', username: 'tv5', password: '123', role: 'tv', est: 5 },
+
+        // Bela Cintra (est 6)
+        { name: 'Gerente Bela Cintra', username: 'gerente6', password: '123', role: 'manager', est: 6 },
+        { name: 'Recepção Bela Cintra', username: 'recepcao6', password: '123', role: 'receptionist', est: 6 },
+        { name: 'Profissional Bela Cintra', username: 'profissional6', password: '123', role: 'professional', est: 6 },
+        { name: 'TV Bela Cintra', username: 'tv6', password: '123', role: 'tv', est: 6 },
     ];
     const userStmt = db.prepare("INSERT INTO users (name, username, password, role, establishment_id) VALUES (?, ?, ?, ?, ?)");
     users.forEach(u => userStmt.run(u.name, u.username, u.password, u.role, u.est));

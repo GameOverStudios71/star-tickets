@@ -91,6 +91,28 @@
             background: #fff5f5;
         }
 
+        .ticket-card.in-progress-other {
+            border-color: #4CAF50;
+            background: #e8f5e9;
+            cursor: not-allowed;
+            opacity: 0.8;
+        }
+
+        .ticket-card.in-progress-other:hover {
+            transform: none;
+            box-shadow: none;
+        }
+
+        .attending-badge {
+            display: inline-block;
+            background: #4CAF50;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            margin-left: 10px;
+        }
+
         .ticket-code {
             font-size: 1.8rem;
             font-weight: bold;
@@ -618,11 +640,23 @@
                 return;
             }
 
+            const myDeskId = getSelectedDeskId();
+
             tickets.forEach((t, index) => {
                 const div = document.createElement('div');
                 div.className = 'ticket-card';
-                if (selectedTicket && selectedTicket.id === t.id) {
+
+                // Verificar se está sendo atendido por outra mesa
+                const isInProgressByOther = (t.status === 'IN_RECEPTION' || t.status === 'CALLED_RECEPTION')
+                    && t.reception_desk_id
+                    && t.reception_desk_id !== myDeskId;
+
+                if (selectedTicket && selectedTicket.id === t.id && !isInProgressByOther) {
                     div.classList.add('selected');
+                }
+
+                if (isInProgressByOther) {
+                    div.classList.add('in-progress-other');
                 }
 
                 const statusClass = t.temp_customer_name ? 'linked' : '';
@@ -631,14 +665,25 @@
                 const insuranceHtml = t.health_insurance_name ?
                     `<div style="font-size:0.85rem; color:#2196F3; margin-top:5px;">💳 ${t.health_insurance_name}</div>` : '';
 
+                // Badge de atendimento por outra mesa
+                const attendingBadge = isInProgressByOther
+                    ? `<span class="attending-badge">🔒 ${t.attending_desk_name || 'Outra mesa'}</span>`
+                    : '';
+
                 div.innerHTML = `
-                    <div class="ticket-code">${t.display_code}</div>
+                    <div class="ticket-code">${t.display_code}${attendingBadge}</div>
                     <div class="ticket-services">${t.services_list || 'Sem serviços'}</div>
                     <span class="ticket-status ${statusClass}">${statusText}</span>
                     ${insuranceHtml}
                 `;
 
-                div.onclick = () => selectTicket(t);
+                // Só permite clicar se não estiver em atendimento por outra mesa
+                if (!isInProgressByOther) {
+                    div.onclick = () => selectTicket(t);
+                } else {
+                    div.onclick = () => alert('Esta senha está sendo atendida por ' + (t.attending_desk_name || 'outra mesa'));
+                }
+
                 container.appendChild(div);
 
                 // Add separator between tickets (not after the last one)
@@ -969,6 +1014,10 @@
                     currentReceptionTicket = ticketId;
                     showToast('Senha chamada! Rotacionando na TV.', 'success');
                     loadTickets();
+                } else if (res.status === 409 && data.error === 'already_in_progress') {
+                    // Outra recepcionista já está atendendo
+                    alert('⚠️ ' + data.message + '\n\nA lista será atualizada.');
+                    loadTickets(); // Recarregar para mostrar status atualizado
                 } else {
                     showToast(data.error || 'Erro ao chamar senha', 'error');
                 }
