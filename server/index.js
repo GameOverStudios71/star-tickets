@@ -36,6 +36,26 @@ const db = new sqlite3.Database(dbPath);
 
 app.use(cors());
 app.use(express.json());
+
+// Livereload for development (auto-refresh browser on file changes)
+if (process.env.NODE_ENV !== 'production') {
+    try {
+        const livereload = require('livereload');
+        const connectLivereload = require('connect-livereload');
+
+        const liveReloadServer = livereload.createServer({
+            exts: ['html', 'css', 'js', 'png', 'jpg', 'gif'],
+            delay: 100
+        });
+        liveReloadServer.watch(path.join(__dirname, '../public'));
+
+        app.use(connectLivereload());
+        console.log('🔥 LiveReload enabled - browser will auto-refresh on file changes');
+    } catch (e) {
+        // Livereload not installed, skip
+    }
+}
+
 app.use(express.static(path.join(__dirname, '../public')));
 
 // Session configuration

@@ -585,7 +585,7 @@
                 return;
             }
 
-            tickets.forEach(t => {
+            tickets.forEach((t, index) => {
                 const div = document.createElement('div');
                 div.className = 'ticket-card';
                 if (selectedTicket && selectedTicket.id === t.id) {
@@ -607,6 +607,13 @@
 
                 div.onclick = () => selectTicket(t);
                 container.appendChild(div);
+
+                // Add separator between tickets (not after the last one)
+                if (index < tickets.length - 1) {
+                    const hr = document.createElement('hr');
+                    hr.style.cssText = 'border: none; border-top: 1px solid #e0e0e0; margin: 5px 0;';
+                    container.appendChild(hr);
+                }
             });
         }
 
