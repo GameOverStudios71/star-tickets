@@ -322,9 +322,38 @@ module.exports = (db, io) => {
         });
     });
 
+    // Get reception desks for an establishment
+    router.get('/reception-desks', (req, res) => {
+        const { establishment_id } = req.query;
+
+        let query = `SELECT * FROM reception_desks WHERE is_active = 1`;
+        const params = [];
+
+        if (establishment_id) {
+            query += ` AND establishment_id = ?`;
+            params.push(establishment_id);
+        }
+
+        query += ` ORDER BY name`;
+
+        db.all(query, params, (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json(rows || []);
+        });
+    });
+
     // Reception - Call ticket to reception desk
     router.post('/reception/call', (req, res) => {
-        const { ticketId } = req.body;
+        const { ticketId, deskId } = req.body;
+
+        // Get desk name if provided
+        const getDeskName = (callback) => {
+            if (!deskId) return callback(null, 'RECEPÇÃO');
+            db.get("SELECT name FROM reception_desks WHERE id = ?", [deskId], (err, desk) => {
+                if (err || !desk) return callback(null, 'RECEPÇÃO');
+                callback(null, desk.name);
+            });
+        };
 
         db.get(`
             SELECT t.display_code, t.temp_customer_name, t.status
@@ -334,19 +363,26 @@ module.exports = (db, io) => {
             if (err || !row) return res.status(404).json({ error: "Ticket não encontrado" });
             if (row.status !== 'WAITING_RECEPTION') return res.status(400).json({ error: "Ticket já foi chamado" });
 
-            // Update ticket status to CALLED_RECEPTION (shows on TV)
-            db.run("UPDATE tickets SET status = 'CALLED_RECEPTION' WHERE id = ?", [ticketId], (err) => {
-                if (err) return res.status(500).json({ error: err.message });
+            getDeskName((err, deskName) => {
+                // Update ticket status to CALLED_RECEPTION and save desk (shows on TV)
+                const updateQuery = deskId
+                    ? "UPDATE tickets SET status = 'CALLED_RECEPTION', reception_desk_id = ? WHERE id = ?"
+                    : "UPDATE tickets SET status = 'CALLED_RECEPTION' WHERE id = ?";
+                const updateParams = deskId ? [deskId, ticketId] : [ticketId];
 
-                // Emit to TV
-                io.emit('call_ticket', {
-                    ticketId,
-                    displayCode: row.display_code,
-                    customerName: row.temp_customer_name || 'Cliente',
-                    roomName: 'RECEPÇÃO'
+                db.run(updateQuery, updateParams, (err) => {
+                    if (err) return res.status(500).json({ error: err.message });
+
+                    // Emit to TV
+                    io.emit('call_ticket', {
+                        ticketId,
+                        displayCode: row.display_code,
+                        customerName: row.temp_customer_name || 'Cliente',
+                        roomName: deskName
+                    });
+
+                    res.json({ success: true });
                 });
-
-                res.json({ success: true });
             });
         });
     });
@@ -397,11 +433,12 @@ module.exports = (db, io) => {
                 t.display_code,
                 t.temp_customer_name,
                 CASE 
-                    WHEN t.status = 'CALLED_RECEPTION' THEN 'RECEPÇÃO'
+                    WHEN t.status = 'CALLED_RECEPTION' THEN COALESCE(rd.name, 'RECEPÇÃO')
                     ELSE r.name
                 END as room_name,
                 COALESCE(ts.created_at, t.created_at) as created_at
             FROM tickets t
+            LEFT JOIN reception_desks rd ON t.reception_desk_id = rd.id
             LEFT JOIN ticket_services ts ON ts.ticket_id = t.id AND ts.status = 'CALLED'
             LEFT JOIN room_services rs ON rs.service_id = ts.service_id
             LEFT JOIN rooms r ON rs.room_id = r.id

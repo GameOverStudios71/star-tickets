@@ -14,6 +14,7 @@ db.serialize(() => {
     db.run("DROP TABLE IF EXISTS service_menus");
     db.run("DROP TABLE IF EXISTS services");
     db.run("DROP TABLE IF EXISTS rooms");
+    db.run("DROP TABLE IF EXISTS reception_desks");
     db.run("DROP TABLE IF EXISTS users");
     db.run("DROP TABLE IF EXISTS establishments");
 
@@ -56,6 +57,17 @@ db.serialize(() => {
         )
     `);
 
+    // Create reception desks table
+    db.run(`
+        CREATE TABLE reception_desks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            establishment_id INTEGER NOT NULL,
+            is_active INTEGER DEFAULT 1,
+            FOREIGN KEY (establishment_id) REFERENCES establishments(id)
+        )
+    `);
+
     // Create customers table
     db.run(`
         CREATE TABLE customers (
@@ -79,8 +91,10 @@ db.serialize(() => {
             health_insurance_name TEXT,
             is_priority INTEGER DEFAULT 0,
             establishment_id INTEGER NOT NULL,
+            reception_desk_id INTEGER,
             FOREIGN KEY (customer_id) REFERENCES customers(id),
-            FOREIGN KEY (establishment_id) REFERENCES establishments(id)
+            FOREIGN KEY (establishment_id) REFERENCES establishments(id),
+            FOREIGN KEY (reception_desk_id) REFERENCES reception_desks(id)
         )
     `);
 
@@ -317,6 +331,17 @@ db.serialize(() => {
     const roomStmt = db.prepare("INSERT INTO rooms (name, type, establishment_id) VALUES (?, ?, ?)");
     rooms.forEach(r => roomStmt.run(r.name, r.type, r.est));
     roomStmt.finalize();
+
+    // 4.1. Insert Reception Desks (4 per establishment)
+    const receptionDesks = [];
+    establishments.forEach(est => {
+        for (let i = 1; i <= 4; i++) {
+            receptionDesks.push({ name: `Mesa ${i}`, est: est.id });
+        }
+    });
+    const deskStmt = db.prepare("INSERT INTO reception_desks (name, establishment_id) VALUES (?, ?)");
+    receptionDesks.forEach(d => deskStmt.run(d.name, d.est));
+    deskStmt.finalize();
 
     // 5. Insert Users
     const users = [

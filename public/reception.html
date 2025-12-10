@@ -192,17 +192,23 @@
 </head>
 
 <body>
-    <header>
+    <header style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
         <h1>Recepção</h1>
+        <div class="desk-selector"
+            style="display: flex; align-items: center; gap: 10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 10px 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+            <span style="color: white; font-weight: 500; font-size: 0.95rem;">🖥️ Minha Mesa:</span>
+            <select id="desk-select" onchange="saveSelectedDesk()"
+                style="padding: 8px 15px; border: 2px solid rgba(255,255,255,0.3); border-radius: 6px; font-size: 1rem; background: white; cursor: pointer; min-width: 120px;">
+                <option value="">Selecione...</option>
+            </select>
+        </div>
     </header>
 
     <div class="reception-layout">
         <!-- Left Column: Filters + Ticket List -->
         <div class="left-column" style="display: flex; flex-direction: column; gap: 20px;">
             <!-- Filtros -->
-            <div>
-                <div class="filter-section">
-                </div>
+            <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
 
                 <!-- Advanced Filters -->
                 <div style="margin-bottom: 15px;">
@@ -241,6 +247,8 @@
                         </div>
                     </div>
                 </div>
+
+                <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 15px 0;">
 
                 <h3 style="cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between;"
                     onclick="toggleFilterDropdown()">
@@ -293,8 +301,63 @@
         let selectedTicket = null;
         let allTickets = [];
         let allServices = [];
+        let allDesks = [];
         let selectedFilters = new Set();
         let currentTab = 'active'; // 'active' or 'finished'
+
+        // Load reception desks
+        async function loadDesks() {
+            try {
+                // Get user's establishment from session
+                const authRes = await fetch('/api/auth/me');
+                if (authRes.ok) {
+                    const authData = await authRes.json();
+                    const establishmentId = authData.user?.establishment_id;
+                    const params = establishmentId ? `?establishment_id=${establishmentId}` : '';
+                    const res = await fetch(`/api/reception-desks${params}`);
+                    allDesks = await res.json();
+                } else {
+                    // Fallback: load all desks if not authenticated
+                    const res = await fetch('/api/reception-desks');
+                    allDesks = await res.json();
+                }
+                renderDesksDropdown();
+            } catch (e) {
+                console.error('Error loading desks:', e);
+            }
+        }
+
+        function renderDesksDropdown() {
+            const select = document.getElementById('desk-select');
+            select.innerHTML = '<option value="">Selecione...</option>';
+
+            allDesks.forEach(desk => {
+                const option = document.createElement('option');
+                option.value = desk.id;
+                option.textContent = desk.name;
+                select.appendChild(option);
+            });
+
+            // Restore saved selection
+            const savedDeskId = localStorage.getItem('star_tickets_reception_desk');
+            if (savedDeskId) {
+                select.value = savedDeskId;
+            }
+        }
+
+        function saveSelectedDesk() {
+            const select = document.getElementById('desk-select');
+            if (select.value) {
+                localStorage.setItem('star_tickets_reception_desk', select.value);
+            } else {
+                localStorage.removeItem('star_tickets_reception_desk');
+            }
+        }
+
+        function getSelectedDeskId() {
+            const select = document.getElementById('desk-select');
+            return select.value ? parseInt(select.value) : null;
+        }
 
         async function loadServices() {
             const res = await fetch('/api/admin/services');
@@ -628,7 +691,7 @@
                         <input type="text" id="customer-name-input"
                             value="${ticket.temp_customer_name || ''}"
                             placeholder="Digite o nome do cliente..."
-                            onblur="linkCustomerName()"
+                            onkeypress="if(event.key === 'Enter') { linkCustomerName(); this.blur(); }"
                             style="flex: 1; padding: 14px 18px; border: 2px solid rgba(255,255,255,0.3); border-radius: 8px; font-size: 1rem; background: rgba(255,255,255,0.95); color: #333; transition: all 0.3s; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"
                             onfocus="this.style.borderColor='white'; this.style.background='white';"
                             onblur="this.style.borderColor='rgba(255,255,255,0.3)'; this.style.background='rgba(255,255,255,0.95)'; linkCustomerName();">
@@ -845,11 +908,19 @@
         let currentReceptionTicket = null;
 
         async function callToReception(ticketId) {
+            const deskId = getSelectedDeskId();
+
+            if (!deskId) {
+                showToast('⚠️ Selecione sua mesa antes de chamar!', 'warning');
+                document.getElementById('desk-select').focus();
+                return;
+            }
+
             try {
                 const res = await fetch('/api/reception/call', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ticketId })
+                    body: JSON.stringify({ ticketId, deskId })
                 });
 
                 const data = await res.json();
@@ -930,6 +1001,7 @@
 
 
         // Initial load
+        loadDesks();
         loadServices();
         loadTickets();
 
