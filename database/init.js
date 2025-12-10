@@ -320,19 +320,42 @@ db.serialize(() => {
 
     // 4. Insert Sample Rooms (Generic)
     const rooms = [
-        { name: 'Sala 1', type: 'Geral', est: 1 },
-        { name: 'Sala 2', type: 'Geral', est: 1 },
-        { name: 'Sala 1', type: 'Geral', est: 2 },
-        { name: 'Sala 1', type: 'Geral', est: 3 },
-        { name: 'Sala 1', type: 'Geral', est: 4 },
-        { name: 'Sala 1', type: 'Geral', est: 5 },
-        { name: 'Sala 1', type: 'Geral', est: 6 },
+        { id: 1, name: 'Sala 1', type: 'Geral', est: 1 },
+        { id: 2, name: 'Sala 2', type: 'Geral', est: 1 },
+        { id: 3, name: 'Sala 1', type: 'Geral', est: 2 },
+        { id: 4, name: 'Sala 1', type: 'Geral', est: 3 },
+        { id: 5, name: 'Sala 1', type: 'Geral', est: 4 },
+        { id: 6, name: 'Sala 1', type: 'Geral', est: 5 },
+        { id: 7, name: 'Sala 1', type: 'Geral', est: 6 },
     ];
-    const roomStmt = db.prepare("INSERT INTO rooms (name, type, establishment_id) VALUES (?, ?, ?)");
-    rooms.forEach(r => roomStmt.run(r.name, r.type, r.est));
+    const roomStmt = db.prepare("INSERT INTO rooms (id, name, type, establishment_id) VALUES (?, ?, ?, ?)");
+    rooms.forEach(r => roomStmt.run(r.id, r.name, r.type, r.est));
     roomStmt.finalize();
 
-    // 4.1. Insert Reception Desks (4 per establishment)
+    // 4.1. Insert Room Services (vincular serviços às salas)
+    const roomServices = [
+        // Freguesia - Sala 1 e 2 (serviços 1-6)
+        { room: 1, service: 1 }, { room: 1, service: 2 }, { room: 1, service: 3 },
+        { room: 2, service: 4 }, { room: 2, service: 5 }, { room: 2, service: 6 },
+        // Santana - Sala 3 (serviços 7-11)
+        { room: 3, service: 7 }, { room: 3, service: 8 }, { room: 3, service: 9 },
+        { room: 3, service: 10 }, { room: 3, service: 11 },
+        // Guarulhos Centro - Sala 4 (serviços 12-17)
+        { room: 4, service: 12 }, { room: 4, service: 13 }, { room: 4, service: 14 },
+        { room: 4, service: 15 }, { room: 4, service: 16 }, { room: 4, service: 17 },
+        // Guarulhos Taboão - Sala 5 (serviços 1, 18, 19, 2)
+        { room: 5, service: 1 }, { room: 5, service: 18 }, { room: 5, service: 19 }, { room: 5, service: 2 },
+        // Tatuapé - Sala 6 (serviços 20-27)
+        { room: 6, service: 20 }, { room: 6, service: 21 }, { room: 6, service: 22 },
+        { room: 6, service: 23 }, { room: 6, service: 24 }, { room: 6, service: 25 },
+        // Bela Cintra - Sala 7 (serviço 2)
+        { room: 7, service: 2 },
+    ];
+    const rsStmt = db.prepare("INSERT INTO room_services (room_id, service_id) VALUES (?, ?)");
+    roomServices.forEach(rs => rsStmt.run(rs.room, rs.service));
+    rsStmt.finalize();
+
+    // 4.2. Insert Reception Desks (4 per establishment)
     const receptionDesks = [];
     establishments.forEach(est => {
         for (let i = 1; i <= 4; i++) {

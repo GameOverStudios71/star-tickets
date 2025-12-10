@@ -1,6 +1,6 @@
 /**
  * Script de Seed - Gera dados de teste para o Star Tickets
- * Cria 500 tickets em diferentes status do fluxo completo
+ * Cria tickets em diferentes status do fluxo completo
  * 
  * Uso: node database/seed.js
  */
@@ -23,24 +23,22 @@ const firstNames = [
 const lastNames = [
     'Silva', 'Santos', 'Oliveira', 'Souza', 'Rodrigues', 'Ferreira', 'Alves',
     'Pereira', 'Lima', 'Gomes', 'Costa', 'Ribeiro', 'Martins', 'Carvalho',
-    'Almeida', 'Lopes', 'Soares', 'Fernandes', 'Vieira', 'Barbosa', 'Rocha',
-    'Dias', 'Nascimento', 'Andrade', 'Moreira', 'Nunes', 'Marques', 'Machado'
+    'Almeida', 'Lopes', 'Soares', 'Fernandes', 'Vieira', 'Barbosa', 'Rocha'
 ];
 
 const healthInsurances = [
-    null, null, null, // Particular (mais comum)
-    'Bradesco Saúde', 'SulAmérica', 'Unimed', 'Amil', 'NotreDame Intermédica',
-    'Porto Seguro Saúde', 'Golden Cross', 'Hapvida', 'Prevent Senior'
+    null, null, null,
+    'Bradesco Saúde', 'SulAmérica', 'Unimed', 'Amil', 'NotreDame Intermédica'
 ];
 
 // Status possíveis no fluxo
 const TICKET_STATUSES = {
-    WAITING_RECEPTION: 'WAITING_RECEPTION',      // Aguardando na recepção
-    CALLED_RECEPTION: 'CALLED_RECEPTION',        // Chamado para recepção
-    IN_RECEPTION: 'IN_RECEPTION',                // Em atendimento na recepção
-    WAITING_PROFESSIONAL: 'WAITING_PROFESSIONAL', // Aguardando profissional
-    DONE: 'DONE',                                 // Finalizado
-    CANCELED: 'CANCELED'                          // Cancelado
+    WAITING_RECEPTION: 'WAITING_RECEPTION',
+    CALLED_RECEPTION: 'CALLED_RECEPTION',
+    IN_RECEPTION: 'IN_RECEPTION',
+    WAITING_PROFESSIONAL: 'WAITING_PROFESSIONAL',
+    DONE: 'DONE',
+    CANCELED: 'CANCELED'
 };
 
 const SERVICE_STATUSES = {
@@ -49,16 +47,6 @@ const SERVICE_STATUSES = {
     IN_PROGRESS: 'IN_PROGRESS',
     COMPLETED: 'COMPLETED'
 };
-
-// Distribuição de status (peso para cada status)
-const statusDistribution = [
-    { status: TICKET_STATUSES.WAITING_RECEPTION, weight: 25 },
-    { status: TICKET_STATUSES.CALLED_RECEPTION, weight: 10 },
-    { status: TICKET_STATUSES.IN_RECEPTION, weight: 10 },
-    { status: TICKET_STATUSES.WAITING_PROFESSIONAL, weight: 35 },
-    { status: TICKET_STATUSES.DONE, weight: 15 },
-    { status: TICKET_STATUSES.CANCELED, weight: 5 }
-];
 
 // Helpers
 function randomItem(arr) {
@@ -73,17 +61,6 @@ function randomName() {
     return `${randomItem(firstNames)} ${randomItem(lastNames)}`;
 }
 
-function weightedRandomStatus() {
-    const totalWeight = statusDistribution.reduce((sum, s) => sum + s.weight, 0);
-    let random = Math.random() * totalWeight;
-
-    for (const item of statusDistribution) {
-        random -= item.weight;
-        if (random <= 0) return item.status;
-    }
-    return TICKET_STATUSES.WAITING_RECEPTION;
-}
-
 function randomDateTime(hoursAgo = 8) {
     const now = new Date();
     const msAgo = randomInt(0, hoursAgo * 60 * 60 * 1000);
@@ -94,54 +71,84 @@ function randomDateTime(hoursAgo = 8) {
 async function seed() {
     console.log('🌱 Iniciando seed de dados de teste...\n');
 
+    // Limpar tickets existentes de hoje
+    await run(`DELETE FROM ticket_services WHERE ticket_id IN (SELECT id FROM tickets WHERE date(created_at, 'localtime') = date('now', 'localtime'))`);
+    await run(`DELETE FROM tickets WHERE date(created_at, 'localtime') = date('now', 'localtime')`);
+    console.log('🗑️ Tickets de hoje limpos\n');
+
     // Buscar dados existentes
     const establishments = await query('SELECT * FROM establishments');
-    const services = await query('SELECT * FROM services');
     const receptionDesks = await query('SELECT * FROM reception_desks');
 
-    console.log(`📊 Estabelecimentos: ${establishments.length}`);
-    console.log(`📊 Serviços: ${services.length}`);
-    console.log(`📊 Mesas de Recepção: ${receptionDesks.length}`);
-    console.log('');
+    // Buscar serviços que estão vinculados a salas (importante!)
+    const servicesWithRooms = await query(`
+        SELECT DISTINCT s.*, rs.room_id
+        FROM services s
+        JOIN room_services rs ON s.id = rs.service_id
+        JOIN rooms r ON rs.room_id = r.id
+        WHERE r.is_active = 1
+    `);
 
-    const TOTAL_TICKETS = 500;
-    const prefixCounters = {}; // Para gerar códigos únicos
+    console.log(`📊 Estabelecimentos: ${establishments.length}`);
+    console.log(`📊 Serviços com salas: ${servicesWithRooms.length}`);
+    console.log(`📊 Mesas de Recepção: ${receptionDesks.length}\n`);
+
+    if (servicesWithRooms.length === 0) {
+        console.log('❌ Nenhum serviço vinculado a salas! Configure room_services primeiro.');
+        db.close();
+        return;
+    }
+
+    const TOTAL_TICKETS = 60;
+    const prefixCounters = {};
+
+    // Distribuição fixa de status para testes
+    const statusList = [
+        // Aguardando recepção (10)
+        ...Array(10).fill(TICKET_STATUSES.WAITING_RECEPTION),
+        // Chamado recepção (5)
+        ...Array(5).fill(TICKET_STATUSES.CALLED_RECEPTION),
+        // Em atendimento recepção (5)
+        ...Array(5).fill(TICKET_STATUSES.IN_RECEPTION),
+        // Aguardando profissional (25) - MAIORIA para testar fila
+        ...Array(25).fill(TICKET_STATUSES.WAITING_PROFESSIONAL),
+        // Finalizados (12)
+        ...Array(12).fill(TICKET_STATUSES.DONE),
+        // Cancelados (3)
+        ...Array(3).fill(TICKET_STATUSES.CANCELED)
+    ];
 
     console.log(`📝 Gerando ${TOTAL_TICKETS} tickets...\n`);
 
     for (let i = 0; i < TOTAL_TICKETS; i++) {
-        const establishment = randomItem(establishments);
-        const status = weightedRandomStatus();
-        const isPriority = Math.random() < 0.15 ? 1 : 0; // 15% prioritário
+        const establishment = establishments[i % establishments.length]; // Distribui entre estabelecimentos
+        const status = statusList[i] || TICKET_STATUSES.WAITING_PROFESSIONAL;
+        const isPriority = Math.random() < 0.2 ? 1 : 0;
         const healthInsurance = randomItem(healthInsurances);
-        const createdAt = randomDateTime(10); // Últimas 10 horas
+        const createdAt = randomDateTime(6);
 
-        // Selecionar 1-3 serviços aleatórios
-        const numServices = randomInt(1, 3);
-        const selectedServices = [];
-        for (let j = 0; j < numServices; j++) {
-            const service = randomItem(services);
-            if (!selectedServices.find(s => s.id === service.id)) {
-                selectedServices.push(service);
-            }
-        }
+        // Buscar salas do estabelecimento
+        const estRooms = await query(`SELECT r.id FROM rooms r WHERE r.establishment_id = ? AND r.is_active = 1`, [establishment.id]);
+        if (estRooms.length === 0) continue;
 
-        if (selectedServices.length === 0) {
-            selectedServices.push(randomItem(services));
-        }
+        // Buscar serviços vinculados às salas deste estabelecimento
+        const estServices = servicesWithRooms.filter(s =>
+            estRooms.some(r => r.id === s.room_id)
+        );
+
+        if (estServices.length === 0) continue;
+
+        const service = randomItem(estServices);
 
         // Gerar display_code
-        const prefix = selectedServices[0].prefix;
+        const prefix = service.prefix;
         prefixCounters[prefix] = (prefixCounters[prefix] || 0) + 1;
         const displayCode = `${prefix}${String(prefixCounters[prefix]).padStart(3, '0')}`;
 
-        // Nome do cliente (exceto para WAITING_RECEPTION sem atendimento)
-        let customerName = null;
-        if (status !== TICKET_STATUSES.WAITING_RECEPTION || Math.random() < 0.3) {
-            customerName = randomName();
-        }
+        // Nome do cliente (SEMPRE preenchido para aparecer na fila)
+        const customerName = randomName();
 
-        // Mesa de recepção (se já passou pela recepção)
+        // Mesa de recepção
         let deskId = null;
         if (status !== TICKET_STATUSES.WAITING_RECEPTION) {
             const estDesks = receptionDesks.filter(d => d.establishment_id === establishment.id);
@@ -157,64 +164,58 @@ async function seed() {
             [displayCode, createdAt, status, customerName, healthInsurance, isPriority, establishment.id, deskId]
         );
 
-        // Inserir serviços do ticket
-        for (let j = 0; j < selectedServices.length; j++) {
-            const service = selectedServices[j];
-            let serviceStatus = SERVICE_STATUSES.PENDING;
-
-            // Definir status do serviço baseado no status do ticket
-            if (status === TICKET_STATUSES.DONE) {
-                serviceStatus = SERVICE_STATUSES.COMPLETED;
-            } else if (status === TICKET_STATUSES.WAITING_PROFESSIONAL) {
-                if (j === 0) {
-                    // Primeiro serviço pode estar pending, called ou in_progress
-                    const r = Math.random();
-                    if (r < 0.6) serviceStatus = SERVICE_STATUSES.PENDING;
-                    else if (r < 0.8) serviceStatus = SERVICE_STATUSES.CALLED;
-                    else serviceStatus = SERVICE_STATUSES.IN_PROGRESS;
-                } else {
-                    // Serviços posteriores
-                    if (Math.random() < 0.3) {
-                        serviceStatus = SERVICE_STATUSES.COMPLETED; // Alguns já finalizados
-                    }
-                }
-            }
-
-            await insert(
-                `INSERT INTO ticket_services (ticket_id, service_id, order_sequence, status, created_at)
-                 VALUES (?, ?, ?, ?, ?)`,
-                [ticketId, service.id, j + 1, serviceStatus, createdAt]
-            );
+        // Inserir serviço do ticket
+        let serviceStatus = SERVICE_STATUSES.PENDING;
+        if (status === TICKET_STATUSES.DONE) {
+            serviceStatus = SERVICE_STATUSES.COMPLETED;
+        } else if (status === TICKET_STATUSES.WAITING_PROFESSIONAL) {
+            // Variação para testar diferentes estados na fila
+            const r = Math.random();
+            if (r < 0.7) serviceStatus = SERVICE_STATUSES.PENDING;
+            else if (r < 0.85) serviceStatus = SERVICE_STATUSES.CALLED;
+            else serviceStatus = SERVICE_STATUSES.IN_PROGRESS;
         }
 
-        // Progresso
-        if ((i + 1) % 50 === 0) {
-            console.log(`  ✓ ${i + 1}/${TOTAL_TICKETS} tickets criados...`);
-        }
+        await insert(
+            `INSERT INTO ticket_services (ticket_id, service_id, order_sequence, status, created_at)
+             VALUES (?, ?, ?, ?, ?)`,
+            [ticketId, service.id, 1, serviceStatus, createdAt]
+        );
     }
 
     // Estatísticas finais
-    console.log('\n📊 Estatísticas geradas:');
+    console.log('📊 Estatísticas geradas:');
 
     const stats = await query(`
         SELECT status, COUNT(*) as count 
         FROM tickets 
         WHERE date(created_at, 'localtime') = date('now', 'localtime')
         GROUP BY status
+        ORDER BY status
     `);
 
     stats.forEach(s => {
         console.log(`   ${s.status}: ${s.count} tickets`);
     });
 
-    const totalServices = await query(`SELECT COUNT(*) as count FROM ticket_services`);
-    console.log(`\n   Total de serviços vinculados: ${totalServices[0].count}`);
+    // Verificar fila do profissional
+    const queueCount = await query(`
+        SELECT COUNT(*) as count
+        FROM ticket_services ts
+        JOIN tickets t ON ts.ticket_id = t.id
+        WHERE ts.status = 'PENDING'
+        AND t.status = 'WAITING_PROFESSIONAL'
+        AND t.temp_customer_name IS NOT NULL
+        AND date(t.created_at, 'localtime') = date('now', 'localtime')
+    `);
+
+    console.log(`\n   📋 Tickets na fila do profissional: ${queueCount[0].count}`);
 
     console.log('\n✅ Seed concluído com sucesso!');
     db.close();
 }
 
-// Database helpers (promisified)
+// Database helpers
 function query(sql, params = []) {
     return new Promise((resolve, reject) => {
         db.all(sql, params, (err, rows) => {
@@ -229,6 +230,15 @@ function insert(sql, params = []) {
         db.run(sql, params, function (err) {
             if (err) reject(err);
             else resolve(this.lastID);
+        });
+    });
+}
+
+function run(sql, params = []) {
+    return new Promise((resolve, reject) => {
+        db.run(sql, params, function (err) {
+            if (err) reject(err);
+            else resolve(this.changes);
         });
     });
 }
