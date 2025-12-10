@@ -525,8 +525,10 @@ module.exports = (db, io) => {
 
     // Overview of all rooms and their waiting counts
     router.get('/manager/overview', (req, res) => {
-        const query = `
-            SELECT r.id, r.name, COUNT(t.id) as waiting_count
+        const { establishment_id } = req.query;
+
+        let query = `
+            SELECT r.id, r.name, r.establishment_id, COUNT(t.id) as waiting_count
             FROM rooms r
             LEFT JOIN room_services rs ON r.id = rs.room_id
             LEFT JOIN ticket_services ts ON rs.service_id = ts.service_id AND ts.status = 'PENDING'
@@ -538,9 +540,17 @@ module.exports = (db, io) => {
                 AND ts_prev.order_sequence < ts.order_sequence 
                 AND ts_prev.status != 'COMPLETED'
             )
-            GROUP BY r.id
         `;
-        db.all(query, [], (err, rows) => {
+
+        const params = [];
+        if (establishment_id) {
+            query += ` WHERE r.establishment_id = ?`;
+            params.push(establishment_id);
+        }
+
+        query += ` GROUP BY r.id`;
+
+        db.all(query, params, (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json(rows);
         });

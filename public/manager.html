@@ -258,8 +258,24 @@
         let selectedTargetRoomId = null;
         let selectedCandidateIds = new Set();
 
+        let userEstablishmentId = null;
+
         async function loadRooms() {
-            const res = await fetch('/api/manager/overview');
+            // Get user's establishment from session if not cached
+            if (!userEstablishmentId) {
+                try {
+                    const authRes = await fetch('/api/auth/me');
+                    if (authRes.ok) {
+                        const authData = await authRes.json();
+                        userEstablishmentId = authData.user?.establishment_id;
+                    }
+                } catch (e) {
+                    console.error('Error getting user session:', e);
+                }
+            }
+
+            const params = userEstablishmentId ? `?establishment_id=${userEstablishmentId}` : '';
+            const res = await fetch(`/api/manager/overview${params}`);
             const rooms = await res.json();
 
             if (isRelocationMode) {
