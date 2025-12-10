@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { requireAuth, requireEstablishmentScope, optionalAuth } = require('../middleware/auth');
+const queries = require('../database/queries');
 
 module.exports = (db, io) => {
 
@@ -44,73 +45,55 @@ module.exports = (db, io) => {
 
     // 3. Reception - List Tickets (only today's tickets) - PROTECTED route
     router.get('/tickets', requireEstablishmentScope, (req, res) => {
-        const establishmentId = req.establishmentId;
-
-        let query = `
-            SELECT t.*, c.name as customer_name, 
-            (SELECT group_concat(s.name, ', ') FROM ticket_services ts JOIN services s ON ts.service_id = s.id WHERE ts.ticket_id = t.id) as services_list
-            FROM tickets t
-            LEFT JOIN customers c ON t.customer_id = c.id
-            WHERE t.status != 'DONE' AND t.status != 'CANCELED'
-            AND date(t.created_at, 'localtime') = date('now', 'localtime')
-        `;
-        const params = [];
-
-        if (establishmentId) {
-            query += ` AND t.establishment_id = ?`;
-            params.push(establishmentId);
-        }
-        query += ` ORDER BY t.created_at DESC`;
-
+        const { query, params } = queries.ticketQueries.listTodayTickets(req.establishmentId);
         db.all(query, params, (err, rows) => {
-            if (err) return res.status(500).json({ error: err.message });
+            if (err) return queries.handleDbError(res, err);
             res.json(rows);
         });
     });
 
     // Get services for a specific ticket
     router.get('/tickets/:id/services', (req, res) => {
-        const query = `
-            SELECT ts.id, ts.status, ts.order_sequence, s.name as service_name, s.id as service_id
-            FROM ticket_services ts
-            JOIN services s ON ts.service_id = s.id
-            WHERE ts.ticket_id = ?
-            ORDER BY ts.order_sequence
-        `;
-        db.all(query, [req.params.id], (err, rows) => {
-            if (err) return res.status(500).json({ error: err.message });
+        const { query, params } = queries.ticketServiceQueries.getByTicket(req.params.id);
+        db.all(query, params, (err, rows) => {
+            if (err) return queries.handleDbError(res, err);
             res.json(rows);
         });
     });
 
-    // Link Customer to Ticket
-    router.put('/tickets/:id/link', (req, res) => {
+    // Link Customer to Ticket - PROTECTED
+    router.put('/tickets/:id/link', requireEstablishmentScope, (req, res) => {
         const { customerName } = req.body;
         const ticketId = req.params.id;
+        const { query, params } = queries.ticketQueries.updateTicket(ticketId, 'temp_customer_name', customerName, req.establishmentId);
 
-        db.run("UPDATE tickets SET temp_customer_name = ? WHERE id = ?", [customerName, ticketId], function (err) {
-            if (err) return res.status(500).json({ error: err.message });
+        db.run(query, params, function (err) {
+            if (err) return queries.handleDbError(res, err);
+            if (this.changes === 0) return queries.handleNotFound(res);
             io.emit('ticket_updated', { ticketId, customerName });
             res.json({ success: true });
         });
     });
 
-    // Update health insurance name for a ticket
-    router.put('/tickets/:id/insurance', (req, res) => {
+    // Update health insurance name for a ticket - PROTECTED
+    router.put('/tickets/:id/insurance', requireEstablishmentScope, (req, res) => {
         const { healthInsuranceName } = req.body;
         const ticketId = req.params.id;
+        const { query, params } = queries.ticketQueries.updateTicket(ticketId, 'health_insurance_name', healthInsuranceName, req.establishmentId);
 
-        db.run("UPDATE tickets SET health_insurance_name = ? WHERE id = ?", [healthInsuranceName, ticketId], function (err) {
-            if (err) return res.status(500).json({ error: err.message });
+        db.run(query, params, function (err) {
+            if (err) return queries.handleDbError(res, err);
+            if (this.changes === 0) return queries.handleNotFound(res);
             io.emit('ticket_updated', { ticketId, healthInsuranceName });
             res.json({ success: true });
         });
     });
 
-    // Update ticket status
-    router.put('/tickets/:id/status', (req, res) => {
+    // Update ticket status - PROTECTED
+    router.put('/tickets/:id/status', requireEstablishmentScope, (req, res) => {
         const { status } = req.body;
         const ticketId = req.params.id;
+        const establishmentId = req.establishmentId;
 
         // Validate status
         const validStatuses = ['WAITING_RECEPTION', 'CALLED_RECEPTION', 'IN_RECEPTION', 'WAITING_PROFESSIONAL', 'DONE', 'CANCELED'];
@@ -118,51 +101,91 @@ module.exports = (db, io) => {
             return res.status(400).json({ error: 'Status inválido' });
         }
 
-        db.run("UPDATE tickets SET status = ? WHERE id = ?", [status, ticketId], function (err) {
+        let query = "UPDATE tickets SET status = ? WHERE id = ?";
+        const params = [status, ticketId];
+
+        if (establishmentId) {
+            query = "UPDATE tickets SET status = ? WHERE id = ? AND establishment_id = ?";
+            params.push(establishmentId);
+        }
+
+        db.run(query, params, function (err) {
             if (err) return res.status(500).json({ error: err.message });
+            if (this.changes === 0) {
+                return res.status(403).json({ error: 'Ticket não encontrado ou sem permissão' });
+            }
             io.emit('ticket_updated', { ticketId, status });
             res.json({ success: true, message: 'Status atualizado com sucesso' });
         });
     });
 
-    // Remove a service from a ticket
-    router.delete('/tickets/services/:id', (req, res) => {
+    // Remove a service from a ticket - PROTECTED
+    router.delete('/tickets/services/:id', requireEstablishmentScope, (req, res) => {
         const ticketServiceId = req.params.id;
+        const establishmentId = req.establishmentId;
 
-        // Get ticket_id before deleting
-        db.get("SELECT ticket_id FROM ticket_services WHERE id = ?", [ticketServiceId], (err, row) => {
-            if (err || !row) return res.status(500).json({ error: "Service not found" });
+        // Get ticket_id and verify ownership before deleting
+        let query = `
+            SELECT ts.ticket_id 
+            FROM ticket_services ts 
+            JOIN tickets t ON ts.ticket_id = t.id 
+            WHERE ts.id = ?
+        `;
+        const params = [ticketServiceId];
+
+        if (establishmentId) {
+            query += ` AND t.establishment_id = ?`;
+            params.push(establishmentId);
+        }
+
+        db.get(query, params, (err, row) => {
+            if (err || !row) return res.status(403).json({ error: "Serviço não encontrado ou sem permissão" });
 
             const ticketId = row.ticket_id;
 
             db.run("DELETE FROM ticket_services WHERE id = ?", [ticketServiceId], function (err) {
                 if (err) return res.status(500).json({ error: err.message });
 
-                // Don't auto-cancel - allow receptionist to add new services
                 io.emit('ticket_updated', { ticketId });
                 res.json({ success: true });
             });
         });
     });
 
-    // Add a service to a ticket
-    router.post('/tickets/:id/services', (req, res) => {
+    // Add a service to a ticket - PROTECTED
+    router.post('/tickets/:id/services', requireEstablishmentScope, (req, res) => {
         const ticketId = req.params.id;
         const { serviceId } = req.body;
+        const establishmentId = req.establishmentId;
 
-        // Get the max order_sequence for this ticket
-        db.get("SELECT MAX(order_sequence) as max_seq FROM ticket_services WHERE ticket_id = ?", [ticketId], (err, row) => {
-            const nextSequence = (row.max_seq || 0) + 1;
+        // Verify ticket ownership first
+        let verifyQuery = "SELECT id FROM tickets WHERE id = ?";
+        const verifyParams = [ticketId];
 
-            db.run(
-                "INSERT INTO ticket_services (ticket_id, service_id, order_sequence, status) VALUES (?, ?, ?, 'PENDING')",
-                [ticketId, serviceId, nextSequence],
-                function (err) {
-                    if (err) return res.status(500).json({ error: err.message });
-                    io.emit('ticket_updated', { ticketId });
-                    res.json({ id: this.lastID, success: true });
-                }
-            );
+        if (establishmentId) {
+            verifyQuery += " AND establishment_id = ?";
+            verifyParams.push(establishmentId);
+        }
+
+        db.get(verifyQuery, verifyParams, (err, ticket) => {
+            if (err || !ticket) {
+                return res.status(403).json({ error: 'Ticket não encontrado ou sem permissão' });
+            }
+
+            // Get the max order_sequence for this ticket
+            db.get("SELECT MAX(order_sequence) as max_seq FROM ticket_services WHERE ticket_id = ?", [ticketId], (err, row) => {
+                const nextSequence = (row.max_seq || 0) + 1;
+
+                db.run(
+                    "INSERT INTO ticket_services (ticket_id, service_id, order_sequence, status) VALUES (?, ?, ?, 'PENDING')",
+                    [ticketId, serviceId, nextSequence],
+                    function (err) {
+                        if (err) return res.status(500).json({ error: err.message });
+                        io.emit('ticket_updated', { ticketId });
+                        res.json({ id: this.lastID, success: true });
+                    }
+                );
+            });
         });
     });
 
@@ -334,193 +357,137 @@ module.exports = (db, io) => {
 
     // Get reception desks for an establishment - uses session when authenticated
     router.get('/reception-desks', optionalAuth, (req, res) => {
-        // Use establishment from session if available, otherwise from query param (for admin/public)
         const establishmentId = req.establishmentId || req.query.establishment_id;
-
-        let query = `SELECT * FROM reception_desks WHERE is_active = 1`;
-        const params = [];
-
-        if (establishmentId) {
-            query += ` AND establishment_id = ?`;
-            params.push(establishmentId);
-        }
-
-        query += ` ORDER BY name`;
+        const { query, params } = queries.receptionDeskQueries.listActive(establishmentId);
 
         db.all(query, params, (err, rows) => {
-            if (err) return res.status(500).json({ error: err.message });
+            if (err) return queries.handleDbError(res, err);
             res.json(rows || []);
         });
     });
 
-    // Reception - Call ticket to reception desk
-    router.post('/reception/call', (req, res) => {
+    // Reception - Call ticket to reception desk - PROTECTED
+    router.post('/reception/call', requireEstablishmentScope, (req, res) => {
         const { ticketId, deskId } = req.body;
 
-        // Get desk name if provided
         const getDeskName = (callback) => {
             if (!deskId) return callback(null, 'RECEPÇÃO');
             db.get("SELECT name FROM reception_desks WHERE id = ?", [deskId], (err, desk) => {
-                if (err || !desk) return callback(null, 'RECEPÇÃO');
-                callback(null, desk.name);
+                callback(null, desk?.name || 'RECEPÇÃO');
             });
         };
 
-        db.get(`
-            SELECT t.display_code, t.temp_customer_name, t.status
-            FROM tickets t
-            WHERE t.id = ?
-        `, [ticketId], (err, row) => {
-            if (err || !row) return res.status(404).json({ error: "Ticket não encontrado" });
+        const { query, params } = queries.ticketQueries.getTicketWithStatus(ticketId, req.establishmentId);
+        db.get(query, params, (err, row) => {
+            if (err || !row) return queries.handleNotFound(res);
             if (row.status !== 'WAITING_RECEPTION') return res.status(400).json({ error: "Ticket já foi chamado" });
 
             getDeskName((err, deskName) => {
-                // Update ticket status to CALLED_RECEPTION and save desk (shows on TV)
                 const updateQuery = deskId
                     ? "UPDATE tickets SET status = 'CALLED_RECEPTION', reception_desk_id = ? WHERE id = ?"
                     : "UPDATE tickets SET status = 'CALLED_RECEPTION' WHERE id = ?";
                 const updateParams = deskId ? [deskId, ticketId] : [ticketId];
 
                 db.run(updateQuery, updateParams, (err) => {
-                    if (err) return res.status(500).json({ error: err.message });
-
-                    // Emit to TV
+                    if (err) return queries.handleDbError(res, err);
                     io.emit('call_ticket', {
                         ticketId,
                         displayCode: row.display_code,
                         customerName: row.temp_customer_name || 'Cliente',
                         roomName: deskName
                     });
-
                     res.json({ success: true });
                 });
             });
         });
     });
 
-    // Reception - Start attendance (client sat down, start service)
-    router.post('/reception/announce', (req, res) => {
+    // Reception - Start attendance - PROTECTED
+    router.post('/reception/announce', requireEstablishmentScope, (req, res) => {
         const { ticketId } = req.body;
+        const { query, params } = queries.ticketQueries.getTicketWithStatus(ticketId, req.establishmentId);
 
-        db.get(`
-            SELECT t.display_code, t.temp_customer_name, t.status
-            FROM tickets t
-            WHERE t.id = ?
-        `, [ticketId], (err, row) => {
-            if (err || !row) return res.status(404).json({ error: "Ticket não encontrado" });
+        db.get(query, params, (err, row) => {
+            if (err || !row) return queries.handleNotFound(res);
             if (row.status !== 'CALLED_RECEPTION') return res.status(400).json({ error: "Ticket precisa ser chamado primeiro" });
 
-            // Mark as IN_RECEPTION (attendance started, stops TV rotation)
             db.run("UPDATE tickets SET status = 'IN_RECEPTION' WHERE id = ?", [ticketId], (err) => {
-                if (err) return res.status(500).json({ error: err.message });
-
-                // Emit update to refresh TV
+                if (err) return queries.handleDbError(res, err);
                 io.emit('ticket_updated', { ticketId });
-
                 res.json({ success: true });
             });
         });
     });
 
-    // Reception - Finish initial triage and release to service queues
-    router.post('/reception/finish', (req, res) => {
+    // Reception - Finish and release to service queues - PROTECTED
+    router.post('/reception/finish', requireEstablishmentScope, (req, res) => {
         const { ticketId } = req.body;
+        const { query, params } = queries.ticketQueries.updateTicket(ticketId, 'status', 'WAITING_PROFESSIONAL', req.establishmentId);
 
-        // Change status to WAITING_PROFESSIONAL so services can be called
-        db.run("UPDATE tickets SET status = 'WAITING_PROFESSIONAL' WHERE id = ?", [ticketId], function (err) {
-            if (err) return res.status(500).json({ error: err.message });
-
+        db.run(query, params, function (err) {
+            if (err) return queries.handleDbError(res, err);
+            if (this.changes === 0) return queries.handleNotFound(res);
             io.emit('ticket_updated', { ticketId });
             res.json({ success: true, message: 'Cliente liberado para filas de serviço' });
         });
     });
 
-    // Get all tickets that have been CALLED but not yet started (for TV rotation)
+    // Get all tickets that have been CALLED (for TV rotation)
     router.get('/called-tickets', (req, res) => {
-        const { establishment_id } = req.query;
-
-        let query = `
-            SELECT DISTINCT
-                t.display_code,
-                t.temp_customer_name,
-                CASE 
-                    WHEN t.status = 'CALLED_RECEPTION' THEN COALESCE(rd.name, 'RECEPÇÃO')
-                    ELSE r.name
-                END as room_name,
-                COALESCE(ts.created_at, t.created_at) as created_at
-            FROM tickets t
-            LEFT JOIN reception_desks rd ON t.reception_desk_id = rd.id
-            LEFT JOIN ticket_services ts ON ts.ticket_id = t.id AND ts.status = 'CALLED'
-            LEFT JOIN room_services rs ON rs.service_id = ts.service_id
-            LEFT JOIN rooms r ON rs.room_id = r.id
-            WHERE (t.status = 'CALLED_RECEPTION' OR ts.status = 'CALLED')
-            AND date(t.created_at, 'localtime') = date('now', 'localtime')
-        `;
-
-        const params = [];
-        if (establishment_id) {
-            query += ` AND t.establishment_id = ?`;
-            params.push(establishment_id);
-        }
-
-        query += ` ORDER BY created_at ASC`;
-
+        const { query, params } = queries.calledTicketQueries.list(req.query.establishment_id);
         db.all(query, params, (err, rows) => {
-            if (err) return res.status(500).json({ error: err.message });
+            if (err) return queries.handleDbError(res, err);
             res.json(rows || []);
         });
     });
 
-    router.post('/call', (req, res) => {
+    // Professional - Call a ticket service - PROTECTED
+    router.post('/call', requireEstablishmentScope, (req, res) => {
         const { ticketServiceId, roomId } = req.body;
+        const { query, params } = queries.ticketServiceQueries.getCallInfo(ticketServiceId, roomId, req.establishmentId);
 
-        db.get(`
-            SELECT t.display_code, t.temp_customer_name, r.name as room_name 
-            FROM ticket_services ts
-            JOIN tickets t ON ts.ticket_id = t.id
-            JOIN room_services rs ON rs.service_id = ts.service_id
-            JOIN rooms r ON rs.room_id = r.id
-            WHERE ts.id = ? AND r.id = ?
-        `, [ticketServiceId, roomId], (err, row) => {
-            if (err || !row) return res.status(500).json({ error: "Error fetching ticket info" });
+        db.get(query, params, (err, row) => {
+            if (err || !row) return queries.handleNotFound(res);
 
-            // Update status to CALLED
             db.run("UPDATE ticket_services SET status = 'CALLED' WHERE id = ?", [ticketServiceId], (err) => {
-                if (err) return res.status(500).json({ error: err.message });
-
-                // Emit to TV
+                if (err) return queries.handleDbError(res, err);
                 io.emit('call_ticket', {
                     displayCode: row.display_code,
                     customerName: row.temp_customer_name,
                     roomName: row.room_name
                 });
-
                 res.json({ success: true });
             });
         });
     });
 
-    // Start service - marks ticket as IN_PROGRESS (removes from TV rotation)
-    router.post('/start-service', (req, res) => {
+    // Start service - marks ticket as IN_PROGRESS - PROTECTED
+    router.post('/start-service', requireEstablishmentScope, (req, res) => {
         const { ticketServiceId } = req.body;
+        const { query, params } = queries.ticketServiceQueries.verifyOwnership(ticketServiceId, req.establishmentId);
 
-        db.run("UPDATE ticket_services SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = ?", [ticketServiceId], function (err) {
-            if (err) return res.status(500).json({ error: err.message });
+        db.get(query, params, (err, row) => {
+            if (err || !row) return queries.handleNotFound(res);
 
-            io.emit('ticket_updated', { ticketServiceId });
-            res.json({ success: true });
+            db.run("UPDATE ticket_services SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = ?", [ticketServiceId], function (err) {
+                if (err) return queries.handleDbError(res, err);
+                io.emit('ticket_updated', { ticketServiceId });
+                res.json({ success: true });
+            });
         });
     });
 
-    router.post('/finish', (req, res) => {
+    // Finish service - marks as COMPLETED - PROTECTED
+    router.post('/finish', requireEstablishmentScope, (req, res) => {
         const { ticketServiceId } = req.body;
+        const { query, params } = queries.ticketServiceQueries.verifyOwnership(ticketServiceId, req.establishmentId);
 
-        db.run("UPDATE ticket_services SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?", [ticketServiceId], function (err) {
-            if (err) return res.status(500).json({ error: err.message });
+        db.get(query, params, (err, row) => {
+            if (err || !row) return queries.handleNotFound(res);
 
-            // Check if there are more services for this ticket
-            db.get("SELECT ticket_id FROM ticket_services WHERE id = ?", [ticketServiceId], (err, row) => {
-                const ticketId = row.ticket_id;
+            const ticketId = row.ticket_id;
+            db.run("UPDATE ticket_services SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?", [ticketServiceId], function (err) {
+                if (err) return queries.handleDbError(res, err);
 
                 db.get("SELECT count(*) as count FROM ticket_services WHERE ticket_id = ? AND status = 'PENDING'", [ticketId], (err, countRow) => {
                     if (countRow.count === 0) {
@@ -534,44 +501,21 @@ module.exports = (db, io) => {
 
     // 6. Manager API
 
-    // Overview of all rooms and their waiting counts - PROTECTED route
+    // Overview of all rooms - PROTECTED
     router.get('/manager/overview', requireEstablishmentScope, (req, res) => {
-        const establishmentId = req.establishmentId;
-
-        let query = `
-            SELECT r.id, r.name, r.establishment_id, COUNT(t.id) as waiting_count
-            FROM rooms r
-            LEFT JOIN room_services rs ON r.id = rs.room_id
-            LEFT JOIN ticket_services ts ON rs.service_id = ts.service_id AND ts.status = 'PENDING'
-            LEFT JOIN tickets t ON ts.ticket_id = t.id AND t.status = 'WAITING_PROFESSIONAL' AND date(t.created_at, 'localtime') = date('now', 'localtime')
-            -- Ensure this is the current active service for the ticket
-            AND NOT EXISTS (
-                SELECT 1 FROM ticket_services ts_prev 
-                WHERE ts_prev.ticket_id = ts.ticket_id 
-                AND ts_prev.order_sequence < ts.order_sequence 
-                AND ts_prev.status != 'COMPLETED'
-            )
-            WHERE 1=1
-        `;
-
-        const params = [];
-        if (establishmentId) {
-            query += ` AND r.establishment_id = ?`;
-            params.push(establishmentId);
-        }
-
-        query += ` GROUP BY r.id`;
-
+        const { query, params } = queries.roomQueries.getOverview(req.establishmentId);
         db.all(query, params, (err, rows) => {
-            if (err) return res.status(500).json({ error: err.message });
+            if (err) return queries.handleDbError(res, err);
             res.json(rows);
         });
     });
 
-    // Detailed queue for a specific room (Manager View)
-    router.get('/manager/room/:roomId/queue', (req, res) => {
+    // Detailed queue for a specific room (Manager View) - PROTECTED
+    router.get('/manager/room/:roomId/queue', requireEstablishmentScope, (req, res) => {
         const roomId = req.params.roomId;
-        const query = `
+        const establishmentId = req.establishmentId;
+
+        let query = `
             SELECT ts.id as ticket_service_id, t.id as ticket_id, t.display_code, t.temp_customer_name, s.name as service_name,
             (SELECT COUNT(*) FROM ticket_services ts2 WHERE ts2.ticket_id = t.id AND ts2.status = 'PENDING' AND ts2.id != ts.id) as other_services_count
             FROM ticket_services ts
@@ -588,24 +532,45 @@ module.exports = (db, io) => {
                 AND ts_prev.order_sequence < ts.order_sequence 
                 AND ts_prev.status != 'COMPLETED'
             )
-            ORDER BY t.is_priority DESC, ts.created_at ASC
         `;
-        db.all(query, [roomId], (err, rows) => {
+        const params = [roomId];
+
+        if (establishmentId) {
+            query += ` AND t.establishment_id = ?`;
+            params.push(establishmentId);
+        }
+        query += ` ORDER BY t.is_priority DESC, ts.created_at ASC`;
+
+        db.all(query, params, (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json(rows);
         });
     });
 
-    // Prioritize a specific service (Move to top of list for that ticket)
-    router.put('/tickets/services/:id/prioritize', (req, res) => {
+    // Prioritize a specific service - PROTECTED
+    router.put('/tickets/services/:id/prioritize', requireEstablishmentScope, (req, res) => {
         const ticketServiceId = req.params.id;
+        const establishmentId = req.establishmentId;
 
-        db.get("SELECT ticket_id, order_sequence FROM ticket_services WHERE id = ?", [ticketServiceId], (err, targetService) => {
-            if (err || !targetService) return res.status(500).json({ error: "Service not found" });
+        // Verify ownership
+        let verifyQuery = `
+            SELECT ts.ticket_id, ts.order_sequence 
+            FROM ticket_services ts
+            JOIN tickets t ON ts.ticket_id = t.id
+            WHERE ts.id = ?
+        `;
+        const verifyParams = [ticketServiceId];
+
+        if (establishmentId) {
+            verifyQuery += ` AND t.establishment_id = ?`;
+            verifyParams.push(establishmentId);
+        }
+
+        db.get(verifyQuery, verifyParams, (err, targetService) => {
+            if (err || !targetService) return res.status(403).json({ error: "Serviço não encontrado ou sem permissão" });
 
             const ticketId = targetService.ticket_id;
 
-            // Find the current first pending service
             db.get(`
                 SELECT id, order_sequence FROM ticket_services 
                 WHERE ticket_id = ? AND status = 'PENDING' 
@@ -614,18 +579,16 @@ module.exports = (db, io) => {
                 if (err) return res.status(500).json({ error: err.message });
                 if (!firstService) return res.status(400).json({ error: "No pending services found" });
 
-                if (firstService.id === ticketServiceId) {
+                if (firstService.id === parseInt(ticketServiceId)) {
                     return res.json({ success: true, message: "Already at top" });
                 }
 
-                // Swap order_sequence
                 const seq1 = firstService.order_sequence;
                 const seq2 = targetService.order_sequence;
 
                 db.run("UPDATE ticket_services SET order_sequence = ? WHERE id = ?", [seq2, firstService.id]);
                 db.run("UPDATE ticket_services SET order_sequence = ? WHERE id = ?", [seq1, ticketServiceId], (err) => {
                     if (err) return res.status(500).json({ error: err.message });
-
                     io.emit('ticket_updated', { ticketId });
                     res.json({ success: true });
                 });
@@ -633,11 +596,12 @@ module.exports = (db, io) => {
         });
     });
 
-    // Get candidates for a target room (Tickets that have a pending service in this room but are not currently there)
-    router.get('/manager/candidates/:targetRoomId', (req, res) => {
+    // Get candidates for a target room - PROTECTED
+    router.get('/manager/candidates/:targetRoomId', requireEstablishmentScope, (req, res) => {
         const targetRoomId = req.params.targetRoomId;
+        const establishmentId = req.establishmentId;
 
-        const query = `
+        let query = `
             SELECT 
                 t.id as ticket_id, 
                 t.display_code, 
@@ -646,37 +610,37 @@ module.exports = (db, io) => {
                 current_s.name as current_service_name,
                 current_r.name as current_room_name
             FROM tickets t
-            -- Join to find the service linked to the target room
             JOIN ticket_services ts_target ON t.id = ts_target.ticket_id
             JOIN services s_target ON ts_target.service_id = s_target.id
             JOIN room_services rs_target ON rs_target.service_id = s_target.id
-            -- Join to find the CURRENT active service (first pending)
             JOIN ticket_services ts_current ON t.id = ts_current.ticket_id
             JOIN services current_s ON ts_current.service_id = current_s.id
             LEFT JOIN room_services current_rs ON current_rs.service_id = current_s.id
             LEFT JOIN rooms current_r ON current_rs.room_id = current_r.id
-            WHERE 
-                rs_target.room_id = ? 
-                AND ts_target.status = 'PENDING'
-                AND t.status = 'WAITING_PROFESSIONAL'
-                AND date(t.created_at, 'localtime') = date('now', 'localtime')
-                -- Only show tickets that have been processed by reception (have customer name)
-                AND t.temp_customer_name IS NOT NULL
-                AND t.temp_customer_name != ''
-                -- Ensure ts_current is the FIRST pending service
-                AND ts_current.status = 'PENDING'
-                AND NOT EXISTS (
-                    SELECT 1 FROM ticket_services ts_prev 
-                    WHERE ts_prev.ticket_id = t.id 
-                    AND ts_prev.status = 'PENDING'
-                    AND ts_prev.order_sequence < ts_current.order_sequence
-                )
-                -- Ensure the target service is NOT the current service (otherwise they are already there)
-                AND ts_target.id != ts_current.id
-            ORDER BY t.is_priority DESC, t.created_at ASC
+            WHERE rs_target.room_id = ?
+            AND ts_target.status = 'PENDING'
+            AND t.status = 'WAITING_PROFESSIONAL'
+            AND date(t.created_at, 'localtime') = date('now', 'localtime')
+            AND t.temp_customer_name IS NOT NULL
+            AND t.temp_customer_name != ''
+            AND ts_current.status = 'PENDING'
+            AND NOT EXISTS (
+                SELECT 1 FROM ticket_services ts_prev 
+                WHERE ts_prev.ticket_id = t.id 
+                AND ts_prev.status = 'PENDING'
+                AND ts_prev.order_sequence < ts_current.order_sequence
+            )
+            AND ts_target.id != ts_current.id
         `;
+        const params = [targetRoomId];
 
-        db.all(query, [targetRoomId], (err, rows) => {
+        if (establishmentId) {
+            query += ` AND t.establishment_id = ?`;
+            params.push(establishmentId);
+        }
+        query += ` ORDER BY t.is_priority DESC, t.created_at ASC`;
+
+        db.all(query, params, (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
 
             // For each ticket, fetch all pending services
@@ -704,8 +668,8 @@ module.exports = (db, io) => {
         });
     });
 
-    // Bulk Prioritize (Move multiple tickets to a target room)
-    router.post('/manager/bulk-prioritize', (req, res) => {
+    // Bulk Prioritize - PROTECTED
+    router.post('/manager/bulk-prioritize', requireEstablishmentScope, (req, res) => {
         const { ticketIds, targetRoomId } = req.body;
 
         if (!ticketIds || !Array.isArray(ticketIds) || ticketIds.length === 0) {
@@ -724,7 +688,7 @@ module.exports = (db, io) => {
                     JOIN services s ON ts.service_id = s.id
                     JOIN room_services rs ON rs.service_id = s.id
                     WHERE ts.ticket_id = ? AND rs.room_id = ? AND ts.status = 'PENDING'
-                `, [ticketId, targetRoomId], (err, targetService) => {
+            `, [ticketId, targetRoomId], (err, targetService) => {
                     if (err) return reject(err);
                     if (!targetService) return resolve(); // Skip if not found (shouldn't happen if list is fresh)
 
@@ -733,7 +697,7 @@ module.exports = (db, io) => {
                         SELECT id, order_sequence FROM ticket_services 
                         WHERE ticket_id = ? AND status = 'PENDING' 
                         ORDER BY order_sequence ASC LIMIT 1
-                    `, [ticketId], (err, firstService) => {
+            `, [ticketId], (err, firstService) => {
                         if (err) return reject(err);
                         if (!firstService || firstService.id === targetService.id) return resolve(); // Already first or none
 

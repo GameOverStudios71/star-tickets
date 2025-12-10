@@ -1,26 +1,15 @@
 const express = require('express');
 const router = express.Router();
+const queries = require('../database/queries');
 
-// This will be imported in server/index.js and passed the db instance
 module.exports = (db) => {
 
     // ==================== SERVICES ====================
 
     router.get('/services', (req, res) => {
-        const establishmentId = req.establishmentId;
-
-        // Filter by establishment. Services with NULL establishment_id are global.
-        let query = "SELECT * FROM services WHERE 1=1";
-        const params = [];
-
-        if (establishmentId) {
-            query += " AND (establishment_id = ? OR establishment_id IS NULL)";
-            params.push(establishmentId);
-        }
-        query += " ORDER BY name";
-
+        const { query, params } = queries.serviceQueries.list(req.establishmentId);
         db.all(query, params, (err, rows) => {
-            if (err) return res.status(500).json({ error: err.message });
+            if (err) return queries.handleDbError(res, err);
             res.json(rows);
         });
     });
@@ -96,19 +85,9 @@ module.exports = (db) => {
     // ==================== ROOMS ====================
 
     router.get('/rooms', (req, res) => {
-        const establishmentId = req.establishmentId;
-
-        let query = "SELECT * FROM rooms WHERE 1=1";
-        const params = [];
-
-        if (establishmentId) {
-            query += " AND establishment_id = ?";
-            params.push(establishmentId);
-        }
-        query += " ORDER BY name";
-
+        const { query, params } = queries.roomQueries.list(req.establishmentId);
         db.all(query, params, (err, rows) => {
-            if (err) return res.status(500).json({ error: err.message });
+            if (err) return queries.handleDbError(res, err);
             res.json(rows);
         });
     });
