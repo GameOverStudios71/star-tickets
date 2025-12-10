@@ -7,7 +7,19 @@ module.exports = (db) => {
     // ==================== SERVICES ====================
 
     router.get('/services', (req, res) => {
-        db.all("SELECT * FROM services ORDER BY name", [], (err, rows) => {
+        const establishmentId = req.establishmentId;
+
+        // Filter by establishment. Services with NULL establishment_id are global.
+        let query = "SELECT * FROM services WHERE 1=1";
+        const params = [];
+
+        if (establishmentId) {
+            query += " AND (establishment_id = ? OR establishment_id IS NULL)";
+            params.push(establishmentId);
+        }
+        query += " ORDER BY name";
+
+        db.all(query, params, (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json(rows);
         });
@@ -15,9 +27,11 @@ module.exports = (db) => {
 
     router.post('/services', (req, res) => {
         const { name, prefix, average_time_minutes, description } = req.body;
+        const establishmentId = req.establishmentId; // Associate with user's establishment
+
         db.run(
-            "INSERT INTO services (name, prefix, average_time_minutes, description) VALUES (?, ?, ?, ?)",
-            [name, prefix, average_time_minutes || 15, description || ''],
+            "INSERT INTO services (name, prefix, average_time_minutes, description, establishment_id) VALUES (?, ?, ?, ?, ?)",
+            [name, prefix, average_time_minutes || 15, description || '', establishmentId],
             function (err) {
                 if (err) return res.status(500).json({ error: err.message });
                 res.json({ id: this.lastID, name, prefix });
@@ -27,11 +41,26 @@ module.exports = (db) => {
 
     router.put('/services/:id', (req, res) => {
         const { name, prefix, average_time_minutes, description } = req.body;
+        const establishmentId = req.establishmentId;
+        const serviceId = req.params.id;
+
+        // Verify ownership: service must belong to user's establishment or be global (admin can edit global)
+        let whereClause = "id = ?";
+        const params = [name, prefix, average_time_minutes, description, serviceId];
+
+        if (establishmentId && !req.isAdmin) {
+            whereClause += " AND (establishment_id = ? OR establishment_id IS NULL)";
+            params.push(establishmentId);
+        }
+
         db.run(
-            "UPDATE services SET name = ?, prefix = ?, average_time_minutes = ?, description = ? WHERE id = ?",
-            [name, prefix, average_time_minutes, description, req.params.id],
+            `UPDATE services SET name = ?, prefix = ?, average_time_minutes = ?, description = ? WHERE ${whereClause}`,
+            params,
             function (err) {
                 if (err) return res.status(500).json({ error: err.message });
+                if (this.changes === 0) {
+                    return res.status(403).json({ error: 'Serviço não encontrado ou sem permissão' });
+                }
                 res.json({ success: true, changes: this.changes });
             }
         );
@@ -67,7 +96,18 @@ module.exports = (db) => {
     // ==================== ROOMS ====================
 
     router.get('/rooms', (req, res) => {
-        db.all("SELECT * FROM rooms ORDER BY name", [], (err, rows) => {
+        const establishmentId = req.establishmentId;
+
+        let query = "SELECT * FROM rooms WHERE 1=1";
+        const params = [];
+
+        if (establishmentId) {
+            query += " AND establishment_id = ?";
+            params.push(establishmentId);
+        }
+        query += " ORDER BY name";
+
+        db.all(query, params, (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json(rows);
         });
@@ -89,11 +129,26 @@ module.exports = (db) => {
 
     router.put('/rooms/:id', (req, res) => {
         const { name, type, is_active } = req.body;
+        const establishmentId = req.establishmentId;
+        const roomId = req.params.id;
+
+        // Verify ownership
+        let whereClause = "id = ?";
+        const params = [name, type, is_active, roomId];
+
+        if (establishmentId) {
+            whereClause += " AND establishment_id = ?";
+            params.push(establishmentId);
+        }
+
         db.run(
-            "UPDATE rooms SET name = ?, type = ?, is_active = ? WHERE id = ?",
-            [name, type, is_active, req.params.id],
+            `UPDATE rooms SET name = ?, type = ?, is_active = ? WHERE ${whereClause}`,
+            params,
             function (err) {
                 if (err) return res.status(500).json({ error: err.message });
+                if (this.changes === 0) {
+                    return res.status(403).json({ error: 'Sala não encontrada ou sem permissão' });
+                }
                 res.json({ success: true, changes: this.changes });
             }
         );
@@ -101,15 +156,32 @@ module.exports = (db) => {
 
     router.delete('/rooms/:id', (req, res) => {
         const roomId = req.params.id;
+        const establishmentId = req.establishmentId;
 
-        // Delete related room_services first
-        db.run("DELETE FROM room_services WHERE room_id = ?", [roomId], (err) => {
+        // Verify ownership first
+        let verifyQuery = "SELECT id FROM rooms WHERE id = ?";
+        const verifyParams = [roomId];
+
+        if (establishmentId) {
+            verifyQuery += " AND establishment_id = ?";
+            verifyParams.push(establishmentId);
+        }
+
+        db.get(verifyQuery, verifyParams, (err, room) => {
             if (err) return res.status(500).json({ error: err.message });
+            if (!room) {
+                return res.status(403).json({ error: 'Sala não encontrada ou sem permissão' });
+            }
 
-            // Then delete the room
-            db.run("DELETE FROM rooms WHERE id = ?", [roomId], function (err) {
+            // Delete related room_services first
+            db.run("DELETE FROM room_services WHERE room_id = ?", [roomId], (err) => {
                 if (err) return res.status(500).json({ error: err.message });
-                res.json({ success: true, message: 'Sala excluída com sucesso' });
+
+                // Then delete the room
+                db.run("DELETE FROM rooms WHERE id = ?", [roomId], function (err) {
+                    if (err) return res.status(500).json({ error: err.message });
+                    res.json({ success: true, message: 'Sala excluída com sucesso' });
+                });
             });
         });
     });
@@ -151,13 +223,23 @@ module.exports = (db) => {
     // ==================== MENUS ====================
 
     router.get('/menus', (req, res) => {
-        const query = `
+        const establishmentId = req.establishmentId;
+
+        let query = `
             SELECT sm.*, s.name as service_name 
             FROM service_menus sm 
             LEFT JOIN services s ON sm.service_id = s.id 
-            ORDER BY sm.parent_id, sm.order_index
+            WHERE 1=1
         `;
-        db.all(query, [], (err, rows) => {
+        const params = [];
+
+        if (establishmentId) {
+            query += " AND (sm.establishment_id = ? OR sm.establishment_id IS NULL)";
+            params.push(establishmentId);
+        }
+        query += " ORDER BY sm.parent_id, sm.order_index";
+
+        db.all(query, params, (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json(rows);
         });
@@ -165,9 +247,11 @@ module.exports = (db) => {
 
     router.post('/menus', (req, res) => {
         const { parent_id, label, service_id, order_index, icon } = req.body;
+        const establishmentId = req.establishmentId;
+
         db.run(
-            "INSERT INTO service_menus (parent_id, label, service_id, order_index, icon) VALUES (?, ?, ?, ?, ?)",
-            [parent_id || null, label, service_id || null, order_index || 0, icon || ''],
+            "INSERT INTO service_menus (parent_id, label, service_id, order_index, icon, establishment_id) VALUES (?, ?, ?, ?, ?, ?)",
+            [parent_id || null, label, service_id || null, order_index || 0, icon || '', establishmentId],
             function (err) {
                 if (err) return res.status(500).json({ error: err.message });
                 res.json({ id: this.lastID, label });
@@ -214,7 +298,25 @@ module.exports = (db) => {
     // ==================== USERS ====================
 
     router.get('/users', (req, res) => {
-        db.all("SELECT id, name, username, role FROM users ORDER BY name", [], (err, rows) => {
+        const establishmentId = req.establishmentId;
+        const isAdmin = req.isAdmin;
+
+        let query = "SELECT id, name, username, role, establishment_id FROM users WHERE 1=1";
+        const params = [];
+
+        // Non-admin only sees users from their own establishment
+        if (establishmentId && !isAdmin) {
+            query += " AND establishment_id = ?";
+            params.push(establishmentId);
+        }
+        // Admin sees all users, or can filter by establishment_id query param
+        else if (establishmentId && isAdmin) {
+            query += " AND establishment_id = ?";
+            params.push(establishmentId);
+        }
+        query += " ORDER BY name";
+
+        db.all(query, params, (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json(rows);
         });
@@ -222,10 +324,12 @@ module.exports = (db) => {
 
     router.post('/users', (req, res) => {
         const { name, username, password, role } = req.body;
+        const establishmentId = req.establishmentId;
+
         // In production, hash the password!
         db.run(
-            "INSERT INTO users (name, username, password, role) VALUES (?, ?, ?, ?)",
-            [name, username, password, role || 'PROFESSIONAL'],
+            "INSERT INTO users (name, username, password, role, establishment_id) VALUES (?, ?, ?, ?, ?)",
+            [name, username, password, role || 'PROFESSIONAL', establishmentId],
             function (err) {
                 if (err) return res.status(500).json({ error: err.message });
                 res.json({ id: this.lastID, name, username });

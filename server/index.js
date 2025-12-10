@@ -83,13 +83,23 @@ const establishmentRoutes = require('./routes/establishments');
 const qrcodeRoutes = require('./routes/qrcode');
 const adminRoutes = require('./routes/admin');
 
+const { requireAuth, requireEstablishmentScope } = require('./middleware/auth');
+
 // Mount Routes
+// Public routes (no auth required)
 app.use('/api/auth', authRoutes(db));
-app.use('/api/dashboard', dashboardRoutes(db));
-app.use('/api', ticketRoutes(db, io)); // Tickets, Call, Finish, Track
-app.use('/api', establishmentRoutes(db)); // Config, Rooms, Establishments
-app.use('/api', qrcodeRoutes()); // QR Code
-app.use('/api/admin', adminRoutes(db));
+app.use('/api', qrcodeRoutes()); // QR Code generation is public
+
+// Semi-public routes (totem/tv need these without login)
+// Establishments routes include /config, /rooms, /establishments - all public for totem
+app.use('/api', establishmentRoutes(db));
+
+// Protected routes (require authentication and establishment scope)
+app.use('/api/dashboard', requireEstablishmentScope, dashboardRoutes(db));
+app.use('/api/admin', requireEstablishmentScope, adminRoutes(db));
+
+// Ticket routes - some need auth, some are public (totem creates tickets)
+app.use('/api', ticketRoutes(db, io)); // Will handle auth internally per-route
 
 // WebSocket handlers
 io.on('connection', (socket) => {

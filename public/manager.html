@@ -514,28 +514,23 @@
 
         let userEstablishmentId = null;
 
+        // Load rooms - backend now filters by session automatically
         async function loadRooms() {
-            // Get user's establishment from session if not cached
-            if (!userEstablishmentId) {
-                try {
-                    const authRes = await fetch('/api/auth/me');
-                    if (authRes.ok) {
-                        const authData = await authRes.json();
-                        userEstablishmentId = authData.user?.establishment_id;
-                    }
-                } catch (e) {
-                    console.error('Error getting user session:', e);
+            try {
+                const res = await fetch('/api/manager/overview');
+                if (!res.ok) {
+                    console.error('Error loading rooms:', res.status);
+                    return;
                 }
-            }
+                const rooms = await res.json();
 
-            const params = userEstablishmentId ? `?establishment_id=${userEstablishmentId}` : '';
-            const res = await fetch(`/api/manager/overview${params}`);
-            const rooms = await res.json();
-
-            if (isRelocationMode) {
-                renderTargetRooms(rooms);
-            } else {
-                renderGrid(rooms);
+                if (isRelocationMode) {
+                    renderTargetRooms(rooms);
+                } else {
+                    renderGrid(rooms);
+                }
+            } catch (e) {
+                console.error('Error loading rooms:', e);
             }
         }
 

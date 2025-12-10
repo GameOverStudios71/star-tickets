@@ -305,21 +305,15 @@
         let selectedFilters = new Set();
         let currentTab = 'active'; // 'active' or 'finished'
 
-        // Load reception desks
+        // Load reception desks - backend now filters by session automatically
         async function loadDesks() {
             try {
-                // Get user's establishment from session
-                const authRes = await fetch('/api/auth/me');
-                if (authRes.ok) {
-                    const authData = await authRes.json();
-                    const establishmentId = authData.user?.establishment_id;
-                    const params = establishmentId ? `?establishment_id=${establishmentId}` : '';
-                    const res = await fetch(`/api/reception-desks${params}`);
+                const res = await fetch('/api/reception-desks');
+                if (res.ok) {
                     allDesks = await res.json();
                 } else {
-                    // Fallback: load all desks if not authenticated
-                    const res = await fetch('/api/reception-desks');
-                    allDesks = await res.json();
+                    allDesks = [];
+                    console.error('Error loading desks:', res.status);
                 }
                 renderDesksDropdown();
             } catch (e) {

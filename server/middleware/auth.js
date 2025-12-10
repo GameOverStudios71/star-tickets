@@ -41,8 +41,45 @@ function requireAdmin(req, res, next) {
     next();
 }
 
+// Middleware to enforce establishment scope in queries
+// Admin can optionally specify establishment_id via query param
+// Non-admin MUST use their own establishment_id
+function requireEstablishmentScope(req, res, next) {
+    if (!req.session || !req.session.user) {
+        return res.status(401).json({ error: 'Não autenticado' });
+    }
+
+    req.user = req.session.user;
+    req.isAdmin = req.session.user.role === 'admin';
+
+    if (req.isAdmin) {
+        // Admin can optionally filter by establishment_id
+        req.establishmentId = req.query.establishment_id ? parseInt(req.query.establishment_id) : null;
+    } else {
+        // Non-admin MUST use their own establishment_id
+        req.establishmentId = req.session.user.establishment_id;
+        if (!req.establishmentId) {
+            return res.status(403).json({ error: 'Usuário sem estabelecimento associado' });
+        }
+    }
+    next();
+}
+
+// Helper function to build establishment filter for SQL queries
+function buildEstablishmentFilter(column, establishmentId, isAdmin) {
+    if (!establishmentId) {
+        return { clause: '', params: [] };
+    }
+    return {
+        clause: ` AND ${column} = ?`,
+        params: [establishmentId]
+    };
+}
+
 module.exports = {
     requireAuth,
     optionalAuth,
-    requireAdmin
+    requireAdmin,
+    requireEstablishmentScope,
+    buildEstablishmentFilter
 };

@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
+const { requireAuth, requireEstablishmentScope, optionalAuth } = require('../middleware/auth');
 
 module.exports = (db, io) => {
 
-    // 2. Create Ticket (Totem)
+    // 2. Create Ticket (Totem) - PUBLIC route, establishment comes from body
     router.post('/tickets', (req, res) => {
         const { serviceIds, establishmentId = 1, isPriority = false, healthInsuranceName = null } = req.body;
         if (!serviceIds || serviceIds.length === 0) return res.status(400).json({ error: "No services selected" });
@@ -41,18 +42,27 @@ module.exports = (db, io) => {
         });
     });
 
-    // 3. Reception - List Tickets (only today's tickets)
-    router.get('/tickets', (req, res) => {
-        const query = `
+    // 3. Reception - List Tickets (only today's tickets) - PROTECTED route
+    router.get('/tickets', requireEstablishmentScope, (req, res) => {
+        const establishmentId = req.establishmentId;
+
+        let query = `
             SELECT t.*, c.name as customer_name, 
             (SELECT group_concat(s.name, ', ') FROM ticket_services ts JOIN services s ON ts.service_id = s.id WHERE ts.ticket_id = t.id) as services_list
             FROM tickets t
             LEFT JOIN customers c ON t.customer_id = c.id
             WHERE t.status != 'DONE' AND t.status != 'CANCELED'
             AND date(t.created_at, 'localtime') = date('now', 'localtime')
-            ORDER BY t.created_at DESC
         `;
-        db.all(query, [], (err, rows) => {
+        const params = [];
+
+        if (establishmentId) {
+            query += ` AND t.establishment_id = ?`;
+            params.push(establishmentId);
+        }
+        query += ` ORDER BY t.created_at DESC`;
+
+        db.all(query, params, (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json(rows);
         });
@@ -322,16 +332,17 @@ module.exports = (db, io) => {
         });
     });
 
-    // Get reception desks for an establishment
-    router.get('/reception-desks', (req, res) => {
-        const { establishment_id } = req.query;
+    // Get reception desks for an establishment - uses session when authenticated
+    router.get('/reception-desks', optionalAuth, (req, res) => {
+        // Use establishment from session if available, otherwise from query param (for admin/public)
+        const establishmentId = req.establishmentId || req.query.establishment_id;
 
         let query = `SELECT * FROM reception_desks WHERE is_active = 1`;
         const params = [];
 
-        if (establishment_id) {
+        if (establishmentId) {
             query += ` AND establishment_id = ?`;
-            params.push(establishment_id);
+            params.push(establishmentId);
         }
 
         query += ` ORDER BY name`;
@@ -523,9 +534,9 @@ module.exports = (db, io) => {
 
     // 6. Manager API
 
-    // Overview of all rooms and their waiting counts
-    router.get('/manager/overview', (req, res) => {
-        const { establishment_id } = req.query;
+    // Overview of all rooms and their waiting counts - PROTECTED route
+    router.get('/manager/overview', requireEstablishmentScope, (req, res) => {
+        const establishmentId = req.establishmentId;
 
         let query = `
             SELECT r.id, r.name, r.establishment_id, COUNT(t.id) as waiting_count
@@ -540,12 +551,13 @@ module.exports = (db, io) => {
                 AND ts_prev.order_sequence < ts.order_sequence 
                 AND ts_prev.status != 'COMPLETED'
             )
+            WHERE 1=1
         `;
 
         const params = [];
-        if (establishment_id) {
-            query += ` WHERE r.establishment_id = ?`;
-            params.push(establishment_id);
+        if (establishmentId) {
+            query += ` AND r.establishment_id = ?`;
+            params.push(establishmentId);
         }
 
         query += ` GROUP BY r.id`;
