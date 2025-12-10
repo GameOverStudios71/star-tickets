@@ -66,7 +66,19 @@ module.exports = (db) => {
     });
 
     router.get('/rooms', (req, res) => {
-        db.all("SELECT * FROM rooms WHERE is_active = 1", [], (err, rows) => {
+        const establishmentId = req.establishmentId || req.query.establishment_id;
+
+        let query = "SELECT * FROM rooms WHERE is_active = 1";
+        const params = [];
+
+        if (establishmentId) {
+            query += " AND establishment_id = ?";
+            params.push(establishmentId);
+        }
+
+        query += " ORDER BY name";
+
+        db.all(query, params, (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json(rows);
         });

@@ -7,6 +7,33 @@
     <title>Star Tickets - Profissional</title>
     <link rel="stylesheet" href="style.css">
     <style>
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .container {
+            height: calc(100vh - 80px);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .queue-card {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .queue-list-container {
+            flex: 1;
+            overflow-y: auto;
+            min-height: 0;
+        }
+
         /* Tabs Styles */
         .tabs {
             display: flex;
@@ -61,7 +88,7 @@
         </div>
 
         <div class="grid">
-            <div class="card">
+            <div class="card queue-card">
                 <div class="tabs">
                     <button class="tab-btn active" onclick="switchTab('queue')" id="tab-queue">
                         ⏳ Fila de Espera
@@ -72,7 +99,9 @@
                 </div>
 
                 <h2 id="list-title">Fila da Sala</h2>
-                <div id="queue-list"></div>
+                <div class="queue-list-container">
+                    <div id="queue-list"></div>
+                </div>
             </div>
         </div>
     </div>
