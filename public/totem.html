@@ -16,22 +16,34 @@
         }
 
         #back-button {
-            background: #2196F3;
-            color: white;
-            border: none;
+            background: linear-gradient(135deg,
+                    rgba(39, 174, 96, var(--acrylic-opacity, 0.5)) 0%,
+                    rgba(46, 204, 113, calc(var(--acrylic-opacity, 0.5) - 0.05)) 100%);
+            backdrop-filter: blur(var(--acrylic-blur, 20px)) saturate(var(--acrylic-saturate, 180%)) brightness(var(--acrylic-brightness, 1.1));
+            -webkit-backdrop-filter: blur(var(--acrylic-blur, 20px)) saturate(var(--acrylic-saturate, 180%)) brightness(var(--acrylic-brightness, 1.1));
+            color: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.4);
             padding: 15px 30px;
-            border-radius: 10px;
+            border-radius: 15px;
             font-size: 1.3rem;
             cursor: pointer;
-            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
-            transition: all 0.3s;
+            box-shadow:
+                0 8px 32px rgba(39, 174, 96, 0.3),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
             font-weight: bold;
         }
 
         #back-button:hover {
-            background: #1976D2;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(33, 150, 243, 0.4);
+            background: linear-gradient(135deg,
+                    rgba(39, 174, 96, var(--acrylic-opacity-hover, 0.6)) 0%,
+                    rgba(46, 204, 113, calc(var(--acrylic-opacity-hover, 0.6) - 0.05)) 100%);
+            backdrop-filter: blur(var(--acrylic-blur-strong, 30px)) saturate(var(--acrylic-saturate-hover, 200%)) brightness(var(--acrylic-brightness-hover, 1.15));
+            -webkit-backdrop-filter: blur(var(--acrylic-blur-strong, 30px)) saturate(var(--acrylic-saturate-hover, 200%)) brightness(var(--acrylic-brightness-hover, 1.15));
+            transform: translateY(-3px);
+            box-shadow:
+                0 15px 45px rgba(39, 174, 96, 0.4),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.2);
         }
 
         .priority-selection {
@@ -41,56 +53,95 @@
         }
 
         .priority-btn {
-            background: white;
-            border: 3px solid #ddd;
-            border-radius: 15px;
+            background: linear-gradient(135deg,
+                    rgba(255, 255, 255, 0.5) 0%,
+                    rgba(255, 255, 255, 0.4) 50%,
+                    rgba(255, 255, 255, 0.45) 100%);
+            backdrop-filter: blur(20px) saturate(180%) brightness(1.1);
+            -webkit-backdrop-filter: blur(20px) saturate(180%) brightness(1.1);
+            border: 5px solid rgba(255, 255, 255, 0.4);
+            border-radius: 20px;
             padding: 40px 20px;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.3s ease;
             text-align: center;
-            font-size: 1.2rem;
+            font-size: 1.5rem;
             font-weight: bold;
+            color: rgba(255, 255, 255, 0.8);
+            text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+            /* macOS-style shadow */
+            box-shadow:
+                0 2px 4px rgba(0, 0, 0, 0.04),
+                0 4px 8px rgba(0, 0, 0, 0.06),
+                0 8px 16px rgba(0, 0, 0, 0.08),
+                0 16px 32px rgba(0, 0, 0, 0.1),
+                0 32px 64px rgba(0, 0, 0, 0.12),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
         }
 
         .priority-btn:hover {
-            transform: scale(1.05);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transform: scale(1.03) translateY(-8px);
+            /* macOS-style elevated shadow */
+            box-shadow:
+                0 4px 8px rgba(0, 0, 0, 0.05),
+                0 8px 16px rgba(0, 0, 0, 0.08),
+                0 16px 32px rgba(0, 0, 0, 0.1),
+                0 32px 64px rgba(0, 0, 0, 0.14),
+                0 48px 96px rgba(0, 0, 0, 0.16),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
         }
 
         .normal-btn {
-            border-color: #2196F3;
+            border-color: rgba(39, 174, 96, 0.4);
         }
 
         .normal-btn:hover {
-            background: #2196F3;
+            background: linear-gradient(135deg,
+                    rgba(39, 174, 96, 0.5) 0%,
+                    rgba(46, 204, 113, 0.45) 100%);
+            backdrop-filter: blur(25px) saturate(200%) brightness(1.15);
+            -webkit-backdrop-filter: blur(25px) saturate(200%) brightness(1.15);
             color: white;
+            border-color: rgba(39, 174, 96, 0.8);
         }
 
         .priority-btn-special {
-            border-color: #FF9800;
-            background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%);
+            border-color: rgba(255, 193, 7, 0.4);
+            background: linear-gradient(135deg,
+                    rgba(255, 249, 196, 0.5) 0%,
+                    rgba(255, 236, 179, 0.45) 100%);
         }
 
         .priority-btn-special:hover {
-            background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
+            background: linear-gradient(135deg,
+                    rgba(255, 193, 7, 0.5) 0%,
+                    rgba(255, 160, 0, 0.45) 100%);
+            backdrop-filter: blur(25px) saturate(200%) brightness(1.15);
+            -webkit-backdrop-filter: blur(25px) saturate(200%) brightness(1.15);
             color: white;
-            border-color: #F57C00;
+            border-color: rgba(255, 193, 7, 0.8);
         }
 
         .priority-icon {
             font-size: 4rem;
             margin-bottom: 15px;
+            opacity: var(--acrylic-icon-opacity, 0.8);
         }
 
         .priority-label {
-            font-size: 1.5rem;
+            font-family: var(--font-family);
+            font-size: 2.2rem;
             margin-bottom: 10px;
+            color: rgba(255, 255, 255, 0.8);
+            text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
         }
 
         .priority-subtitle {
-            font-size: 0.9rem;
-            color: #666;
+            font-family: var(--font-family);
+            font-size: 1.4rem;
+            color: rgba(255, 255, 255, 0.9);
             margin-top: 10px;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
         }
 
         .priority-btn-special:hover .priority-subtitle {
@@ -180,18 +231,19 @@
             overflow-y: auto;
             position: relative;
             padding: 20px;
-            background-color: var(--bg-color);
         }
 
         .sidebar {
             width: 400px;
             height: 100%;
-            background: white;
-            border-left: 1px solid #ddd;
+            background: var(--glass-bg-strong);
+            backdrop-filter: blur(var(--blur-xl));
+            -webkit-backdrop-filter: blur(var(--blur-xl));
+            border-left: 3px solid rgba(255, 255, 255, 0.2);
             display: flex;
             flex-direction: column;
             z-index: 100;
-            box-shadow: -5px 0 15px rgba(0, 0, 0, 0.05);
+            box-shadow: -5px 0 25px rgba(0, 0, 0, 0.1);
             transition: transform 0.3s ease-in-out;
         }
 
@@ -226,12 +278,15 @@
         #selected-list li {
             margin-bottom: 10px;
             padding: 10px;
-            background: #f8f9fa;
+            background: var(--glass-bg);
+            backdrop-filter: blur(var(--blur-md));
+            -webkit-backdrop-filter: blur(var(--blur-md));
             border-radius: 8px;
             border-left: 4px solid var(--accent-color);
             line-height: 1.4;
             font-size: 0.95rem;
             animation: slideIn 0.3s ease;
+            color: var(--text-primary);
         }
 
         @keyframes slideIn {
@@ -249,13 +304,15 @@
         .menu-icon-large {
             font-size: 4rem;
             line-height: 1;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
+            opacity: var(--acrylic-icon-opacity, 0.8);
         }
 
         .menu-label-text {
-            font-size: 1.3rem;
+            font-size: 2.2rem;
             font-weight: bold;
             line-height: 1.2;
+            margin-bottom: 15px;
         }
 
         /* Menu Grid adjustments for centered layout */
@@ -264,7 +321,7 @@
             grid-template-columns: repeat(2, 1fr);
             gap: 30px;
             width: 100%;
-            max-width: 900px;
+            max-width: 1100px;
             margin: 0 auto;
         }
 
@@ -275,14 +332,110 @@
                 max-width: 500px;
             }
         }
+
+        /* Toast animations */
+        @keyframes toastSlideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes toastSlideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+
+        /* Menu items with acrylic effect */
+        .menu-item {
+            background: linear-gradient(135deg,
+                    rgba(255, 255, 255, var(--acrylic-opacity, 0.5)) 0%,
+                    rgba(255, 255, 255, calc(var(--acrylic-opacity, 0.5) - 0.1)) 50%,
+                    rgba(255, 255, 255, calc(var(--acrylic-opacity, 0.5) - 0.05)) 100%) !important;
+            backdrop-filter: blur(var(--acrylic-blur, 20px)) saturate(var(--acrylic-saturate, 180%)) brightness(var(--acrylic-brightness, 1.1));
+            -webkit-backdrop-filter: blur(var(--acrylic-blur, 20px)) saturate(var(--acrylic-saturate, 180%)) brightness(var(--acrylic-brightness, 1.1));
+            border: 3px solid rgba(255, 255, 255, 0.8) !important;
+            color: rgba(255, 255, 255, 0.8) !important;
+            font-family: var(--font-family) !important;
+            font-size: 1.8rem !important;
+            font-weight: bold !important;
+            text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+            /* macOS-style shadow */
+            box-shadow:
+                0 2px 4px rgba(0, 0, 0, 0.04),
+                0 4px 8px rgba(0, 0, 0, 0.06),
+                0 8px 16px rgba(0, 0, 0, 0.08),
+                0 16px 32px rgba(0, 0, 0, 0.1),
+                0 32px 64px rgba(0, 0, 0, 0.12),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .menu-item:hover {
+            transform: translateY(-6px);
+            box-shadow:
+                0 4px 8px rgba(0, 0, 0, 0.05),
+                0 8px 16px rgba(0, 0, 0, 0.08),
+                0 16px 32px rgba(0, 0, 0, 0.1),
+                0 32px 64px rgba(0, 0, 0, 0.14),
+                0 48px 96px rgba(0, 0, 0, 0.16),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        }
+
+        .menu-item small {
+            color: rgba(255, 255, 255, 0.85) !important;
+        }
+
+        /* Selected menu item - green acrylic with white text */
+        .menu-item.selected {
+            background: linear-gradient(135deg,
+                    rgba(39, 174, 96, var(--acrylic-opacity, 0.5)) 0%,
+                    rgba(46, 204, 113, calc(var(--acrylic-opacity, 0.5) - 0.05)) 100%) !important;
+            backdrop-filter: blur(var(--acrylic-blur, 20px)) saturate(var(--acrylic-saturate-hover, 200%)) brightness(var(--acrylic-brightness-hover, 1.15));
+            -webkit-backdrop-filter: blur(var(--acrylic-blur, 20px)) saturate(var(--acrylic-saturate-hover, 200%)) brightness(var(--acrylic-brightness-hover, 1.15));
+            color: #ffffff !important;
+            border-color: rgba(39, 174, 96, 0.8) !important;
+            box-shadow:
+                0 8px 32px rgba(39, 174, 96, 0.3),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+        }
     </style>
 </head>
 
-<body>
+<body class="has-background">
+
+    <!-- Logo no canto superior direito -->
+    <div id="totem-logo" style="
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 100;
+        padding: 15px 25px;
+        background: linear-gradient(135deg, rgba(255, 255, 255, var(--acrylic-opacity, 0.5)) 0%, rgba(255, 255, 255, calc(var(--acrylic-opacity, 0.5) - 0.1)) 100%);
+        backdrop-filter: blur(var(--acrylic-blur, 20px)) saturate(var(--acrylic-saturate, 180%)) brightness(var(--acrylic-brightness, 1.1));
+        -webkit-backdrop-filter: blur(var(--acrylic-blur, 20px)) saturate(var(--acrylic-saturate, 180%)) brightness(var(--acrylic-brightness, 1.1));
+        border: 2px solid rgba(255, 255, 255, 0.4);
+        border-radius: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.04), 0 4px 8px rgba(0,0,0,0.06), 0 8px 16px rgba(0,0,0,0.08), 0 16px 32px rgba(0,0,0,0.1);
+    ">
+        <img src="./img/logo.png" alt="Logo" style="width: 300px; display: block;">
+    </div>
 
     <!-- Back Button Container (Always in top left when visible) -->
     <div id="back-button-container" style="display:none;">
-        <button id="back-button" onclick="goBack()">⬅️ VOLTAR</button>
+        <button id="back-button" onclick="goBack()">VOLTAR</button>
     </div>
 
     <div class="totem-layout">
@@ -291,11 +444,10 @@
 
             <!-- Priority Selection Screen (First Screen) -->
             <div id="priority-selection" class="priority-selection">
-                <h2 style="text-align:center; margin-bottom:40px; font-size: 2.5rem; color: var(--primary-color);">
-                    Selecione o tipo de atendimento</h2>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:30px; max-width:800px; margin:0 auto;">
+                <div
+                    style="display:grid; grid-template-columns:1fr 1fr; gap:30px; max-width:var(--acrylic-container-width, 1100px); margin:0 auto;">
                     <button class="priority-btn normal-btn" onclick="selectPriority(false)">
-                        <div class="priority-icon">👤</div>
+                        <div class="priority-icon">✅</div>
                         <div class="priority-label">ATENDIMENTO<br>NORMAL</div>
                     </button>
                     <button class="priority-btn priority-btn-special" onclick="selectPriority(true)">
@@ -358,29 +510,22 @@
             <div id="menu-container" class="menu-grid" style="display:none;">
                 <!-- Menus will be loaded here -->
             </div>
-        </div>
 
-        <!-- Right Sidebar (Selection Summary) -->
-        <div id="sidebar-panel" class="sidebar hidden">
-            <div id="selection-summary">
-                <h3>Serviços Selecionados</h3>
-                <ul id="selected-list">
-                    <li style="color:#999; background:none; border:none; text-align:center; padding-top:50px;">
-                        Nenhum serviço selecionado
-                    </li>
-                </ul>
-                <div style="margin-top: auto; padding-top: 20px; border-top: 1px solid #eee;">
-                    <button class="btn btn-large btn-accent" onclick="confirmTicket()"
-                        style="width:100%; margin-bottom:15px; box-shadow: 0 4px 10px rgba(231, 76, 60, 0.3);">
-                        CONFIRMAR
-                    </button>
-                    <button class="btn" onclick="resetSelection()" style="width:100%; background-color: #95a5a6;">
-                        Limpar Tudo
-                    </button>
-                </div>
+            <!-- Action Buttons (Below menu) -->
+            <div id="action-buttons"
+                style="display:none; flex-direction: column; align-items: center; margin-top: 30px; width: 100%; max-width: 1100px; gap: 15px;">
+                <button class="btn btn-large btn-accent" onclick="confirmTicket()"
+                    style="width: 100%; font-size: 2.2rem; color: rgba(255,255,255,0.8); text-shadow: 0 2px 6px rgba(0,0,0,0.6); background: linear-gradient(135deg, rgba(39, 174, 96, 0.5) 0%, rgba(46, 204, 113, 0.45) 100%); backdrop-filter: blur(20px) saturate(180%) brightness(1.1); -webkit-backdrop-filter: blur(20px) saturate(180%) brightness(1.1); border: 2px solid rgba(255,255,255,0.4); box-shadow: 0 2px 4px rgba(0,0,0,0.04), 0 4px 8px rgba(0,0,0,0.06), 0 8px 16px rgba(0,0,0,0.08), 0 16px 32px rgba(0,0,0,0.1), 0 32px 64px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.2); transition: all 0.3s ease;">
+                    CONFIRMAR
+                </button>
+                <button class="btn btn-large" onclick="resetSelection()"
+                    style="width: 100%; font-size: 2.2rem; color: rgba(255,255,255,0.8); text-shadow: 0 2px 6px rgba(0,0,0,0.6); background: linear-gradient(135deg, rgba(149, 165, 166, 0.5) 0%, rgba(127, 140, 141, 0.45) 100%); backdrop-filter: blur(20px) saturate(180%) brightness(1.1); -webkit-backdrop-filter: blur(20px) saturate(180%) brightness(1.1); border: 2px solid rgba(255,255,255,0.4); box-shadow: 0 2px 4px rgba(0,0,0,0.04), 0 4px 8px rgba(0,0,0,0.06), 0 8px 16px rgba(0,0,0,0.08), 0 16px 32px rgba(0,0,0,0.1), 0 32px 64px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.2); transition: all 0.3s ease;">
+                    Limpar Tudo
+                </button>
             </div>
         </div>
     </div>
+
 
     <!-- Modal Confirmação -->
     <div id="confirmation-modal"
@@ -445,6 +590,41 @@
         let currentScreen = 'priority'; // Track current screen: 'priority', 'insurance', 'menu', 'summary'
         let pendingConvenioMenuId = null; // Store the menu ID to navigate to after insurance input
 
+        // Toast notification for totem (top right)
+        function showTotemToast(message) {
+            // Remove existing toast if any
+            const existingToast = document.getElementById('totem-toast');
+            if (existingToast) existingToast.remove();
+
+            const toast = document.createElement('div');
+            toast.id = 'totem-toast';
+            toast.innerHTML = message;
+            toast.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: rgba(231, 76, 60, 0.95);
+                backdrop-filter: blur(16px);
+                -webkit-backdrop-filter: blur(16px);
+                color: white;
+                padding: 20px 30px;
+                border-radius: 12px;
+                font-size: 1.2rem;
+                font-weight: bold;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+                z-index: 9999;
+                animation: toastSlideIn 0.3s ease-out;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+            `;
+            document.body.appendChild(toast);
+
+            // Auto remove after 3 seconds
+            setTimeout(() => {
+                toast.style.animation = 'toastSlideOut 0.3s ease-in forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
         // Virtual Keyboard Functions
         function addChar(char) {
             const input = document.getElementById('insurance-name-input');
@@ -485,8 +665,8 @@
             document.getElementById('insurance-input-screen').style.display = 'none';
             // Show menu container
             document.getElementById('menu-container').style.display = 'grid';
-            // Show sidebar
-            document.getElementById('sidebar-panel').classList.remove('hidden');
+            // Show action buttons
+            document.getElementById('action-buttons').style.display = 'flex';
 
             // Show back button
             document.getElementById('back-button-container').style.display = 'block';
@@ -533,7 +713,7 @@
                 // Go back to menu
                 document.getElementById('insurance-input-screen').style.display = 'none';
                 document.getElementById('menu-container').style.display = 'grid';
-                document.getElementById('sidebar-panel').classList.remove('hidden');
+                document.getElementById('action-buttons').style.display = 'flex';
                 currentScreen = 'menu';
                 // Go back in menu history
                 if (menuHistory.length > 1) {
@@ -560,7 +740,7 @@
                 } else {
                     // Go back to priority selection
                     document.getElementById('menu-container').style.display = 'none';
-                    document.getElementById('sidebar-panel').classList.add('hidden');
+                    document.getElementById('action-buttons').style.display = 'none';
                     document.getElementById('priority-selection').style.display = 'block';
                     document.getElementById('back-button-container').style.display = 'none';
                     currentScreen = 'priority';
@@ -577,8 +757,8 @@
 
             // Show menu container
             document.getElementById('menu-container').style.display = 'grid';
-            // Show sidebar
-            document.getElementById('sidebar-panel').classList.remove('hidden');
+            // Show action buttons
+            document.getElementById('action-buttons').style.display = 'flex';
 
             currentScreen = 'menu';
             // Load menu
@@ -682,28 +862,8 @@
         }
 
         function updateSummary() {
-            const summary = document.getElementById('selection-summary');
-            const list = document.getElementById('selected-list');
-
-            if (selectedServices.length > 0) {
-                // Summary is always visible in the sidebar now, no need to toggle
-
-                // Calculate total estimated time
-                const totalTime = selectedServices.reduce((sum, s) => sum + (s.estimated_wait_minutes || 0), 0);
-
-                list.innerHTML = selectedServices.map(s =>
-                    `<li>${s.label} <small style="color:#666;">(~${s.estimated_wait_minutes || 0} min)</small></li>`
-                ).join('');
-
-                // Add total time display
-                if (totalTime > 0) {
-                    list.innerHTML += `<li style="margin-top:10px; padding-top:10px; border-top:2px solid #ddd; font-weight:bold;">
-                        ⏱️ Tempo total estimado: ${totalTime} minutos
-                    </li>`;
-                }
-            } else {
-                list.innerHTML = '<li style="color:#999;">Nenhum serviço selecionado</li>';
-            }
+            // Sidebar was removed, summary is now only shown in confirmation modal
+            // This function is kept for compatibility but does nothing
         }
 
         function resetSelection() {
@@ -724,7 +884,10 @@
         }
 
         async function confirmTicket() {
-            if (selectedServices.length === 0) return;
+            if (selectedServices.length === 0) {
+                showTotemToast('⚠️ Selecione pelo menos um serviço antes de confirmar!');
+                return;
+            }
 
             // Show confirmation modal
             const totalTime = selectedServices.reduce((sum, s) => sum + (s.estimated_wait_minutes || 0), 0);
