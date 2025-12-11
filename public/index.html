@@ -12,27 +12,53 @@
             transition: transform 0.2s;
             cursor: pointer;
             text-decoration: none;
-            color: inherit;
+            color: rgba(255, 255, 255, 0.95);
             display: block;
+            border-radius: 15px;
+            /* Acrylic Style */
+            background: rgba(var(--acrylic-base-color), 0.1);
+            backdrop-filter: blur(var(--acrylic-blur, 20px));
+            -webkit-backdrop-filter: blur(var(--acrylic-blur, 20px));
+            border: 1px solid rgba(var(--acrylic-base-color), 0.2);
+            padding: 30px 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
         .nav-card:hover {
-            transform: scale(1.05);
+            transform: translateY(-5px);
+            background: rgba(var(--acrylic-base-color), 0.2);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        .nav-card h2 {
+            margin: 10px 0 5px 0;
+            font-size: 1.5rem;
+            color: white;
+        }
+
+        .nav-card p {
+            color: rgba(255, 255, 255, 0.7);
+            margin: 0;
+            font-size: 0.9rem;
         }
 
         .icon {
             font-size: 3rem;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
             display: block;
+            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
         }
     </style>
 </head>
 
 <body class="has-background">
-    <header>
-        <h1>Star Tickets</h1>
-        <p>Sistema de Gestão de Atendimento</p>
-    </header>
+    <!-- Global Header Injection -->
+    <script src="global-ui.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            renderAppHeader('Star Tickets');
+        });
+    </script>
     <div class="container">
         <div class="grid" id="menu-grid">
             <a href="totem.html" class="card nav-card" data-page="totem">
@@ -40,7 +66,7 @@
                 <h2>Totem</h2>
                 <p>Autoatendimento para clientes</p>
             </a>
-            <a href="manager.html" class="card nav-card" data-page="manager" style="border-left: 5px solid #9C27B0;">
+            <a href="manager.html" class="card nav-card" data-page="manager">
                 <span class="icon">📊</span>
                 <h2>Gerente</h2>
                 <p>Otimização de filas e fluxo</p>

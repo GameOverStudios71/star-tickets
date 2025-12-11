@@ -852,9 +852,10 @@ body.has-background .sidebar {
 }
 
 body.has-background .tv-main {
-    background: var(--glass-bg-dark);
-    backdrop-filter: blur(var(--blur-xl));
-    -webkit-backdrop-filter: blur(var(--blur-xl));
+    background: rgba(var(--acrylic-base-color), 0.1);
+    backdrop-filter: blur(var(--acrylic-blur));
+    -webkit-backdrop-filter: blur(var(--acrylic-blur));
+    border-right: 1px solid rgba(var(--acrylic-base-color), 0.2);
 }
 
 .tv-sidebar {
@@ -868,33 +869,43 @@ body.has-background .tv-main {
 }
 
 body.has-background .tv-sidebar {
-    background: var(--glass-bg-dark);
-    backdrop-filter: blur(var(--blur-lg));
-    -webkit-backdrop-filter: blur(var(--blur-lg));
+    background: rgba(var(--acrylic-base-color), 0.15);
+    backdrop-filter: blur(var(--acrylic-blur));
+    -webkit-backdrop-filter: blur(var(--acrylic-blur));
+    border-left: 1px solid rgba(var(--acrylic-base-color), 0.2);
 }
 
 .ticket-display {
     font-size: var(--font-size-6xl);
     font-weight: var(--font-weight-bold);
-    color: var(--color-warning-light);
+    color: rgba(255, 255, 255, 0.95);
+    /* White instead of warning light */
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
     margin-top: var(--spacing-lg);
 }
 
 .customer-display {
     font-size: calc(var(--font-size-6xl) * 1.5);
     font-weight: var(--font-weight-bold);
-    color: var(--color-info);
+    color: rgba(255, 255, 255, 0.9);
+    /* White/Light instead of info blue */
     text-transform: uppercase;
     text-align: center;
     line-height: var(--line-height-tight);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
 }
 
 .room-display {
     font-size: var(--font-size-4xl);
     margin-top: var(--spacing-2xl);
-    background: var(--color-accent);
+    /* Acrylic Reddish Style */
+    background: linear-gradient(135deg, rgba(231, 76, 60, 0.2) 0%, rgba(192, 57, 43, 0.2) 100%);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(231, 76, 60, 0.5);
     padding: var(--spacing-sm) var(--spacing-2xl);
     border-radius: var(--radius-full);
+    color: white;
+    box-shadow: 0 4px 15px rgba(231, 76, 60, 0.2);
 }
 
 .history-item {
@@ -1313,4 +1324,125 @@ body.has-background .login-container {
 
 .animate-pulse {
     animation: pulse 2s infinite;
+}
+
+/* ==================== GLOBAL UI COMPONENTS ==================== */
+
+/* App Header (Acrylic Style) */
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 30px;
+    margin-bottom: 20px;
+    background: rgba(var(--acrylic-base-color), 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(var(--acrylic-base-color), 0.2);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    color: rgba(255, 255, 255, 0.95);
+    position: relative;
+    z-index: 100;
+}
+
+.app-header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.95);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 5px 15px;
+    border-radius: 30px;
+    background: rgba(var(--acrylic-base-color), 0.1);
+    border: 1px solid rgba(var(--acrylic-base-color), 0.2);
+    transition: all 0.3s ease;
+}
+
+.user-profile:hover {
+    background: rgba(var(--acrylic-base-color), 0.2);
+}
+
+.user-avatar {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--color-info), var(--color-info-light));
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.2rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.user-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.user-role {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.7);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Base Acrylic Container Override */
+.acrylic-container {
+    background: rgba(var(--acrylic-base-color), 0.1);
+    backdrop-filter: blur(var(--acrylic-blur));
+    -webkit-backdrop-filter: blur(var(--acrylic-blur));
+    border: 1px solid rgba(var(--acrylic-base-color), 0.2);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    color: rgba(255, 255, 255, 0.95);
+}
+
+/* Text Utilities */
+.text-white {
+    color: rgba(255, 255, 255, 0.95) !important;
+}
+
+.text-light {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.text-muted {
+    color: rgba(255, 255, 255, 0.6) !important;
+}
+
+/* Global Button Overrides for Acrylic Theme */
+button {
+    font-family: var(--font-family);
+}
+
+.btn-acrylic {
+    background: linear-gradient(135deg,
+            rgba(var(--acrylic-base-color), 0.5) 0%,
+            rgba(var(--acrylic-base-color), 0.45) 100%);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(var(--acrylic-base-color), 0.4);
+    color: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s;
+}
+
+.btn-acrylic:hover {
+    background: linear-gradient(135deg,
+            rgba(var(--acrylic-base-color), 0.6) 0%,
+            rgba(var(--acrylic-base-color), 0.55) 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }

@@ -55,26 +55,60 @@
             transition: all 0.3s;
         }
 
-        .tab-btn:hover {
-            color: var(--primary-color);
-            background: #f5f5f5;
-            border-radius: 5px 5px 0 0;
+        .tab-btn.active {
+            color: white;
+            border-bottom-color: white;
+            font-weight: bold;
+            background: rgba(255, 255, 255, 0.1);
         }
 
-        .tab-btn.active {
-            color: var(--primary-color);
-            border-bottom-color: var(--primary-color);
-            font-weight: bold;
+        .tab-btn {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .tab-btn:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .card,
+        .queue-card {
+            background: rgba(var(--acrylic-base-color), 0.1);
+            backdrop-filter: blur(var(--acrylic-blur));
+            -webkit-backdrop-filter: blur(var(--acrylic-blur));
+            border: 1px solid rgba(var(--acrylic-base-color), 0.2);
+            border-radius: 8px;
+            color: white;
+        }
+
+        h2,
+        h3 {
+            color: white !important;
+        }
+
+        .queue-item {
+            color: white;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .queue-item:hover {
+            background: rgba(255, 255, 255, 0.1);
         }
     </style>
 </head>
 
 <body class="has-background">
-    <header>
-        <h1>Área do Profissional</h1>
-        <select id="room-select" onchange="loadQueue()" style="padding:5px; margin-left:10px;">
-            <option value="">Selecione sua Sala...</option>
-        </select>
+    <header class="app-header">
+        <div class="header-left" style="display:flex; align-items:center; gap:15px;">
+            <h1>Área do Profissional</h1>
+            <select id="room-select" onchange="loadQueue()"
+                style="padding:8px; border-radius:5px; border:1px solid rgba(255,255,255,0.3); background:rgba(0,0,0,0.2); color:white;">
+                <option value="" style="color:black;">Selecione sua Sala...</option>
+            </select>
+        </div>
+        <div class="header-right" id="header-user-container">
+            <!-- User info injected here -->
+        </div>
     </header>
     <div class="container">
         <!-- Card de Atendimento Atual -->
@@ -82,7 +116,7 @@
             <div class="card">
                 <h2>Atendimento Atual</h2>
                 <div id="current-ticket" style="text-align:center; padding:20px;">
-                    <h3 style="color:gray;">Nenhum cliente em atendimento</h3>
+                    <h3 style="color:rgba(255,255,255,0.5) !important;">Nenhum cliente em atendimento</h3>
                 </div>
             </div>
         </div>
@@ -115,6 +149,21 @@
         // Check authentication on page load
         checkAuth().then(user => {
             if (!user) return; // Will redirect to login
+
+            // Manual injection of user info into header
+            const container = document.getElementById('header-user-container');
+            if (container) {
+                container.innerHTML = `
+                <div class="user-profile">
+                    <div class="user-avatar">
+                        ${user.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div class="user-info">
+                        <span class="user-name">${user.name}</span>
+                        <span class="user-role">${user.role}</span>
+                    </div>
+                </div>`;
+            }
         });
 
         async function loadRooms() {

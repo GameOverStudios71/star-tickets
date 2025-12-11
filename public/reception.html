@@ -38,69 +38,108 @@
             /* Importante para flexbox */
         }
 
+        /* Scrollbar customizada - estilo fino */
+        .ticket-list-container::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .ticket-list-container::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 2px;
+        }
+
+        .ticket-list-container::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 2px;
+        }
+
+        .ticket-list-container::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.8);
+        }
+
+        /* Firefox scrollbar */
+        .ticket-list-container {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.6) rgba(255, 255, 255, 0.05);
+        }
+
         .tickets-card {
             flex: 1;
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            background: rgba(var(--acrylic-base-color), 0.1);
+            backdrop-filter: blur(var(--acrylic-blur));
+            -webkit-backdrop-filter: blur(var(--acrylic-blur));
+            border: 1px solid rgba(var(--acrylic-base-color), 0.2);
+            border-radius: 8px;
+            padding: 20px;
+            color: white;
         }
 
         .filter-section {
-            background: white;
+            background: rgba(var(--acrylic-base-color), 0.1);
+            backdrop-filter: blur(var(--acrylic-blur));
+            -webkit-backdrop-filter: blur(var(--acrylic-blur));
+            border: 1px solid rgba(var(--acrylic-base-color), 0.2);
             padding: 15px;
             border-radius: 8px;
             margin-bottom: 15px;
-        }
-
-        .filter-section h3 {
-            margin-top: 0;
-            margin-bottom: 10px;
-        }
-
-        .filter-checkboxes {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 8px;
-        }
-
-        .filter-checkboxes label {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            cursor: pointer;
+            color: white;
         }
 
         .ticket-card {
-            background: white;
+            background: rgba(var(--acrylic-base-color), 0.1);
+            backdrop-filter: blur(var(--acrylic-blur));
+            -webkit-backdrop-filter: blur(var(--acrylic-blur));
+            border: 1px solid rgba(var(--acrylic-base-color), 0.2);
             padding: 15px;
             margin-bottom: 10px;
             border-radius: 8px;
             cursor: pointer;
-            border: 3px solid transparent;
             transition: all 0.3s;
+            color: white;
         }
 
         .ticket-card:hover {
-            border-color: var(--primary-color);
+            background: rgba(var(--acrylic-base-color), 0.2);
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
 
         .ticket-card.selected {
-            border-color: var(--accent-color);
-            background: #fff5f5;
+            border: 4px solid #27ae60;
+            background: rgba(39, 174, 96, 0.1);
+            box-shadow: 0 0 10px rgba(39, 174, 96, 0.3);
+        }
+
+        /* Ticket em atendimento na própria mesa */
+        .ticket-card.in-progress-my-desk {
+            background: rgba(76, 175, 80, 0.15) !important;
+            border: none !important;
+        }
+
+        .ticket-card.in-progress-my-desk:hover {
+            background: rgba(76, 175, 80, 0.25) !important;
         }
 
         .ticket-card.in-progress-other {
-            border-color: #4CAF50;
-            background: #e8f5e9;
+            border: none !important;
+            background: rgba(244, 67, 54, 0.15) !important;
             cursor: not-allowed;
-            opacity: 0.8;
+            opacity: 0.9;
         }
 
         .ticket-card.in-progress-other:hover {
             transform: none;
             box-shadow: none;
+            background: rgba(244, 67, 54, 0.25) !important;
+        }
+
+        /* Cor branca para o texto do convênio em tickets bloqueados ou em atendimento */
+        .ticket-card.in-progress-other div,
+        .ticket-card.in-progress-my-desk div {
+            color: white !important;
         }
 
         .attending-badge {
@@ -109,20 +148,20 @@
             color: white;
             padding: 2px 8px;
             border-radius: 10px;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             margin-left: 10px;
         }
 
         .ticket-code {
-            font-size: 1.8rem;
+            font-size: 1.3rem;
             font-weight: bold;
-            color: var(--primary-color);
+            color: #fff;
             margin-bottom: 5px;
         }
 
         .ticket-services {
-            color: #666;
-            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.8rem;
             margin-bottom: 5px;
         }
 
@@ -130,8 +169,9 @@
             display: inline-block;
             padding: 3px 8px;
             border-radius: 3px;
-            font-size: 0.8rem;
-            background: #e0e0e0;
+            font-size: 0.75rem;
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
         }
 
         .ticket-status.linked {
@@ -140,10 +180,52 @@
         }
 
         .detail-panel {
-            background: white;
+            background: rgba(var(--acrylic-base-color), 0.15);
+            backdrop-filter: blur(var(--acrylic-blur));
+            -webkit-backdrop-filter: blur(var(--acrylic-blur));
+            border: 1px solid rgba(var(--acrylic-base-color), 0.2);
             padding: 20px;
             border-radius: 8px;
             min-height: 400px;
+            max-height: calc(100vh - 120px);
+            overflow-y: auto;
+            color: white;
+        }
+
+        /* Scrollbar customizada detail-panel */
+        .detail-panel::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .detail-panel::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 2px;
+        }
+
+        .detail-panel::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 2px;
+        }
+
+        .detail-panel::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.8);
+        }
+
+        /* Firefox scrollbar */
+        .detail-panel {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.6) rgba(255, 255, 255, 0.05);
+        }
+
+        /* Estilo das opções dos dropdowns */
+        select option {
+            background: #2a2a2a;
+            color: white;
+        }
+
+        select option:checked {
+            background: white;
+            color: #333;
         }
 
         .service-item {
@@ -151,9 +233,10 @@
             justify-content: space-between;
             align-items: center;
             padding: 10px;
-            background: #f5f5f5;
+            background: rgba(255, 255, 255, 0.1);
             margin-bottom: 8px;
             border-radius: 5px;
+            color: white;
         }
 
         .service-item .service-info {
@@ -169,6 +252,24 @@
         .service-item button {
             padding: 5px 10px;
             font-size: 0.85rem;
+        }
+
+        .btn-call {
+            width: 100%;
+            padding: 15px;
+            background: #27ae60;
+            /* Green */
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background 0.3s;
+        }
+
+        .btn-call:hover {
+            background: #2ecc71;
         }
 
         .arrow-btn {
@@ -192,14 +293,14 @@
 
         .empty-state {
             text-align: center;
-            color: #999;
+            color: rgba(255, 255, 255, 0.6);
             padding: 40px;
         }
 
         .add-service-section {
             margin-top: 20px;
             padding-top: 20px;
-            border-top: 2px solid #eee;
+            border-top: 2px solid rgba(255, 255, 255, 0.2);
         }
 
         .add-service-section select {
@@ -213,7 +314,7 @@
             display: flex;
             gap: 10px;
             margin-bottom: 15px;
-            border-bottom: 2px solid #eee;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
             padding-bottom: 0;
         }
 
@@ -225,20 +326,22 @@
             cursor: pointer;
             font-size: 1rem;
             font-weight: 500;
-            color: #666;
+            color: rgba(255, 255, 255, 0.6);
             transition: all 0.3s;
         }
 
         .tab-btn:hover {
-            color: var(--primary-color);
-            background: #f5f5f5;
+            color: #fff;
+            background: rgba(255, 255, 255, 0.1);
             border-radius: 5px 5px 0 0;
         }
 
         .tab-btn.active {
-            color: var(--primary-color);
-            border-bottom-color: var(--primary-color);
+            color: #fff;
+            border-bottom-color: #fff;
             font-weight: bold;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px 5px 0 0;
         }
 
         /* Modal de Ticket Bloqueado */
@@ -300,33 +403,23 @@
 </head>
 
 <body class="has-background">
-    <header style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
-        <h1>Recepção</h1>
-        <div class="desk-selector"
-            style="display: flex; align-items: center; gap: 10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 10px 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
-            <span style="color: white; font-weight: 500; font-size: 0.95rem;">🖥️ Minha Mesa:</span>
-            <select id="desk-select" onchange="handleDeskSelection()"
-                style="padding: 8px 15px; border: 2px solid rgba(255,255,255,0.3); border-radius: 6px; font-size: 1rem; background: white; cursor: pointer; min-width: 120px;">
-                <option value="">Selecione...</option>
-            </select>
-        </div>
-    </header>
+    <header id="reception-header"></header>
 
     <div class="reception-layout">
         <!-- Left Column: Filters + Ticket List -->
         <div class="left-column" style="display: flex; flex-direction: column; gap: 20px;">
             <!-- Filtros -->
-            <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <div class="filter-section">
 
                 <!-- Advanced Filters -->
                 <div style="margin-bottom: 15px;">
-                    <h3 style="cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between;"
+                    <h3 style="cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between; font-size: 1rem;"
                         onclick="toggleTypeFilterDropdown()">
-                        <span>🏷️ Filtrar por Tipo</span>
+                        <span>Filtrar por Tipo</span>
                         <span id="type-filter-arrow" style="transition: transform 0.3s;">▼</span>
                     </h3>
                     <div id="type-filter-dropdown"
-                        style="display: none; margin-top: 10px; background: #f5f5f5; padding: 10px; border-radius: 5px;">
+                        style="display: none; margin-top: 10px; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 5px;">
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                             <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
                                 <input type="checkbox" id="filter-insurance" onchange="applyFilters()">
@@ -356,15 +449,15 @@
                     </div>
                 </div>
 
-                <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 15px 0;">
+                <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.2); margin: 15px 0;">
 
-                <h3 style="cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between;"
+                <h3 style="cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between; font-size: 1rem;"
                     onclick="toggleFilterDropdown()">
-                    <span>🔍 Filtrar por Serviço</span>
+                    <span>Filtrar por Serviço</span>
                     <span id="filter-arrow" style="transition: transform 0.3s;">▼</span>
                 </h3>
                 <div id="filter-dropdown"
-                    style="display: none; max-height: 300px; overflow-y: auto; margin-top: 10px; padding: 10px; background: #f9f9f9; border-radius: 5px;">
+                    style="display: none; max-height: 300px; overflow-y: auto; margin-top: 10px; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 5px;">
                     <div style="margin-bottom: 10px;">
                         <button class="btn" onclick="selectAllFilters()"
                             style="font-size: 0.85rem; padding: 5px 10px;">Selecionar Todos</button>
@@ -378,7 +471,7 @@
             </div>
 
             <!-- Ticket List with Tabs -->
-            <div class="card tickets-card">
+            <div class="tickets-card">
                 <!-- Tabs Header -->
                 <div class="tabs">
                     <button class="tab-btn active" onclick="switchTab('active')" id="tab-active">
@@ -389,7 +482,6 @@
                     </button>
                 </div>
 
-                <h2>Senhas Emitidas</h2>
                 <div class="ticket-list-container">
                     <div id="ticket-list"></div>
                 </div>
@@ -418,9 +510,10 @@
         let currentTab = 'active'; // 'active' or 'finished'
 
         // Check authentication on page load
-        checkAuth().then(user => {
+        checkAuth().then(async user => {
             if (!user) return; // Will redirect to login
             currentUser = user;
+            await renderReceptionHeader(); // Render header first to create desk-select element
             loadDesks(); // Loads desks AND tries to join saved desk
         });
 
@@ -434,13 +527,21 @@
             localStorage.setItem('star_tickets_reception_desk', data.deskId);
             setCookie('star_tickets_reception_desk', data.deskId, 30); // 30 days
 
-            document.querySelector('.desk-selector').style.background = 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)';
-
             if (!isAutoJoining) {
-                showToast(`Mesa conectada com sucesso!`, 'success');
+                // Se foi troca manual, recarrega a página para atualizar tudo do zero na nova mesa
+                document.querySelector('.desk-selector').style.background = 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)';
+                showToast(`Mesa altera com sucesso! Atualizando...`, 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 500);
             } else {
+                // Reconexão automática ao abrir a página
+                document.querySelector('.desk-selector').style.background = 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)';
                 console.log('Mesa reconectada automaticamente');
                 isAutoJoining = false; // Reset flag
+
+                // Re-renderizar tickets para aplicar cores corretas (verde/vermelho)
+                renderTickets(filterTickets(allTickets));
             }
         });
 
@@ -459,7 +560,7 @@
             localStorage.removeItem('star_tickets_reception_desk');
             setCookie('star_tickets_reception_desk', "", -1);
 
-            document.querySelector('.desk-selector').style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            document.querySelector('.desk-selector').style.background = 'linear-gradient(135deg, #0a3d3e 0%, #0d4d4f 100%)';
         });
 
         // Load reception desks - backend now filters by session automatically
@@ -530,6 +631,10 @@
 
         function renderDesksDropdown() {
             const select = document.getElementById('desk-select');
+            if (!select) {
+                console.warn('desk-select element not found, header may not be rendered yet');
+                return;
+            }
             // Save current selection to restore visual state
             // Priority: Current Value (User Input) > LocalStorage > Empty
             // This prevents the dropdown from reverting to the old value while waiting for success confirmation
@@ -579,6 +684,51 @@
         let activeDesks = new Map();
         let currentUser = null; // Will be set after checkAuth
 
+        // Custom header renderer for reception that includes desk selector
+        async function renderReceptionHeader() {
+            let user = null;
+            try {
+                const authRes = await fetch('/api/auth/me');
+                if (authRes.ok) {
+                    const data = await authRes.json();
+                    user = data.user;
+                }
+            } catch (e) {
+                console.error('Error fetching user:', e);
+            }
+
+            const header = document.getElementById('reception-header');
+            if (!header) return;
+
+            // Adicionar classe app-header ao elemento pai para evitar fundo duplo
+            header.className = 'app-header';
+
+            header.innerHTML = `
+                <div class="header-left">
+                    <h1>Recepção / Triagem</h1>
+                </div>
+                <div class="header-right" style="display: flex; align-items: center; gap: 20px;">
+                    <div class="desk-selector" style="display: flex; align-items: center; gap: 10px; background: linear-gradient(135deg, #0a3d3e 0%, #0d4d4f 100%); padding: 10px 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(10, 61, 62, 0.3);">
+                        <label for="desk-select" style="font-weight: 500; color: white;">🪑 Minha Mesa:</label>
+                        <select id="desk-select" onchange="handleDeskSelection()" style="padding: 8px 15px; border-radius: 5px; border: none; font-size: 1rem; min-width: 150px; cursor: pointer;">
+                            <option value="">Selecione...</option>
+                        </select>
+                    </div>
+                    ${user ? `
+                    <div class="user-profile">
+                        <div class="user-avatar">
+                            ${user.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div class="user-info">
+                            <span class="user-name">${user.name}</span>
+                            <span class="user-role">${user.role}</span>
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
         function handleDeskSelection() {
             const select = document.getElementById('desk-select');
             const deskId = select.value;
@@ -587,7 +737,7 @@
                 // User deselected desk
                 socket.emit('leave_desk');
                 localStorage.removeItem('star_tickets_reception_desk');
-                document.querySelector('.desk-selector').style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                document.querySelector('.desk-selector').style.background = 'linear-gradient(135deg, #0a3d3e 0%, #0d4d4f 100%)';
                 return;
             }
 
@@ -608,6 +758,11 @@
                     userName: currentUser.username,
                     userId: currentUser.id
                 });
+
+                // Re-renderizar tickets para aplicar cores corretas (verde/vermelho)
+                setTimeout(() => {
+                    renderTickets(filterTickets(allTickets));
+                }, 100);
             }
         }
 
@@ -619,6 +774,7 @@
 
         function getSelectedDeskId() {
             const select = document.getElementById('desk-select');
+            if (!select) return null;
             return select.value ? parseInt(select.value) : null;
         }
 
@@ -855,9 +1011,17 @@
                 div.className = 'ticket-card';
 
                 // Verificar se está sendo atendido por outra mesa
+                const ticketDeskId = t.reception_desk_id ? parseInt(t.reception_desk_id) : null;
                 const isInProgressByOther = (t.status === 'IN_RECEPTION' || t.status === 'CALLED_RECEPTION')
-                    && t.reception_desk_id
-                    && t.reception_desk_id !== myDeskId;
+                    && ticketDeskId
+                    && myDeskId
+                    && ticketDeskId !== myDeskId;
+
+                // Verificar se está em atendimento na própria mesa
+                const isInProgressMyDesk = (t.status === 'IN_RECEPTION' || t.status === 'CALLED_RECEPTION')
+                    && ticketDeskId
+                    && myDeskId
+                    && ticketDeskId === myDeskId;
 
                 if (selectedTicket && selectedTicket.id === t.id && !isInProgressByOther) {
                     div.classList.add('selected');
@@ -865,6 +1029,8 @@
 
                 if (isInProgressByOther) {
                     div.classList.add('in-progress-other');
+                } else if (isInProgressMyDesk) {
+                    div.classList.add('in-progress-my-desk');
                 }
 
                 const statusClass = t.temp_customer_name ? 'linked' : '';
@@ -894,12 +1060,6 @@
 
                 container.appendChild(div);
 
-                // Add separator between tickets (not after the last one)
-                if (index < tickets.length - 1) {
-                    const hr = document.createElement('hr');
-                    hr.style.cssText = 'border: none; border-top: 1px solid #e0e0e0; margin: 5px 0;';
-                    container.appendChild(hr);
-                }
             });
         }
 
@@ -911,6 +1071,34 @@
 
         async function showTicketDetail(ticket) {
             const panel = document.getElementById('detail-panel');
+
+            // Obter ID da mesa atual
+            const myDeskId = getSelectedDeskId();
+
+            // Verificar se está sendo atendido por outra mesa
+            // Converter ambos para número para garantir comparação correta
+            const ticketDeskId = ticket.reception_desk_id ? parseInt(ticket.reception_desk_id) : null;
+            const isInProgressByOther = (ticket.status === 'IN_RECEPTION' || ticket.status === 'CALLED_RECEPTION')
+                && ticketDeskId
+                && myDeskId
+                && ticketDeskId !== myDeskId;
+
+            // Se estiver sendo atendido por outra mesa, mostrar mensagem de bloqueio
+            if (isInProgressByOther) {
+                panel.innerHTML = `
+                    <div style="text-align: center; padding: 40px;">
+                        <div style="font-size: 4rem; margin-bottom: 20px;">🔒</div>
+                        <h2 style="color: white; margin-bottom: 10px;">Atendimento em Andamento</h2>
+                        <p style="color: rgba(255,255,255,0.7); font-size: 1.1rem;">
+                            Esta senha está sendo atendida em: <strong style="color: #4CAF50;">${ticket.attending_desk_name || 'Outra mesa'}</strong>
+                        </p>
+                        <p style="color: rgba(255,255,255,0.6); margin-top: 20px;">
+                            Você não pode editar ou interagir com esta senha.
+                        </p>
+                    </div>
+                `;
+                return;
+            }
 
             // Fetch detailed services for this ticket
             const res = await fetch(`/api/tickets/${ticket.id}/services`);
@@ -925,25 +1113,22 @@
             let actionButtons = '';
             if (isWaitingReception) {
                 actionButtons = `
-                    <button class="btn btn-large btn-accent" onclick="callToReception(${ticket.id})" style="width:100%; margin-bottom:15px;">
+                    <button class="btn btn-large btn-accent" onclick="callToReception(${ticket.id})" style="width:100%; margin-bottom:15px; background: rgba(33, 150, 243, 0.6); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.3); color: white; font-weight: 600;">
                         📢 CHAMAR PARA RECEPÇÃO
                     </button>
                 `;
             } else if (isCalledReception) {
                 actionButtons = `
-                    <div style="background:#fff3cd; padding:15px; border-radius:5px; margin-bottom:15px; text-align:center;">
+                    <div style="background:rgba(255,243,205,0.15); backdrop-filter: blur(10px); border: 1px solid rgba(255,243,205,0.3); padding:15px; border-radius:8px; margin-bottom:15px; text-align:center; color: #ffd700;">
                         <strong>🔔 Senha chamada - Rotacionando na TV</strong>
                     </div>
-                    <button class="btn btn-large" onclick="startAttendance(${ticket.id})" style="width:100%; margin-bottom:15px; background:#2196F3; color:white;">
+                    <button class="btn btn-large" onclick="startAttendance(${ticket.id})" style="width:100%; margin-bottom:15px; background: linear-gradient(135deg, rgba(76, 175, 80, 0.8) 0%, rgba(56, 142, 60, 0.9) 100%); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); color:white;">
                         🔔 INÍCIO DO ATENDIMENTO
                     </button>
                 `;
             } else if (isInReception) {
                 actionButtons = `
-                    <div style="background:#d4edda; padding:15px; border-radius:5px; margin-bottom:15px; text-align:center;">
-                        <strong>✅ Cliente em atendimento</strong>
-                    </div>
-                    <button class="btn btn-large" onclick="finishReception(${ticket.id})" style="width:100%; margin-bottom:15px; background:#4CAF50; color:white;">
+                    <button class="btn btn-large" onclick="finishReception(${ticket.id})" style="width:100%; margin-bottom:15px; background: linear-gradient(135deg, rgba(255, 152, 0, 0.8) 0%, rgba(251, 140, 0, 0.9) 100%); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); color:white;">
                         ✓ FINALIZAR E LIBERAR PARA SERVIÇOS
                     </button>
                 `;
@@ -960,24 +1145,23 @@
             panel.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px;">
                     <div>
-                        <h2 style="font-size:3rem; color:var(--primary-color); margin-bottom:5px;">${ticket.display_code}</h2>
+                        <h2 style="font-size:3rem; color:#fff; margin-bottom:5px;">${ticket.display_code}</h2>
                         <div style="display:flex; gap:10px; align-items:center;">
                             ${priorityBadge}
                             ${insuranceDisplay}
                         </div>
                     </div>
                     <div style="text-align:right;">
-                        <div style="font-size:2rem; font-weight:bold; color:${ticket.status === 'WAITING_RECEPTION' ? '#f1c40f' : '#2ecc71'}">
-                            ${ticket.status.replace('_', ' ')}
+                        <div style="font-size:1.5rem; font-weight:bold; color:${ticket.status === 'WAITING_RECEPTION' ? '#f1c40f' : '#2ecc71'}">
+                            ${getStatusLabel(ticket.status)}
                         </div>
                     </div>
                 </div>
 
                 ${actionButtons}
 
-                <div class="customer-link-section" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 25px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
-                    <h3 style="color: white; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; font-size: 1.2rem;">
-                        <span style="font-size: 1.5rem;">👤</span>
+                <div class="customer-link-section" style="background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.3); padding: 25px; border-radius: 12px; margin-bottom: 25px;">
+                    <h3 style="color: white; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; font-size: 1rem;">
                         <span>Identificação do Cliente</span>
                     </h3>
                     <div style="display:flex; gap:10px;">
@@ -990,8 +1174,8 @@
                             onblur="this.style.borderColor='rgba(255,255,255,0.3)'; this.style.background='rgba(255,255,255,0.95)'; linkCustomerName();">
                     </div>
                     ${ticket.temp_customer_name ? `
-                        <div style="margin-top: 12px; padding: 10px 15px; background: rgba(255,255,255,0.2); border-radius: 6px; color: white; display: flex; align-items: center; gap: 8px;">
-                            <span style="font-size: 1.2rem;">✓</span>
+                        <div style="margin-top: 12px; padding: 10px 15px; background: rgba(76, 175, 80, 0.3); backdrop-filter: blur(10px); border: 1px solid rgba(76, 175, 80, 0.5); border-radius: 6px; color: white; display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 1rem;">✓</span>
                             <span style="font-weight: 500;">Cliente identificado</span>
                         </div>
                     ` : `
@@ -1002,20 +1186,19 @@
                     `}
                 </div>
 
-                <div style="margin-bottom: 20px; padding: 12px; background: #f5f5f5; border-radius: 8px; border-left: 4px solid var(--primary-color);">
-                    <div style="font-size:0.9rem; color:#666; display: flex; align-items: center; gap: 8px;">
+                <div style="margin-bottom: 20px; padding: 12px; background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border-radius: 8px; border-left: 4px solid rgba(255,255,255,0.5);">
+                    <div style="font-size:0.9rem; color:rgba(255,255,255,0.8); display: flex; align-items: center; gap: 8px;">
                         <span style="font-size: 1.1rem;">🕐</span>
-                        <span><strong>Chegada:</strong> ${new Date(ticket.created_at).toLocaleTimeString()}</span>
+                        <span><strong style="color:white;">Chegada:</strong> ${new Date(ticket.created_at).toLocaleTimeString()}</span>
                     </div>
                 </div>
 
-                <div style="margin-bottom: 20px; padding: 20px; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                    <h3 style="margin-top: 0; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; color: #2c3e50;">
-                        <span style="font-size: 1.3rem;">🔄</span>
+                <div style="margin-bottom: 20px; padding: 20px; background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px;">
+                    <h3 style="margin-top: 0; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; color: white; font-size: 1rem;">
                         <span>Alterar Status</span>
                     </h3>
                     <div style="display: flex; gap: 10px; align-items: stretch;">
-                        <select id="status-select" style="flex: 1; padding: 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 0.95rem; background: white; cursor: pointer;">
+                        <select id="status-select" style="flex: 1; padding: 12px; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; font-size: 0.95rem; background: rgba(255,255,255,0.1); color: white; cursor: pointer;">
                             <option value="WAITING_RECEPTION" ${ticket.status === 'WAITING_RECEPTION' ? 'selected' : ''}>⏳ Aguardando Recepção</option>
                             <option value="CALLED_RECEPTION" ${ticket.status === 'CALLED_RECEPTION' ? 'selected' : ''}>🔔 Chamado para Recepção</option>
                             <option value="IN_RECEPTION" ${ticket.status === 'IN_RECEPTION' ? 'selected' : ''}>👥 Em Atendimento na Recepção</option>
@@ -1023,26 +1206,27 @@
                             <option value="DONE" ${ticket.status === 'DONE' ? 'selected' : ''}>✅ Finalizado</option>
                             <option value="CANCELED" ${ticket.status === 'CANCELED' ? 'selected' : ''}>❌ Cancelado</option>
                         </select>
-                        <button class="btn" onclick="changeTicketStatus(${ticket.id})" style="padding: 12px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; white-space: nowrap; font-weight: 500;">
+                        <button class="btn" onclick="changeTicketStatus(${ticket.id})" style="padding: 12px 20px; background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.3); color: white; white-space: nowrap; font-weight: 500;">
                             Atualizar
                         </button>
                     </div>
-                    <div style="margin-top: 10px; font-size: 0.85rem; color: #666; display: flex; align-items: center; gap: 5px;">
-                        <span>ℹ️</span>
-                        <span>Status atual: <strong>${getStatusLabel(ticket.status)}</strong></span>
+                    <div style="margin-top: 10px; font-size: 0.85rem; color: rgba(255,255,255,0.7); display: flex; align-items: center; gap: 5px;">
+                        <span>Status atual: <strong style="color:white;">${getStatusLabel(ticket.status)}</strong></span>
                     </div>
                 </div>
 
-                <div class="services-section">
-                    <h3>🩺 Serviços Solicitados</h3>
+                <div class="services-section" style="background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+                    <h3 style="color: white; margin-top: 0; margin-bottom: 15px; font-size: 1rem;">Serviços Solicitados</h3>
                     <div id="services-list" class="services-list"></div>
                 </div>
-                <div class="add-service-section">
-                    <h3>➕ Adicionar Serviço</h3>
-                    <select id="add-service-select">
-                        <option value="">Selecione um serviço...</option>
-                    </select>
-                    <button class="btn" onclick="addService()">Adicionar</button>
+                <div class="add-service-section" style="background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; padding: 20px;">
+                    <h3 style="color: white; margin-top: 0; margin-bottom: 15px; font-size: 1rem;">Adicionar Serviço</h3>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <select id="add-service-select" style="flex: 1; padding: 12px; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; font-size: 0.95rem; background: rgba(255,255,255,0.1); color: white; cursor: pointer;">
+                            <option value="">Selecione um serviço...</option>
+                        </select>
+                        <button class="btn" onclick="addService()" style="padding: 12px 20px; background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.3); color: white;">Adicionar</button>
+                    </div>
                 </div>
             `;
 
@@ -1065,7 +1249,7 @@
             container.innerHTML = '';
 
             if (services.length === 0) {
-                container.innerHTML = '<p style="color:#999;">Nenhum serviço selecionado</p>';
+                container.innerHTML = '<p style="color:rgba(255,255,255,0.6);">Nenhum serviço selecionado</p>';
                 return;
             }
 
@@ -1300,8 +1484,7 @@
 
 
 
-        // Initial load
-        loadDesks();
+        // Initial load (loadDesks is called in checkAuth after header is rendered)
         loadServices();
         loadTickets();
 
@@ -1367,6 +1550,7 @@
             }
         });
     </script>
+    <script src="global-ui.js"></script>
 </body>
 
 </html>
