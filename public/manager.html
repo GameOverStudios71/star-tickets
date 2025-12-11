@@ -185,6 +185,9 @@
             <button class="btn" onclick="openSoundModal()" style="margin-right: 10px; background: #9C27B0;">
                 🔔 Som da TV
             </button>
+            <button class="btn" onclick="openTotemSoundModal()" style="margin-right: 10px; background: #FF9800;">
+                🔊 Som do Totem
+            </button>
             <button id="tts-toggle-btn" class="btn" onclick="toggleTTS()"
                 style="margin-right: 10px; background: #607D8B;">
                 🔇 Voz Desligada
@@ -352,6 +355,92 @@
         </div>
     </div>
 
+    <!-- Totem Sound Selection Modal -->
+    <div id="totem-sound-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <button class="close-modal" onclick="closeTotemSoundModal()">×</button>
+            <h2>🔊 Som do Totem</h2>
+            <p style="color: #666; margin-bottom: 20px;">Selecione o som de clique para os botões do totem:</p>
+
+            <div id="totem-sound-presets" style="display: flex; flex-direction: column; gap: 10px;">
+                <label class="sound-option"
+                    style="display: flex; align-items: center; padding: 15px; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                    <input type="radio" name="totem-sound" value="click"
+                        style="margin-right: 15px; transform: scale(1.3);">
+                    <div>
+                        <strong>🖱️ Click</strong>
+                        <div style="font-size: 0.85rem; color: #666;">Som de clique rápido</div>
+                    </div>
+                    <button onclick="previewTotemSound('click'); event.stopPropagation();" class="btn"
+                        style="margin-left: auto; padding: 5px 10px; font-size: 0.8rem;">▶ Ouvir</button>
+                </label>
+
+                <label class="sound-option"
+                    style="display: flex; align-items: center; padding: 15px; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                    <input type="radio" name="totem-sound" value="pop"
+                        style="margin-right: 15px; transform: scale(1.3);">
+                    <div>
+                        <strong>💫 Pop</strong>
+                        <div style="font-size: 0.85rem; color: #666;">Som de bolha estourada</div>
+                    </div>
+                    <button onclick="previewTotemSound('pop'); event.stopPropagation();" class="btn"
+                        style="margin-left: auto; padding: 5px 10px; font-size: 0.8rem;">▶ Ouvir</button>
+                </label>
+
+                <label class="sound-option"
+                    style="display: flex; align-items: center; padding: 15px; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                    <input type="radio" name="totem-sound" value="ding"
+                        style="margin-right: 15px; transform: scale(1.3);">
+                    <div>
+                        <strong>🔔 Ding</strong>
+                        <div style="font-size: 0.85rem; color: #666;">Som de sino agudo</div>
+                    </div>
+                    <button onclick="previewTotemSound('ding'); event.stopPropagation();" class="btn"
+                        style="margin-left: auto; padding: 5px 10px; font-size: 0.8rem;">▶ Ouvir</button>
+                </label>
+
+                <label class="sound-option"
+                    style="display: flex; align-items: center; padding: 15px; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                    <input type="radio" name="totem-sound" value="tap"
+                        style="margin-right: 15px; transform: scale(1.3);">
+                    <div>
+                        <strong>👆 Tap</strong>
+                        <div style="font-size: 0.85rem; color: #666;">Som de toque suave</div>
+                    </div>
+                    <button onclick="previewTotemSound('tap'); event.stopPropagation();" class="btn"
+                        style="margin-left: auto; padding: 5px 10px; font-size: 0.8rem;">▶ Ouvir</button>
+                </label>
+
+                <label class="sound-option"
+                    style="display: flex; align-items: center; padding: 15px; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                    <input type="radio" name="totem-sound" value="blip"
+                        style="margin-right: 15px; transform: scale(1.3);">
+                    <div>
+                        <strong>✨ Blip</strong>
+                        <div style="font-size: 0.85rem; color: #666;">Som de interface digital</div>
+                    </div>
+                    <button onclick="previewTotemSound('blip'); event.stopPropagation();" class="btn"
+                        style="margin-left: auto; padding: 5px 10px; font-size: 0.8rem;">▶ Ouvir</button>
+                </label>
+
+                <label class="sound-option"
+                    style="display: flex; align-items: center; padding: 15px; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                    <input type="radio" name="totem-sound" value="silent"
+                        style="margin-right: 15px; transform: scale(1.3);">
+                    <div>
+                        <strong>🔇 Silencioso</strong>
+                        <div style="font-size: 0.85rem; color: #666;">Sem som de clique</div>
+                    </div>
+                </label>
+            </div>
+
+            <button onclick="saveTotemSoundPreset()" class="btn btn-large"
+                style="width: 100%; margin-top: 20px; background: #4CAF50;">
+                💾 Salvar Configuração
+            </button>
+        </div>
+    </div>
+
     <script src="auth-helper.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script>
@@ -511,6 +600,107 @@
                 closeSoundModal();
             }
         }
+
+        // Totem Sound Presets
+        const totemSoundPresets = {
+            'click': () => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.08);
+            },
+            'pop': () => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.1);
+            },
+            'ding': () => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.15);
+            },
+            'tap': () => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.05);
+            },
+            'blip': () => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(1000, audioCtx.currentTime);
+                osc.frequency.setValueAtTime(1200, audioCtx.currentTime + 0.03);
+                gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.1);
+            },
+            'silent': () => {
+                // No sound
+            }
+        };
+
+        function previewTotemSound(preset) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            if (totemSoundPresets[preset]) totemSoundPresets[preset]();
+        }
+
+        function openTotemSoundModal() {
+            document.getElementById('totem-sound-modal').classList.add('active');
+            // Load current setting
+            const current = localStorage.getItem('star_tickets_totem_sound') || 'click';
+            const radio = document.querySelector(`input[name="totem-sound"][value="${current}"]`);
+            if (radio) radio.checked = true;
+        }
+
+        function closeTotemSoundModal() {
+            document.getElementById('totem-sound-modal').classList.remove('active');
+        }
+
+        function saveTotemSoundPreset() {
+            const selected = document.querySelector('input[name="totem-sound"]:checked');
+            if (selected) {
+                const preset = selected.value;
+                localStorage.setItem('star_tickets_totem_sound', preset);
+
+                // Emit to all Totems via WebSocket
+                socket.emit('change_totem_sound', { preset });
+
+                alert('✅ Som do Totem configurado com sucesso!\n\nO Totem será atualizado automaticamente.');
+                closeTotemSoundModal();
+            }
+        }
+
 
         let currentRoomId = null;
         let selectedTicketId = null;

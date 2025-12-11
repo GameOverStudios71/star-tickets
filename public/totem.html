@@ -17,19 +17,23 @@
 
         #back-button {
             background: linear-gradient(135deg,
-                    rgba(39, 174, 96, var(--acrylic-opacity, 0.5)) 0%,
-                    rgba(46, 204, 113, calc(var(--acrylic-opacity, 0.5) - 0.05)) 100%);
+                    rgba(var(--acrylic-base-color), var(--acrylic-opacity, 0.5)) 0%,
+                    rgba(var(--acrylic-base-color), calc(var(--acrylic-opacity, 0.5) - 0.05)) 100%);
             backdrop-filter: blur(var(--acrylic-blur, 20px)) saturate(var(--acrylic-saturate, 180%)) brightness(var(--acrylic-brightness, 1.1));
             -webkit-backdrop-filter: blur(var(--acrylic-blur, 20px)) saturate(var(--acrylic-saturate, 180%)) brightness(var(--acrylic-brightness, 1.1));
-            color: rgba(255, 255, 255, 0.8);
-            border: 1px solid rgba(255, 255, 255, 0.4);
+            color: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(var(--acrylic-base-color), 0.4);
             padding: 15px 30px;
             border-radius: 15px;
             font-size: 1.3rem;
             cursor: pointer;
+            /* Glassmorphism background */
+            background: rgba(var(--acrylic-base-color), 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             box-shadow:
-                0 8px 32px rgba(39, 174, 96, 0.3),
-                inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+                0 4px 6px rgba(0, 0, 0, 0.1),
+                inset 0 0 0 1px rgba(var(--acrylic-base-color), 0.1);
             transition: all 0.3s ease;
             font-weight: bold;
         }
@@ -54,12 +58,12 @@
 
         .priority-btn {
             background: linear-gradient(135deg,
-                    rgba(255, 255, 255, 0.5) 0%,
-                    rgba(255, 255, 255, 0.4) 50%,
-                    rgba(255, 255, 255, 0.45) 100%);
+                    rgba(var(--acrylic-base-color), 0.5) 0%,
+                    rgba(var(--acrylic-base-color), 0.4) 50%,
+                    rgba(var(--acrylic-base-color), 0.45) 100%);
             backdrop-filter: blur(20px) saturate(180%) brightness(1.1);
             -webkit-backdrop-filter: blur(20px) saturate(180%) brightness(1.1);
-            border: 5px solid rgba(255, 255, 255, 0.4);
+            border: 5px solid rgba(var(--acrylic-base-color), 0.4);
             border-radius: 20px;
             padding: 40px 20px;
             cursor: pointer;
@@ -67,7 +71,7 @@
             text-align: center;
             font-size: 1.5rem;
             font-weight: bold;
-            color: rgba(255, 255, 255, 0.8);
+            color: rgba(255, 255, 255, 0.95);
             text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
             /* macOS-style shadow */
             box-shadow:
@@ -76,7 +80,7 @@
                 0 8px 16px rgba(0, 0, 0, 0.08),
                 0 16px 32px rgba(0, 0, 0, 0.1),
                 0 32px 64px rgba(0, 0, 0, 0.12),
-                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+                inset 0 1px 0 rgba(var(--acrylic-base-color), 0.2);
         }
 
         .priority-btn:hover {
@@ -88,7 +92,7 @@
                 0 16px 32px rgba(0, 0, 0, 0.1),
                 0 32px 64px rgba(0, 0, 0, 0.14),
                 0 48px 96px rgba(0, 0, 0, 0.16),
-                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+                inset 0 1px 0 rgba(var(--acrylic-base-color), 0.3);
         }
 
         .normal-btn {
@@ -132,7 +136,7 @@
             font-family: var(--font-family);
             font-size: 2.2rem;
             margin-bottom: 10px;
-            color: rgba(255, 255, 255, 0.8);
+            color: rgba(255, 255, 255, 0.95);
             text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
         }
 
@@ -239,7 +243,7 @@
             background: var(--glass-bg-strong);
             backdrop-filter: blur(var(--blur-xl));
             -webkit-backdrop-filter: blur(var(--blur-xl));
-            border-left: 3px solid rgba(255, 255, 255, 0.2);
+            border-left: 3px solid rgba(var(--acrylic-base-color), 0.2);
             display: flex;
             flex-direction: column;
             z-index: 100;
@@ -361,13 +365,13 @@
         /* Menu items with acrylic effect */
         .menu-item {
             background: linear-gradient(135deg,
-                    rgba(255, 255, 255, var(--acrylic-opacity, 0.5)) 0%,
-                    rgba(255, 255, 255, calc(var(--acrylic-opacity, 0.5) - 0.1)) 50%,
-                    rgba(255, 255, 255, calc(var(--acrylic-opacity, 0.5) - 0.05)) 100%) !important;
+                    rgba(var(--acrylic-base-color), var(--acrylic-opacity, 0.5)) 0%,
+                    rgba(var(--acrylic-base-color), calc(var(--acrylic-opacity, 0.5) - 0.1)) 50%,
+                    rgba(var(--acrylic-base-color), calc(var(--acrylic-opacity, 0.5) - 0.05)) 100%) !important;
             backdrop-filter: blur(var(--acrylic-blur, 20px)) saturate(var(--acrylic-saturate, 180%)) brightness(var(--acrylic-brightness, 1.1));
             -webkit-backdrop-filter: blur(var(--acrylic-blur, 20px)) saturate(var(--acrylic-saturate, 180%)) brightness(var(--acrylic-brightness, 1.1));
-            border: 3px solid rgba(255, 255, 255, 0.8) !important;
-            color: rgba(255, 255, 255, 0.8) !important;
+            border: 3px solid rgba(var(--acrylic-base-color), 0.8) !important;
+            color: rgba(255, 255, 255, 0.9) !important;
             font-family: var(--font-family) !important;
             font-size: 1.8rem !important;
             font-weight: bold !important;
@@ -423,12 +427,12 @@
         right: 20px;
         z-index: 100;
         padding: 15px 25px;
-        background: linear-gradient(135deg, rgba(255, 255, 255, var(--acrylic-opacity, 0.5)) 0%, rgba(255, 255, 255, calc(var(--acrylic-opacity, 0.5) - 0.1)) 100%);
+        background: linear-gradient(135deg, rgba(var(--acrylic-base-color), var(--acrylic-opacity, 0.5)) 0%, rgba(var(--acrylic-base-color), calc(var(--acrylic-opacity, 0.5) - 0.1)) 100%);
         backdrop-filter: blur(var(--acrylic-blur, 20px)) saturate(var(--acrylic-saturate, 180%)) brightness(var(--acrylic-brightness, 1.1));
         -webkit-backdrop-filter: blur(var(--acrylic-blur, 20px)) saturate(var(--acrylic-saturate, 180%)) brightness(var(--acrylic-brightness, 1.1));
-        border: 2px solid rgba(255, 255, 255, 0.4);
+        border: 2px solid rgba(var(--acrylic-base-color), 0.4);
         border-radius: 20px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.04), 0 4px 8px rgba(0,0,0,0.06), 0 8px 16px rgba(0,0,0,0.08), 0 16px 32px rgba(0,0,0,0.1);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 40px 50px -10px rgba(0, 0, 0, 0.2);
     ">
         <img src="./img/logo.png" alt="Logo" style="width: 300px; display: block;">
     </div>
@@ -448,12 +452,11 @@
                     style="display:grid; grid-template-columns:1fr 1fr; gap:30px; max-width:var(--acrylic-container-width, 1100px); margin:0 auto;">
                     <button class="priority-btn normal-btn" onclick="selectPriority(false)">
                         <div class="priority-icon">✅</div>
-                        <div class="priority-label">ATENDIMENTO<br>NORMAL</div>
+                        <div class="priority-label">Atendimento<br>NORMAL</div>
                     </button>
                     <button class="priority-btn priority-btn-special" onclick="selectPriority(true)">
                         <div class="priority-icon">⭐</div>
-                        <div class="priority-label">ATENDIMENTO<br>PREFERENCIAL</div>
-                        <div class="priority-subtitle">Idosos, Gestantes,<br>Lactantes, PcD</div>
+                        <div class="priority-label">Atendimento<br>PREFERENCIAL</div>
                     </button>
                 </div>
             </div>
@@ -515,11 +518,11 @@
             <div id="action-buttons"
                 style="display:none; flex-direction: column; align-items: center; margin-top: 30px; width: 100%; max-width: 1100px; gap: 15px;">
                 <button class="btn btn-large btn-accent" onclick="confirmTicket()"
-                    style="width: 100%; font-size: 2.2rem; color: rgba(255,255,255,0.8); text-shadow: 0 2px 6px rgba(0,0,0,0.6); background: linear-gradient(135deg, rgba(39, 174, 96, 0.5) 0%, rgba(46, 204, 113, 0.45) 100%); backdrop-filter: blur(20px) saturate(180%) brightness(1.1); -webkit-backdrop-filter: blur(20px) saturate(180%) brightness(1.1); border: 2px solid rgba(255,255,255,0.4); box-shadow: 0 2px 4px rgba(0,0,0,0.04), 0 4px 8px rgba(0,0,0,0.06), 0 8px 16px rgba(0,0,0,0.08), 0 16px 32px rgba(0,0,0,0.1), 0 32px 64px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.2); transition: all 0.3s ease;">
+                    style="width: 100%; font-size: 2.2rem; font-weight: bold; color: rgba(255,255,255,0.8); text-shadow: 0 2px 6px rgba(0,0,0,0.6); background: linear-gradient(135deg, rgba(39, 174, 96, 0.5) 0%, rgba(46, 204, 113, 0.45) 100%); backdrop-filter: blur(20px) saturate(180%) brightness(1.1); -webkit-backdrop-filter: blur(20px) saturate(180%) brightness(1.1); border: 2px solid rgba(255,255,255,0.4); box-shadow: 0 2px 4px rgba(0,0,0,0.04), 0 4px 8px rgba(0,0,0,0.06), 0 8px 16px rgba(0,0,0,0.08), 0 16px 32px rgba(0,0,0,0.1), 0 32px 64px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.2); transition: all 0.3s ease;">
                     CONFIRMAR
                 </button>
                 <button class="btn btn-large" onclick="resetSelection()"
-                    style="width: 100%; font-size: 2.2rem; color: rgba(255,255,255,0.8); text-shadow: 0 2px 6px rgba(0,0,0,0.6); background: linear-gradient(135deg, rgba(149, 165, 166, 0.5) 0%, rgba(127, 140, 141, 0.45) 100%); backdrop-filter: blur(20px) saturate(180%) brightness(1.1); -webkit-backdrop-filter: blur(20px) saturate(180%) brightness(1.1); border: 2px solid rgba(255,255,255,0.4); box-shadow: 0 2px 4px rgba(0,0,0,0.04), 0 4px 8px rgba(0,0,0,0.06), 0 8px 16px rgba(0,0,0,0.08), 0 16px 32px rgba(0,0,0,0.1), 0 32px 64px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.2); transition: all 0.3s ease;">
+                    style="width: 100%; font-size: 2.2rem; font-weight: bold; color: rgba(255,255,255,0.8); text-shadow: 0 2px 6px rgba(0,0,0,0.6); background: linear-gradient(135deg, rgba(149, 165, 166, 0.5) 0%, rgba(127, 140, 141, 0.45) 100%); backdrop-filter: blur(20px) saturate(180%) brightness(1.1); -webkit-backdrop-filter: blur(20px) saturate(180%) brightness(1.1); border: 2px solid rgba(255,255,255,0.4); box-shadow: 0 2px 4px rgba(0,0,0,0.04), 0 4px 8px rgba(0,0,0,0.06), 0 8px 16px rgba(0,0,0,0.08), 0 16px 32px rgba(0,0,0,0.1), 0 32px 64px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.2); transition: all 0.3s ease;">
                     Limpar Tudo
                 </button>
             </div>
@@ -537,8 +540,11 @@
             <div id="confirmation-total"
                 style="font-size:1.2rem; font-weight:bold; margin:20px 0; padding:15px; background:#f0f0f0; border-radius:5px;">
             </div>
-            <button class="btn btn-large btn-accent" onclick="finalConfirm()">CONFIRMAR E IMPRIMIR</button>
-            <button class="btn" onclick="closeConfirmation()">CANCELAR</button>
+            <button class="btn btn-large btn-accent" onclick="playConfirmSound(); finalConfirm()"
+                style="width: 100%; font-size: 1.5rem; color: rgba(255,255,255,0.95); text-shadow: 0 1px 3px rgba(0,0,0,0.4); background: linear-gradient(135deg, rgba(25, 111, 61, 0.95) 0%, rgba(30, 132, 73, 0.9) 100%); border: 1px solid rgba(255,255,255,0.4); box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 10px;">
+                CONFIRMAR E
+                IMPRIMIR</button>
+            <button class="btn" onclick="playButtonSound(); closeConfirmation()">CANCELAR</button>
         </div>
     </div>
 
@@ -572,7 +578,8 @@
                 </div>
             </div>
 
-            <button class="btn btn-large btn-accent" onclick="window.location.reload()"
+            <button class="btn btn-large btn-accent"
+                onclick="playConfirmSound(); setTimeout(() => window.location.reload(), 500)"
                 style="margin-top:10px; width:100%;">
                 FINALIZAR ATENDIMENTO
             </button>
@@ -590,6 +597,131 @@
         let currentScreen = 'priority'; // Track current screen: 'priority', 'insurance', 'menu', 'summary'
         let pendingConvenioMenuId = null; // Store the menu ID to navigate to after insurance input
 
+        // Audio Context for totem button sounds
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        // Sound presets for totem button clicks
+        const totemSoundPresets = {
+            'click': () => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.08);
+            },
+            'pop': () => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.1);
+            },
+            'ding': () => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.15);
+            },
+            'tap': () => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.05);
+            },
+            'blip': () => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(1000, audioCtx.currentTime);
+                osc.frequency.setValueAtTime(1200, audioCtx.currentTime + 0.03);
+                gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.1);
+            },
+            'silent': () => {
+                // No sound
+            }
+        };
+
+        // Play button click sound
+        function playButtonSound() {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            const preset = localStorage.getItem('star_tickets_totem_sound') || 'click';
+            if (totemSoundPresets[preset]) {
+                totemSoundPresets[preset]();
+            }
+        }
+
+        // Listen for sound preset changes via WebSocket (if socket exists)
+        if (typeof io !== 'undefined') {
+            const socket = io();
+            socket.on('totem_sound_changed', (data) => {
+                localStorage.setItem('star_tickets_totem_sound', data.preset);
+            });
+        }
+
+        // Sound for Back button (swoosh/slide sound)
+        function playBackSound() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(500, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.15);
+            gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.15);
+        }
+
+        // Sound for Confirm/Action buttons (success chime)
+        function playConfirmSound() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const notes = [523, 659, 784]; // C5, E5, G5 - success chord
+            notes.forEach((freq, i) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime + i * 0.08);
+                gain.gain.setValueAtTime(0.25, audioCtx.currentTime + i * 0.08);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + i * 0.08 + 0.3);
+                osc.start(audioCtx.currentTime + i * 0.08);
+                osc.stop(audioCtx.currentTime + i * 0.08 + 0.3);
+            });
+        }
+
         // Toast notification for totem (top right)
         function showTotemToast(message) {
             // Remove existing toast if any
@@ -601,20 +733,21 @@
             toast.innerHTML = message;
             toast.style.cssText = `
                 position: fixed;
-                top: 20px;
-                right: 20px;
-                background: rgba(231, 76, 60, 0.95);
-                backdrop-filter: blur(16px);
-                -webkit-backdrop-filter: blur(16px);
-                color: white;
-                padding: 20px 30px;
-                border-radius: 12px;
-                font-size: 1.2rem;
+                bottom: 30px;
+                right: 30px;
+                background: linear-gradient(135deg, rgba(231, 76, 60, 0.6) 0%, rgba(192, 57, 43, 0.55) 100%);
+                backdrop-filter: blur(20px) saturate(180%) brightness(1.1);
+                -webkit-backdrop-filter: blur(20px) saturate(180%) brightness(1.1);
+                color: rgba(255, 255, 255, 0.95);
+                text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+                padding: 25px 35px;
+                border-radius: 15px;
+                font-size: 1.4rem;
                 font-weight: bold;
-                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.04), 0 4px 8px rgba(0,0,0,0.06), 0 8px 16px rgba(0,0,0,0.08), 0 16px 32px rgba(0,0,0,0.1), 0 32px 64px rgba(0,0,0,0.12);
                 z-index: 9999;
                 animation: toastSlideIn 0.3s ease-out;
-                border: 1px solid rgba(255, 255, 255, 0.2);
+                border: 2px solid rgba(var(--acrylic-base-color), 0.4);
             `;
             document.body.appendChild(toast);
 
@@ -709,6 +842,7 @@
 
         // Back button function
         function goBack() {
+            playBackSound();
             if (currentScreen === 'insurance') {
                 // Go back to menu
                 document.getElementById('insurance-input-screen').style.display = 'none';
@@ -749,6 +883,7 @@
         }
 
         function selectPriority(priority) {
+            playButtonSound();
             isPriorityTicket = priority;
             // Hide priority selection
             document.getElementById('priority-selection').style.display = 'none';
@@ -757,8 +892,7 @@
 
             // Show menu container
             document.getElementById('menu-container').style.display = 'grid';
-            // Show action buttons
-            document.getElementById('action-buttons').style.display = 'flex';
+            // Action buttons visibility will be handled by renderMenu based on depth
 
             currentScreen = 'menu';
             // Load menu
@@ -777,6 +911,16 @@
             console.log('menu-container element:', container);
             console.log('menu-container display:', container ? window.getComputedStyle(container).display : 'N/A');
             container.innerHTML = '';
+
+            // Show action buttons only if we are deep in the menu (submenu selected)
+            // menuHistory has items when we are inside submenus.
+            // If menuHistory is empty, we are at root (Convênio/Particular selection)
+            const actionButtons = document.getElementById('action-buttons');
+            if (menuHistory.length > 0) {
+                if (actionButtons) actionButtons.style.display = 'flex';
+            } else {
+                if (actionButtons) actionButtons.style.display = 'none';
+            }
 
             items.forEach((item, index) => {
                 console.log(`Creating menu item ${index}:`, item.label);
@@ -822,6 +966,7 @@
         `;
 
                 div.onclick = () => {
+                    playButtonSound();
                     // Logic for Insurance/Private selection
                     if (item.id === 10) { // Convênio
                         healthInsuranceName = 'Convênio';
@@ -843,6 +988,7 @@
         }
 
         function toggleService(item, divElement) {
+            playButtonSound();
             if (!item.service_id) return;
 
             // Check if already selected
@@ -888,6 +1034,7 @@
                 showTotemToast('⚠️ Selecione pelo menos um serviço antes de confirmar!');
                 return;
             }
+            playConfirmSound();
 
             // Show confirmation modal
             const totalTime = selectedServices.reduce((sum, s) => sum + (s.estimated_wait_minutes || 0), 0);
@@ -902,7 +1049,7 @@
 
             document.getElementById('confirmation-services').innerHTML = servicesHtml;
             document.getElementById('confirmation-total').innerHTML =
-                `⏱️ Tempo total estimado: <span style="color:var(--accent-color);">${totalTime} minutos</span>`;
+                `⏱️ Tempo total estimado: <span style="color:#196f3d;">${totalTime} minutos</span>`;
             document.getElementById('confirmation-modal').style.display = 'flex';
         }
 
