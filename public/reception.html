@@ -240,6 +240,62 @@
             border-bottom-color: var(--primary-color);
             font-weight: bold;
         }
+
+        /* Modal de Ticket Bloqueado */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(2px);
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            animation: modalSlideUp 0.3s ease-out;
+        }
+
+        @keyframes modalSlideUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .modal-title {
+            color: #333;
+            margin: 0 0 10px 0;
+            font-size: 1.5rem;
+        }
+
+        .modal-message {
+            color: #666;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
     </style>
 </head>
 
@@ -249,7 +305,7 @@
         <div class="desk-selector"
             style="display: flex; align-items: center; gap: 10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 10px 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
             <span style="color: white; font-weight: 500; font-size: 0.95rem;">🖥️ Minha Mesa:</span>
-            <select id="desk-select" onchange="saveSelectedDesk()"
+            <select id="desk-select" onchange="handleDeskSelection()"
                 style="padding: 8px 15px; border: 2px solid rgba(255,255,255,0.3); border-radius: 6px; font-size: 1rem; background: white; cursor: pointer; min-width: 120px;">
                 <option value="">Selecione...</option>
             </select>
@@ -364,6 +420,46 @@
         // Check authentication on page load
         checkAuth().then(user => {
             if (!user) return; // Will redirect to login
+            currentUser = user;
+            loadDesks(); // Loads desks AND tries to join saved desk
+        });
+
+        // Socket Listeners for Desks
+        socket.on('active_desks_update', (data) => {
+            activeDesks = new Map(data);
+            if (allDesks.length > 0) renderDesksDropdown();
+        });
+
+        socket.on('desk_join_success', (data) => {
+            localStorage.setItem('star_tickets_reception_desk', data.deskId);
+            setCookie('star_tickets_reception_desk', data.deskId, 30); // 30 days
+
+            document.querySelector('.desk-selector').style.background = 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)';
+
+            if (!isAutoJoining) {
+                showToast(`Mesa conectada com sucesso!`, 'success');
+            } else {
+                console.log('Mesa reconectada automaticamente');
+                isAutoJoining = false; // Reset flag
+            }
+        });
+
+        socket.on('desk_join_error', (data) => {
+            if (!isAutoJoining) {
+                showWarningModal('Falha ao selecionar mesa', data.message);
+            } else {
+                console.warn('Falha na reconexão automática:', data.message);
+                isAutoJoining = false;
+            }
+
+            // Revert
+            const select = document.getElementById('desk-select');
+            select.value = "";
+
+            localStorage.removeItem('star_tickets_reception_desk');
+            setCookie('star_tickets_reception_desk', "", -1);
+
+            document.querySelector('.desk-selector').style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
         });
 
         // Load reception desks - backend now filters by session automatically
@@ -377,36 +473,148 @@
                     console.error('Error loading desks:', res.status);
                 }
                 renderDesksDropdown();
+                tryJoinSavedDesk(); // Try to join only once after loading desks
             } catch (e) {
                 console.error('Error loading desks:', e);
             }
         }
 
+        // Flag to suppress success toast on auto-join
+        let isAutoJoining = false;
+
+        // Cookie Helpers
+        function setCookie(name, value, days) {
+            let expires = "";
+            if (days) {
+                let date = new Date();
+                date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+                expires = "; expires=" + date.toUTCString();
+            }
+            document.cookie = name + "=" + (value || "") + expires + "; path=/";
+        }
+
+        function getCookie(name) {
+            let nameEQ = name + "=";
+            let ca = document.cookie.split(';');
+            for (let i = 0; i < ca.length; i++) {
+                let c = ca[i];
+                while (c.charAt(0) == ' ') c = c.substring(1, c.length);
+                if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
+            }
+            return null;
+        }
+
+        // Tries to join the desk saved in localStorage OR cookie (only if not taken)
+        function tryJoinSavedDesk() {
+            // Priority: LocalStorage -> Cookie
+            const savedDeskId = localStorage.getItem('star_tickets_reception_desk') || getCookie('star_tickets_reception_desk');
+
+            if (savedDeskId && currentUser) {
+                const occupant = activeDesks.get(parseInt(savedDeskId));
+                // Only join if not occupied OR occupied by me
+                if (!occupant || occupant.userName === currentUser.username) {
+                    isAutoJoining = true; // Suppress toast
+                    socket.emit('join_desk', {
+                        deskId: parseInt(savedDeskId),
+                        userName: currentUser.username,
+                        userId: currentUser.id
+                    });
+                } else {
+                    // It's taken by someone else, clear saved data
+                    localStorage.removeItem('star_tickets_reception_desk');
+                    setCookie('star_tickets_reception_desk', "", -1);
+                    renderDesksDropdown();
+                }
+            }
+        }
+
         function renderDesksDropdown() {
             const select = document.getElementById('desk-select');
+            // Save current selection to restore visual state
+            // Priority: Current Value (User Input) > LocalStorage > Empty
+            // This prevents the dropdown from reverting to the old value while waiting for success confirmation
+            const currentSelection = select.value || localStorage.getItem('star_tickets_reception_desk');
+
             select.innerHTML = '<option value="">Selecione...</option>';
 
             allDesks.forEach(desk => {
                 const option = document.createElement('option');
                 option.value = desk.id;
-                option.textContent = desk.name;
+
+                // Check if occupied
+                const occupant = activeDesks.get(desk.id);
+                // Occupied if exists AND not by me (if I'm logged in)
+                const isOccupied = occupant && (!currentUser || occupant.userName !== currentUser.username);
+
+                if (isOccupied) {
+                    option.textContent = `${desk.name} (Usada por ${occupant.userName})`;
+                    option.disabled = true;
+                    option.style.background = '#ffebee';
+                } else {
+                    option.textContent = desk.name;
+                }
+
                 select.appendChild(option);
             });
 
-            // Restore saved selection
-            const savedDeskId = localStorage.getItem('star_tickets_reception_desk');
-            if (savedDeskId) {
-                select.value = savedDeskId;
+            // Restore selection if valid
+            if (currentSelection) {
+                // Check if it's still valid in the new options
+                const optionToSelect = select.querySelector(`option[value="${currentSelection}"]`);
+                if (optionToSelect && !optionToSelect.disabled) {
+                    select.value = currentSelection;
+                } else {
+                    // It got disabled or doesn't exist, clear invalid selection
+                    if (localStorage.getItem('star_tickets_reception_desk') === currentSelection) {
+                        localStorage.removeItem('star_tickets_reception_desk');
+                    }
+                    select.value = "";
+                }
+            } else {
+                select.value = "";
             }
         }
 
-        function saveSelectedDesk() {
+        // Active Desks Map: deskId -> { socketId, userName }
+        let activeDesks = new Map();
+        let currentUser = null; // Will be set after checkAuth
+
+        function handleDeskSelection() {
             const select = document.getElementById('desk-select');
-            if (select.value) {
-                localStorage.setItem('star_tickets_reception_desk', select.value);
-            } else {
+            const deskId = select.value;
+
+            if (!deskId) {
+                // User deselected desk
+                socket.emit('leave_desk');
                 localStorage.removeItem('star_tickets_reception_desk');
+                document.querySelector('.desk-selector').style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                return;
             }
+
+            // Check if desk is already occupied locally (optimistic check)
+            const deskOccupant = activeDesks.get(parseInt(deskId));
+            if (deskOccupant && (!currentUser || deskOccupant.userName !== currentUser.username)) {
+                showWarningModal('Mesa Ocupada', `A mesa <strong>${getDeskName(deskId)}</strong> já está sendo usada por <strong>${deskOccupant.userName}</strong>.`);
+                // Revert selection
+                const savedDesk = localStorage.getItem('star_tickets_reception_desk');
+                select.value = savedDesk || "";
+                return;
+            }
+
+            // Attempt to join desk
+            if (currentUser) {
+                socket.emit('join_desk', {
+                    deskId: parseInt(deskId),
+                    userName: currentUser.username,
+                    userId: currentUser.id
+                });
+            }
+        }
+
+        // Helper to get desk name by ID
+        function getDeskName(id) {
+            const desk = allDesks.find(d => d.id == id);
+            return desk ? desk.name : 'Mesa ' + id;
         }
 
         function getSelectedDeskId() {
@@ -681,7 +889,7 @@
                 if (!isInProgressByOther) {
                     div.onclick = () => selectTicket(t);
                 } else {
-                    div.onclick = () => alert('Esta senha está sendo atendida por ' + (t.attending_desk_name || 'outra mesa'));
+                    div.onclick = () => showTicketLockedPopup(t.attending_desk_name);
                 }
 
                 container.appendChild(div);
@@ -996,8 +1204,11 @@
             const deskId = getSelectedDeskId();
 
             if (!deskId) {
-                showToast('⚠️ Selecione sua mesa antes de chamar!', 'warning');
-                document.getElementById('desk-select').focus();
+                showWarningModal('Atenção', '<strong>Selecione sua mesa</strong> antes de chamar uma senha!');
+                // Highlight desk selector
+                const selector = document.querySelector('.desk-selector');
+                selector.style.boxShadow = '0 0 0 4px #e74c3c';
+                setTimeout(() => selector.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.3)', 2000);
                 return;
             }
 
@@ -1016,7 +1227,7 @@
                     loadTickets();
                 } else if (res.status === 409 && data.error === 'already_in_progress') {
                     // Outra recepcionista já está atendendo
-                    alert('⚠️ ' + data.message + '\n\nA lista será atualizada.');
+                    showTicketLockedPopup(data.attendingDesk);
                     loadTickets(); // Recarregar para mostrar status atualizado
                 } else {
                     showToast(data.error || 'Erro ao chamar senha', 'error');
@@ -1101,6 +1312,61 @@
     </script>
     <script src="js/common/trace.js"></script>
     <script src="js/common/toast.js"></script>
+    <div id="locked-ticket-modal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="modal-icon">🔒</span>
+            <h3 class="modal-title">Atendimento em Andamento</h3>
+            <p class="modal-message" id="locked-modal-message">Esta senha já está sendo atendida.</p>
+            <button class="btn btn-large" onclick="closeLockedModal()" style="width: 100%;">Entendido</button>
+        </div>
+    </div>
+
+    <script>
+        function showTicketLockedPopup(deskName) {
+            const modal = document.getElementById('locked-ticket-modal');
+            const message = document.getElementById('locked-modal-message');
+            message.innerHTML = `Esta senha está sendo atendida por<br><strong>${deskName || 'Outra mesa'}</strong>`;
+            modal.style.display = 'flex';
+        }
+
+        function closeLockedModal() {
+            document.getElementById('locked-ticket-modal').style.display = 'none';
+        }
+
+        // Fechar modal ao clicar fora
+        document.getElementById('locked-ticket-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'locked-ticket-modal') {
+                closeLockedModal();
+            }
+        });
+    </script>
+    <div id="warning-modal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="modal-icon" style="color: #f1c40f;">⚠️</span>
+            <h3 class="modal-title" id="warning-modal-title">Aviso</h3>
+            <p class="modal-message" id="warning-modal-message">Mensagem de aviso.</p>
+            <button class="btn btn-large" onclick="closeWarningModal()" style="width: 100%;">OK</button>
+        </div>
+    </div>
+
+    <script>
+        function showWarningModal(title, message) {
+            document.getElementById('warning-modal-title').innerText = title;
+            document.getElementById('warning-modal-message').innerHTML = message;
+            document.getElementById('warning-modal').style.display = 'flex';
+        }
+
+        function closeWarningModal() {
+            document.getElementById('warning-modal').style.display = 'none';
+        }
+
+        // Fechar modal ao clicar fora
+        document.getElementById('warning-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'warning-modal') {
+                closeWarningModal();
+            }
+        });
+    </script>
 </body>
 
 </html>

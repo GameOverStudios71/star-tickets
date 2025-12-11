@@ -17,6 +17,61 @@ const io = new Server(server, {
     }
 });
 
+// Track active desks: deskId -> { socketId, userName, userId }
+const activeDesks = new Map();
+
+io.on('connection', (socket) => {
+    // Send current active desks to new client
+    socket.emit('active_desks_update', Array.from(activeDesks.entries()));
+
+    socket.on('join_desk', (data) => {
+        const { deskId, userName, userId } = data;
+        const currentOccupant = activeDesks.get(parseInt(deskId));
+
+        // Check if occupied by someone else
+        if (currentOccupant && currentOccupant.socketId !== socket.id) {
+            socket.emit('desk_join_error', {
+                message: `Esta mesa já está sendo usada por ${currentOccupant.userName}`
+            });
+            return;
+        }
+
+        // Occupy desk
+        // First, leave any previously occupied desk by this socket
+        for (const [dId, occupant] of activeDesks.entries()) {
+            if (occupant.socketId === socket.id) {
+                activeDesks.delete(dId);
+            }
+        }
+
+        activeDesks.set(parseInt(deskId), { socketId: socket.id, userName, userId });
+        io.emit('active_desks_update', Array.from(activeDesks.entries()));
+        socket.emit('desk_join_success', { deskId });
+
+        console.log(`Desk ${deskId} occupied by ${userName}`);
+    });
+
+    socket.on('leave_desk', () => {
+        for (const [dId, occupant] of activeDesks.entries()) {
+            if (occupant.socketId === socket.id) {
+                activeDesks.delete(dId);
+                io.emit('active_desks_update', Array.from(activeDesks.entries()));
+                console.log(`Desk ${dId} left by ${occupant.userName}`);
+            }
+        }
+    });
+
+    socket.on('disconnect', () => {
+        for (const [dId, occupant] of activeDesks.entries()) {
+            if (occupant.socketId === socket.id) {
+                activeDesks.delete(dId);
+                io.emit('active_desks_update', Array.from(activeDesks.entries()));
+                console.log(`Desk ${dId} freed (disconnect)`);
+            }
+        }
+    });
+});
+
 const dbPath = path.resolve(__dirname, '../database/star-tickets.db');
 
 // Check if database exists, if not, initialize it
