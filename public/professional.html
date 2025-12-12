@@ -166,40 +166,89 @@
             }
         });
 
+        // Cookie helpers
+        function getCookie(name) {
+            let nameEQ = name + "=";
+            let ca = document.cookie.split(';');
+            for (let i = 0; i < ca.length; i++) {
+                let c = ca[i];
+                while (c.charAt(0) == ' ') c = c.substring(1, c.length);
+                if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
+            }
+            return null;
+        }
+
+        function setCookie(name, value, days) {
+            let expires = "";
+            if (days) {
+                let date = new Date();
+                date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+                expires = "; expires=" + date.toUTCString();
+            }
+            document.cookie = name + "=" + (value || "") + expires + "; path=/";
+        }
+
         async function loadRooms() {
             const res = await fetch('/api/rooms');
             const rooms = await res.json();
             const select = document.getElementById('room-select');
+
+            // Get saved room
+            const savedRoomId = localStorage.getItem('star_tickets_professional_room') || getCookie('star_tickets_professional_room');
+
             rooms.forEach(r => {
                 const opt = document.createElement('option');
                 opt.value = r.id;
                 opt.innerText = r.name;
                 select.appendChild(opt);
             });
+
+            // Restore selection
+            if (savedRoomId) {
+                select.value = savedRoomId;
+                // If value matches (room exists), load queue
+                if (select.value === savedRoomId) {
+                    loadQueue();
+                }
+            }
         }
+
+        let isServiceInProgress = false;
 
         async function loadQueue() {
             const select = document.getElementById('room-select');
             currentRoomId = select.value;
+
+            if (currentRoomId) {
+                // Save selection
+                localStorage.setItem('star_tickets_professional_room', currentRoomId);
+                setCookie('star_tickets_professional_room', currentRoomId, 30);
+            }
+
             if (!currentRoomId) return;
 
             const container = document.getElementById('queue-list');
 
             if (currentTab === 'queue') {
-                // Skeletons
-                container.innerHTML = '';
-                for (let i = 0; i < 3; i++) {
-                    const div = document.createElement('div');
-                    div.className = 'ticket-list-item';
-                    div.style.pointerEvents = 'none';
-                    div.innerHTML = `
-                        <div style="width: 100%;">
-                            <span class="skeleton skeleton-text" style="width: 40px; display: inline-block;"></span> <span class="skeleton skeleton-text" style="width: 150px; display: inline-block;"></span>
-                            <br><span class="skeleton skeleton-text" style="width: 100px; height: 0.8em; margin-top: 5px; display: block;"></span>
-                        </div>
-                        <span class="skeleton skeleton-block" style="width: 80px; height: 35px; border-radius: 5px;"></span>
-                    `;
-                    container.appendChild(div);
+                // Skeletons only if empty or first load? 
+                // To avoid flickering every 5s, maybe only show skeletons if container is empty?
+                // For now keeping original logic but maybe checking childNodes length could be better.
+                // kept original skeleton logic
+                if (container.children.length === 0) {
+                    container.innerHTML = '';
+                    for (let i = 0; i < 3; i++) {
+                        const div = document.createElement('div');
+                        div.className = 'ticket-list-item';
+                        div.style.pointerEvents = 'none';
+                        div.innerHTML = `
+                             <div style="width: 100%;">
+                                 <span class="skeleton skeleton-text" style="width: 40px; display: inline-block;"></span> <span class="skeleton skeleton-text" style="width: 150px; display: inline-block;"></span>
+                                 <br><span class="skeleton skeleton-text" style="width: 100px; height: 0.8em; margin-top: 5px; display: block;"></span>
+                             </div>
+                             <span class="skeleton skeleton-block" style="width: 80px; height: 35px; border-radius: 5px;"></span>
+                         `;
+                        container.appendChild(div);
+                    }
                 }
 
                 const res = await fetch(`/api/queue/${currentRoomId}`);
@@ -209,6 +258,8 @@
                 loadHistory();
             }
         }
+
+
 
         async function loadHistory() {
             if (!currentRoomId) return;
@@ -261,12 +312,16 @@
                 const div = document.createElement('div');
                 div.className = 'ticket-list-item';
                 const priorityBadge = item.is_priority ? '<span style="background:#FF9800;color:white;padding:2px 8px;border-radius:3px;font-size:0.8rem;margin-left:5px;">⭐ PREFERENCIAL</span>' : '';
+
+                // Disable button if service is in progress
+                const disabledAttr = isServiceInProgress ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : '';
+
                 div.innerHTML = `
                     <div>
                         <strong>${item.display_code}</strong> ${priorityBadge} - ${item.temp_customer_name || 'Sem nome'}
                         <br><small>${item.service_name}</small>
                     </div>
-                    <button class="btn" onclick="callTicket(${item.ticket_service_id})">CHAMAR</button>
+                    <button class="btn" onclick="callTicket(${item.ticket_service_id}, '${item.display_code}', '${item.temp_customer_name || 'Sem nome'}')" ${disabledAttr}>CHAMAR</button>
                 `;
                 container.appendChild(div);
             });
@@ -296,23 +351,72 @@
             });
         }
 
-        async function callTicket(ticketServiceId) {
-            if (currentTicketServiceId) {
-                if (!confirm('Finalizar atendimento atual antes de chamar o próximo?')) return;
-                await finishTicket();
+        // ...
+
+        let currentTicketCode = '';
+        let currentTicketName = '';
+
+        async function callTicket(ticketServiceId, code, name) {
+            // Block explicitly if service started
+            if (isServiceInProgress) {
+                showToast('Finalize o atendimento atual antes de chamar o próximo!', 'warning');
+                return;
             }
 
-            await fetch('/api/call', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ticketServiceId, roomId: currentRoomId })
-            });
+            if (currentTicketServiceId) {
+                // Show custom modal instead of native confirm
+                // Pass new details to modal so it can pass them to executeCallTicket
+                showConfirmModal(ticketServiceId, code, name);
+                return;
+            }
 
-            currentTicketServiceId = ticketServiceId;
+            // Direct call if no current
+            await executeCallTicket(ticketServiceId, code, name);
+        }
 
-            // Move from queue to current (simplified visual update)
-            loadQueue();
-            updateCurrentDisplay(ticketServiceId, false); // false = not started yet
+        async function executeCallTicket(ticketServiceId, code, name) {
+            try {
+                const res = await fetch('/api/call', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ticketServiceId, roomId: currentRoomId })
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    showToast(`Erro ao chamar senha: ${err.error || 'Erro desconhecido'}`, 'error');
+                    return;
+                }
+
+                currentTicketServiceId = ticketServiceId;
+                currentTicketCode = code;
+                currentTicketName = name;
+
+                // Move from queue to current (simplified visual update)
+                loadQueue();
+                updateCurrentDisplay(ticketServiceId, false); // false = not started yet
+            } catch (error) {
+                console.error(error);
+                showToast('Erro de conexão ao chamar senha', 'error');
+            }
+        }
+
+        function showConfirmModal(nextTicketId, code, name) {
+            const modal = document.getElementById('confirm-modal');
+            const confirmBtn = document.getElementById('confirm-modal-btn');
+
+            // Set up one-time click handler
+            confirmBtn.onclick = async () => {
+                await finishTicket();
+                modal.style.display = 'none';
+                await executeCallTicket(nextTicketId, code, name);
+            };
+
+            modal.style.display = 'flex';
+        }
+
+        function closeConfirmModal() {
+            document.getElementById('confirm-modal').style.display = 'none';
         }
 
         async function startService() {
@@ -324,7 +428,9 @@
                 body: JSON.stringify({ ticketServiceId: currentTicketServiceId })
             });
 
+            isServiceInProgress = true; // Set flag
             updateCurrentDisplay(currentTicketServiceId, true); // true = service started
+            loadQueue(); // Refresh to update disabled buttons
         }
 
         async function finishTicket() {
@@ -335,6 +441,7 @@
 
             // Immediately clear the display
             currentTicketServiceId = null;
+            isServiceInProgress = false; // Reset flag
             document.getElementById('current-ticket').innerHTML = '<h3 style="color:gray;">Nenhum cliente em atendimento</h3>';
 
             // Send finish request to backend
@@ -351,15 +458,17 @@
         }
 
         function updateCurrentDisplay(id, isServiceStarted) {
-            // In a real app we'd fetch details, here we just show generic
+            // Updated to show Code and Name
             if (isServiceStarted) {
                 // Service already started - show finish button
                 document.getElementById('current-ticket').innerHTML = `
                     <div style="background:#d4edda; padding:15px; border-radius:5px; margin-bottom:15px; text-align:center;">
                         <strong>✅ Cliente em atendimento</strong>
                     </div>
-                    <h1>Em Atendimento</h1>
-                    <p>Ticket ID: ${id}</p>
+                    <div style="margin-bottom:20px;">
+                        <h1 style="font-size: 4rem; margin: 0; line-height: 1;">${currentTicketCode}</h1>
+                        <h2 style="font-size: 2rem; margin: 10px 0 0; color: rgba(255,255,255,0.8);">${currentTicketName}</h2>
+                    </div>
                     <button class="btn btn-large" onclick="finishTicket()" style="width:100%; background:#4CAF50; color:white;">
                         ✓ FINALIZAR ATENDIMENTO
                     </button>
@@ -370,8 +479,10 @@
                     <div style="background:#fff3cd; padding:15px; border-radius:5px; margin-bottom:15px; text-align:center;">
                         <strong>🔔 Senha chamada - Rotacionando na TV</strong>
                     </div>
-                    <h1>Chamado</h1>
-                    <p>Ticket ID: ${id}</p>
+                    <div style="margin-bottom:20px;">
+                        <h1 style="font-size: 4rem; margin: 0; line-height: 1;">${currentTicketCode}</h1>
+                        <h2 style="font-size: 2rem; margin: 10px 0 0; color: rgba(255,255,255,0.8);">${currentTicketName}</h2>
+                    </div>
                     <button class="btn btn-large" onclick="startService()" style="width:100%; background:#2196F3; color:white;">
                         🔔 INÍCIO DO ATENDIMENTO
                     </button>
@@ -390,6 +501,23 @@
     </script>
     <script src="js/common/trace.js"></script>
     <script src="js/common/toast.js"></script>
+    <div id="confirm-modal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(5px);">
+        <div
+            style="background: #1a252f; padding: 30px; border-radius: 12px; max-width: 400px; width: 90%; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 25px rgba(0,0,0,0.5); text-align: center;">
+            <div style="font-size: 3rem; margin-bottom: 20px;">⚠️</div>
+            <h3 style="color: white; margin-top: 0; margin-bottom: 10px;">Atenção</h3>
+            <p style="color: rgba(255,255,255,0.8); margin-bottom: 25px;">
+                Deseja finalizar o atendimento atual antes de chamar a próxima senha?
+            </p>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button onclick="closeConfirmModal()" class="btn"
+                    style="background: rgba(255,255,255,0.1); color: white;">Cancelar</button>
+                <button id="confirm-modal-btn" class="btn" style="background: #27ae60; color: white;">Sim, Finalizar e
+                    Chamar</button>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>

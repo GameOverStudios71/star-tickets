@@ -187,8 +187,7 @@
             border: 1px solid rgba(var(--acrylic-base-color), 0.2);
             padding: 20px;
             border-radius: 8px;
-            min-height: 400px;
-            max-height: calc(100vh - 120px);
+            height: 100%;
             overflow-y: auto;
             color: white;
         }
@@ -1144,9 +1143,6 @@
                 `;
             } else if (isCalledReception) {
                 actionButtons = `
-                    <div style="background:rgba(255,243,205,0.15); backdrop-filter: blur(10px); border: 1px solid rgba(255,243,205,0.3); padding:15px; border-radius:8px; margin-bottom:15px; text-align:center; color: #ffd700;">
-                        <strong>🔔 Senha chamada - Rotacionando na TV</strong>
-                    </div>
                     <button class="btn btn-large" onclick="startAttendance(${ticket.id})" style="width:100%; margin-bottom:15px; background: linear-gradient(135deg, rgba(76, 175, 80, 0.8) 0%, rgba(56, 142, 60, 0.9) 100%); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); color:white;">
                         🔔 INÍCIO DO ATENDIMENTO
                     </button>
@@ -1185,6 +1181,7 @@
 
                 ${actionButtons}
 
+                ${!['WAITING_RECEPTION', 'CALLED_RECEPTION'].includes(ticket.status) ? `
                 <div class="customer-link-section" style="background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.3); padding: 25px; border-radius: 12px; margin-bottom: 25px;">
                     <h3 style="color: white; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; font-size: 1rem;">
                         <span>Identificação do Cliente</span>
@@ -1210,6 +1207,7 @@
                         </div>
                     `}
                 </div>
+                ` : ''}
 
                 <div style="margin-bottom: 20px; padding: 12px; background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border-radius: 8px; border-left: 4px solid rgba(255,255,255,0.5);">
                     <div style="font-size:0.9rem; color:rgba(255,255,255,0.8); display: flex; align-items: center; gap: 8px;">
@@ -1457,7 +1455,13 @@
                 if (res.ok) {
                     currentReceptionTicket = ticketId;
                     showToast('Atendimento iniciado! Senha removida da TV.', 'success');
-                    loadTickets();
+                    await loadTickets();
+
+                    // Auto-focus customer name field
+                    setTimeout(() => {
+                        const input = document.getElementById('customer-name-input');
+                        if (input) input.focus();
+                    }, 100);
                 } else {
                     showToast('Erro ao iniciar atendimento', 'error');
                 }
@@ -1495,7 +1499,12 @@
 
                 if (res.ok) {
                     currentReceptionTicket = null;
-                    showToast('Cliente liberado para filas de serviço!', 'success');
+                    showToast('Atendimento finalizado com sucesso!', 'success');
+
+                    // Clear details panel
+                    selectedTicket = null;
+                    document.getElementById('detail-panel').innerHTML = '<div class="empty-state"><i class="fas fa-ticket-alt" style="font-size: 3rem; margin-bottom: 20px;"></i><p>Selecione uma senha para visualizar</p></div>';
+
                     loadTickets();
                 } else {
                     const data = await res.json();
