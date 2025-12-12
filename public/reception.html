@@ -273,8 +273,8 @@
         }
 
         .arrow-btn {
-            background: var(--primary-color);
-            color: white;
+            background: white;
+            color: var(--primary-color);
             border: none;
             padding: 3px 8px;
             cursor: pointer;
@@ -971,6 +971,21 @@
         }
 
         async function loadTickets() {
+            // Show Skeletons
+            const container = document.getElementById('ticket-list');
+            container.innerHTML = '';
+            for (let i = 0; i < 5; i++) {
+                const div = document.createElement('div');
+                div.className = 'ticket-card';
+                div.style.pointerEvents = 'none'; // Prevenir cliques
+                div.innerHTML = `
+                    <div class="ticket-code"><span class="skeleton skeleton-text" style="width: 80px; height: 1.2em;"></span></div>
+                    <div class="ticket-services"><span class="skeleton skeleton-text" style="width: 100%;"></span></div>
+                    <span class="ticket-status" style="width: 100px; height: 1.5em; padding:0; display:inline-block;"><span class="skeleton skeleton-block" style="border-radius:3px;"></span></span>
+                `;
+                container.appendChild(div);
+            }
+
             const res = await fetch('/api/tickets');
             allTickets = await res.json();
 
@@ -1044,8 +1059,13 @@
                     ? `<span class="attending-badge">🔒 ${t.attending_desk_name || 'Outra mesa'}</span>`
                     : '';
 
+                // Badge de prioridade - Somente este foi solicitado para ser mantido
+                const priorityHtml = t.is_priority ?
+                    `<div style="font-size:0.85rem; color:#ff9800; font-weight:bold; margin-top:2px;">⭐ Preferencial</div>` : '';
+
                 div.innerHTML = `
                     <div class="ticket-code">${t.display_code}${attendingBadge}</div>
+                    ${priorityHtml}
                     <div class="ticket-services">${t.services_list || 'Sem serviços'}</div>
                     <span class="ticket-status ${statusClass}">${statusText}</span>
                     ${insuranceHtml}

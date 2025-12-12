@@ -12,22 +12,16 @@
 
 <body class="has-background">
     <div class="tv-container">
-        <div class="tv-main">
+        <div class="tv-main" style="width: 100%; max-width: 100%; flex: 1;">
             <div class="customer-display" id="main-customer">Aguardando chamada...</div>
             <div class="ticket-display" id="main-ticket">---</div>
             <div class="room-display" id="main-room">---</div>
-        </div>
-        <div class="tv-sidebar">
-            <h2>Histórico</h2>
-            <div id="history-list">
-                <!-- History items -->
-            </div>
         </div>
     </div>
 
     <script>
         const socket = io();
-        const historyList = document.getElementById('history-list');
+
 
         let calledTickets = []; // Array of tickets that have been called
         let currentIndex = 0;
@@ -267,16 +261,7 @@
             loadCalledTickets();
         });
 
-        function addToHistory(item) {
-            const div = document.createElement('div');
-            div.className = 'history-item';
-            div.innerHTML = `<strong>${item.displayCode}</strong> - ${item.roomName}`;
-            historyList.prepend(div);
 
-            if (historyList.children.length > 5) {
-                historyList.removeChild(historyList.lastChild);
-            }
-        }
 
         // Verificar autenticação e obter establishment
         checkAuth().then(user => {

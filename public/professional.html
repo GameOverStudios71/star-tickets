@@ -183,7 +183,25 @@
             currentRoomId = select.value;
             if (!currentRoomId) return;
 
+            const container = document.getElementById('queue-list');
+
             if (currentTab === 'queue') {
+                // Skeletons
+                container.innerHTML = '';
+                for (let i = 0; i < 3; i++) {
+                    const div = document.createElement('div');
+                    div.className = 'ticket-list-item';
+                    div.style.pointerEvents = 'none';
+                    div.innerHTML = `
+                        <div style="width: 100%;">
+                            <span class="skeleton skeleton-text" style="width: 40px; display: inline-block;"></span> <span class="skeleton skeleton-text" style="width: 150px; display: inline-block;"></span>
+                            <br><span class="skeleton skeleton-text" style="width: 100px; height: 0.8em; margin-top: 5px; display: block;"></span>
+                        </div>
+                        <span class="skeleton skeleton-block" style="width: 80px; height: 35px; border-radius: 5px;"></span>
+                    `;
+                    container.appendChild(div);
+                }
+
                 const res = await fetch(`/api/queue/${currentRoomId}`);
                 const queue = await res.json();
                 renderQueue(queue);
@@ -194,6 +212,25 @@
 
         async function loadHistory() {
             if (!currentRoomId) return;
+
+            const container = document.getElementById('queue-list');
+            // Skeletons
+            container.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                const div = document.createElement('div');
+                div.className = 'ticket-list-item';
+                div.style.pointerEvents = 'none';
+                div.style.opacity = '0.7';
+                div.innerHTML = `
+                    <div style="width: 100%;">
+                        <span class="skeleton skeleton-text" style="width: 40px; display: inline-block;"></span> <span class="skeleton skeleton-text" style="width: 150px; display: inline-block;"></span>
+                        <br><span class="skeleton skeleton-text" style="width: 100px; height: 0.8em; margin-top: 5px; display: block;"></span>
+                        <br><span class="skeleton skeleton-text" style="width: 80px; height: 0.8em; margin-top: 2px; display: block;"></span>
+                    </div>
+                `;
+                container.appendChild(div);
+            }
+
             const res = await fetch(`/api/queue/${currentRoomId}/history`);
             const history = await res.json();
             renderHistory(history);

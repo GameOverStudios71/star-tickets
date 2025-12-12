@@ -731,6 +731,22 @@
         // Load rooms - backend now filters by session automatically
         async function loadRooms() {
             try {
+                // Show skeletons only on initial load (if grid is empty)
+                const grid = document.getElementById('rooms-grid');
+                if (!isRelocationMode && grid.children.length === 0) {
+                    for (let i = 0; i < 3; i++) {
+                        const card = document.createElement('div');
+                        card.className = 'room-card';
+                        card.style.pointerEvents = 'none';
+                        card.innerHTML = `
+                            <h3><span class="skeleton skeleton-text" style="width: 100px;"></span></h3>
+                            <div class="room-count"><span class="skeleton skeleton-text" style="width: 40px; height: 40px; border-radius: 50%;"></span></div>
+                            <p><span class="skeleton skeleton-text" style="width: 80px;"></span></p>
+                        `;
+                        grid.appendChild(card);
+                    }
+                }
+
                 const res = await fetch('/api/manager/overview');
                 if (!res.ok) {
                     console.error('Error loading rooms:', res.status);
@@ -1064,10 +1080,29 @@
         }
 
         async function loadQueueDetails(roomId) {
+            const list = document.getElementById('modal-ticket-list');
+            // Only show skeleton if list is empty or we assume this is a fresh open
+            // Since this is called from openRoomQueue where we want immediate feedback:
+            list.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                const div = document.createElement('div');
+                div.className = 'ticket-item';
+                div.style.pointerEvents = 'none';
+                div.innerHTML = `
+                    <div style="display:flex; justify-content:space-between;">
+                        <span class="skeleton skeleton-text" style="width: 50px;"></span>
+                        <span class="skeleton skeleton-text" style="width: 150px;"></span>
+                    </div>
+                    <div style="margin-top:5px;">
+                        <span class="skeleton skeleton-text" style="width: 100px; height: 0.8em;"></span>
+                    </div>
+                `;
+                list.appendChild(div);
+            }
+
             const res = await fetch(`/api/manager/room/${roomId}/queue`);
             const tickets = await res.json();
 
-            const list = document.getElementById('modal-ticket-list');
             list.innerHTML = '';
 
             if (tickets.length === 0) {
