@@ -36,6 +36,7 @@
             overflow-y: auto;
             min-height: 0;
             /* Importante para flexbox */
+            padding-right: 10px;
         }
 
         /* Scrollbar customizada - estilo fino */
@@ -753,6 +754,10 @@
 
             // Attempt to join desk
             if (currentUser) {
+                // Save selection to storage and cookie
+                localStorage.setItem('star_tickets_reception_desk', deskId);
+                setCookie('star_tickets_reception_desk', deskId, 30); // Save for 30 days
+
                 socket.emit('join_desk', {
                     deskId: parseInt(deskId),
                     userName: currentUser.username,
