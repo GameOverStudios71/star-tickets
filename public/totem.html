@@ -16,11 +16,9 @@
         }
 
         #back-button {
-            background: linear-gradient(135deg,
-                    rgba(var(--acrylic-base-color), var(--acrylic-opacity, 0.5)) 0%,
-                    rgba(var(--acrylic-base-color), calc(var(--acrylic-opacity, 0.5) - 0.05)) 100%);
-            backdrop-filter: blur(var(--acrylic-blur, 20px)) saturate(var(--acrylic-saturate, 180%)) brightness(var(--acrylic-brightness, 1.1));
-            -webkit-backdrop-filter: blur(var(--acrylic-blur, 20px)) saturate(var(--acrylic-saturate, 180%)) brightness(var(--acrylic-brightness, 1.1));
+            background: rgba(var(--acrylic-base-color), 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             color: rgba(255, 255, 255, 0.95);
             border: 1px solid rgba(var(--acrylic-base-color), 0.4);
             padding: 15px 30px;
@@ -57,13 +55,10 @@
         }
 
         .priority-btn {
-            background: linear-gradient(135deg,
-                    rgba(var(--acrylic-base-color), 0.5) 0%,
-                    rgba(var(--acrylic-base-color), 0.4) 50%,
-                    rgba(var(--acrylic-base-color), 0.45) 100%);
-            backdrop-filter: blur(20px) saturate(180%) brightness(1.1);
-            -webkit-backdrop-filter: blur(20px) saturate(180%) brightness(1.1);
-            border: 5px solid rgba(var(--acrylic-base-color), 0.4);
+            background: rgba(var(--acrylic-base-color), 0.1);
+            backdrop-filter: blur(var(--acrylic-blur));
+            -webkit-backdrop-filter: blur(var(--acrylic-blur));
+            border: 2px solid rgba(var(--acrylic-base-color), 0.4);
             border-radius: 20px;
             padding: 40px 20px;
             cursor: pointer;
@@ -100,28 +95,22 @@
         }
 
         .normal-btn:hover {
-            background: linear-gradient(135deg,
-                    rgba(39, 174, 96, 0.5) 0%,
-                    rgba(46, 204, 113, 0.45) 100%);
-            backdrop-filter: blur(25px) saturate(200%) brightness(1.15);
-            -webkit-backdrop-filter: blur(25px) saturate(200%) brightness(1.15);
+            background: rgba(39, 174, 96, 0.2);
+            backdrop-filter: blur(var(--acrylic-blur-strong));
+            -webkit-backdrop-filter: blur(var(--acrylic-blur-strong));
             color: white;
             border-color: rgba(39, 174, 96, 0.8);
         }
 
         .priority-btn-special {
             border-color: rgba(255, 193, 7, 0.4);
-            background: linear-gradient(135deg,
-                    rgba(255, 249, 196, 0.5) 0%,
-                    rgba(255, 236, 179, 0.45) 100%);
+            background: rgba(255, 236, 179, 0.1);
         }
 
         .priority-btn-special:hover {
-            background: linear-gradient(135deg,
-                    rgba(255, 193, 7, 0.5) 0%,
-                    rgba(255, 160, 0, 0.45) 100%);
-            backdrop-filter: blur(25px) saturate(200%) brightness(1.15);
-            -webkit-backdrop-filter: blur(25px) saturate(200%) brightness(1.15);
+            background: rgba(255, 193, 7, 0.2);
+            backdrop-filter: blur(var(--acrylic-blur-strong));
+            -webkit-backdrop-filter: blur(var(--acrylic-blur-strong));
             color: white;
             border-color: rgba(255, 193, 7, 0.8);
         }
@@ -364,13 +353,10 @@
 
         /* Menu items with acrylic effect */
         .menu-item {
-            background: linear-gradient(135deg,
-                    rgba(var(--acrylic-base-color), var(--acrylic-opacity, 0.5)) 0%,
-                    rgba(var(--acrylic-base-color), calc(var(--acrylic-opacity, 0.5) - 0.1)) 50%,
-                    rgba(var(--acrylic-base-color), calc(var(--acrylic-opacity, 0.5) - 0.05)) 100%) !important;
-            backdrop-filter: blur(var(--acrylic-blur, 20px)) saturate(var(--acrylic-saturate, 180%)) brightness(var(--acrylic-brightness, 1.1));
-            -webkit-backdrop-filter: blur(var(--acrylic-blur, 20px)) saturate(var(--acrylic-saturate, 180%)) brightness(var(--acrylic-brightness, 1.1));
-            border: 3px solid rgba(var(--acrylic-base-color), 0.8) !important;
+            background: rgba(var(--acrylic-base-color), 0.1) !important;
+            backdrop-filter: blur(var(--acrylic-blur)) !important;
+            -webkit-backdrop-filter: blur(var(--acrylic-blur)) !important;
+            border: 0px solid rgba(var(--acrylic-base-color), 0.8) !important;
             color: rgba(255, 255, 255, 0.9) !important;
             font-family: var(--font-family) !important;
             font-size: 1.8rem !important;
@@ -405,8 +391,8 @@
         /* Selected menu item - green acrylic with white text */
         .menu-item.selected {
             background: linear-gradient(135deg,
-                    rgba(39, 174, 96, var(--acrylic-opacity, 0.5)) 0%,
-                    rgba(46, 204, 113, calc(var(--acrylic-opacity, 0.5) - 0.05)) 100%) !important;
+                    rgba(39, 174, 96, 0.4) 0%,
+                    rgba(46, 204, 113, 0.35) 100%) !important;
             backdrop-filter: blur(var(--acrylic-blur, 20px)) saturate(var(--acrylic-saturate-hover, 200%)) brightness(var(--acrylic-brightness-hover, 1.15));
             -webkit-backdrop-filter: blur(var(--acrylic-blur, 20px)) saturate(var(--acrylic-saturate-hover, 200%)) brightness(var(--acrylic-brightness-hover, 1.15));
             color: #ffffff !important;
@@ -423,16 +409,16 @@
     <!-- Logo no canto superior direito -->
     <div id="totem-logo" style="
         position: fixed;
-        top: 20px;
+        bottom: 20px;
         right: 20px;
         z-index: 100;
         padding: 15px 25px;
-        background: linear-gradient(135deg, rgba(var(--acrylic-base-color), var(--acrylic-opacity, 0.5)) 0%, rgba(var(--acrylic-base-color), calc(var(--acrylic-opacity, 0.5) - 0.1)) 100%);
-        backdrop-filter: blur(var(--acrylic-blur, 20px)) saturate(var(--acrylic-saturate, 180%)) brightness(var(--acrylic-brightness, 1.1));
-        -webkit-backdrop-filter: blur(var(--acrylic-blur, 20px)) saturate(var(--acrylic-saturate, 180%)) brightness(var(--acrylic-brightness, 1.1));
-        border: 2px solid rgba(var(--acrylic-base-color), 0.4);
+        background: rgba(var(--acrylic-base-color), 0.1);
+        backdrop-filter: blur(var(--acrylic-blur, 20px));
+        -webkit-backdrop-filter: blur(var(--acrylic-blur, 20px));
+        border: 1px solid rgba(var(--acrylic-base-color), 0.2);
         border-radius: 20px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 40px 50px -10px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     ">
         <img src="./img/logo.png" alt="Logo" style="width: 300px; display: block;">
     </div>
