@@ -506,9 +506,10 @@ module.exports = (db, io) => {
         });
     });
 
-    // Get all tickets that have been CALLED (for TV rotation)
-    router.get('/called-tickets', (req, res) => {
-        const { query, params } = queries.calledTicketQueries.list(req.query.establishment_id);
+    // Get all tickets that have been CALLED (for TV rotation) - PROTECTED
+    router.get('/called-tickets', requireEstablishmentScope, (req, res) => {
+        // Use establishment from session, not query param (security)
+        const { query, params } = queries.calledTicketQueries.list(req.establishmentId);
         db.all(query, params, (err, rows) => {
             if (err) return queries.handleDbError(res, err);
             res.json(rows || []);

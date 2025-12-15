@@ -290,6 +290,7 @@
                             <th>Nome</th>
                             <th>Username</th>
                             <th>Role</th>
+                            <th>Estabelecimento</th>
                             <th>Ações</th>
                         </tr>
                     </thead>
@@ -437,9 +438,17 @@
                 <div class="form-group">
                     <label>Role</label>
                     <select id="user-role">
-                        <option value="PROFESSIONAL">Profissional</option>
-                        <option value="RECEPTIONIST">Recepcionista</option>
-                        <option value="ADMIN">Administrador</option>
+                        <option value="professional">Profissional</option>
+                        <option value="receptionist">Recepcionista</option>
+                        <option value="manager">Gerente</option>
+                        <option value="tv">TV</option>
+                        <option value="admin">Administrador</option>
+                    </select>
+                </div>
+                <div class="form-group" id="establishment-field">
+                    <label>Estabelecimento</label>
+                    <select id="user-establishment">
+                        <!-- Populated dynamically -->
                     </select>
                 </div>
                 <button type="submit" class="btn">Salvar</button>

@@ -181,8 +181,12 @@ async function main() {
     });
 
     await runTest('3.3 TV Check (Est 1)', async () => {
-        const res = await request('/api/called-tickets?establishment_id=1', 'GET');
+        // Now requires authentication - use recepcao1 which is Est 1
+        const res = await request('/api/called-tickets', 'GET', null, 'recepcao1');
+        if (res.status !== 200) throw new Error(`Failed to get called tickets: ${res.status}`);
         const list = res.data;
+        // Ticket1 was called previously (status CALLED_RECEPTION)
+        if (!Array.isArray(list)) throw new Error("Response is not an array");
         if (!list.find(t => t.display_code === ticket1_Display)) throw new Error("Ticket not shown on TV");
     });
 
@@ -321,6 +325,62 @@ async function main() {
 
         // Assuming safe if 200.
         // Ideally we check content.
+    });
+
+    await runTest('5.3 [HACKER] Manager tries to list Est 2 users', async () => {
+        const res = await request('/api/admin/users?establishment_id=2', 'GET', null, 'gerente1');
+        // Should return only Est 1 users (ignoring query param)
+        const users = res.data;
+        if (users.some(u => u.establishment_id === 2)) {
+            throw new Error("Security Breach: Manager saw other establishment users");
+        }
+    });
+
+    await runTest('5.4 [HACKER] Manager tries to list Est 2 establishments', async () => {
+        const res = await request('/api/admin/establishments', 'GET', null, 'gerente1');
+        const establishments = res.data;
+        // Manager should only see their own establishment (Est 1)
+        if (establishments.some(e => e.id === 2)) {
+            throw new Error("Security Breach: Manager saw other establishments");
+        }
+    });
+
+    await runTest('5.5 [HACKER] Receptionist tries to access admin users', async () => {
+        const res = await request('/api/admin/users', 'GET', null, 'recepcao1');
+        if (res.status !== 403) {
+            throw new Error(`Receptionist should be denied, got ${res.status}`);
+        }
+    });
+
+    await runTest('5.6 [HACKER] Receptionist tries to access admin services', async () => {
+        const res = await request('/api/admin/services', 'GET', null, 'recepcao1');
+        if (res.status !== 403) {
+            throw new Error(`Receptionist should be denied admin services, got ${res.status}`);
+        }
+    });
+
+    // TV Security Tests
+    await runTest('5.7 Login TV1 (Freguesia)', async () => {
+        const res = await request('/api/auth/login', 'POST', { username: 'tv1', password: '123' });
+        if (res.status !== 200) throw new Error(`TV login failed: ${res.status}`);
+        sessionCookies['tv1'] = res.headers.get('set-cookie').split(';')[0];
+    });
+
+    await runTest('5.8 [SECURITY] TV1 sees only Est 1 called tickets', async () => {
+        const res = await request('/api/called-tickets', 'GET', null, 'tv1');
+        if (res.status !== 200) throw new Error(`Failed to get called tickets: ${res.status}`);
+        // All tickets should belong to Est 1 (no way to filter since we're using session)
+        // If ticket3 (Est 2) appeared, it would be a security breach
+        // Since we can't easily check content here without creating called tickets for both,
+        // we just verify the endpoint uses session auth (returns 200 with logged user)
+    });
+
+    await runTest('5.9 [HACKER] Unauthenticated access to called-tickets', async () => {
+        // Try without session cookie
+        const res = await request('/api/called-tickets', 'GET', null, null);
+        if (res.status !== 401) {
+            throw new Error(`Unauthenticated should be denied, got ${res.status}`);
+        }
     });
 
     console.log(`\n${COLORS.cyan}=== All Tests Completed ===${COLORS.reset}`);

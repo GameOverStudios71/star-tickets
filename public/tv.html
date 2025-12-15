@@ -8,11 +8,26 @@
     <link rel="stylesheet" href="style.css">
     <script src="/socket.io/socket.io.js"></script>
     <script src="auth-helper.js"></script>
+    <style>
+        #tv-est-name {
+            position: absolute;
+            top: 40px;
+            font-size: 3rem;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 300;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            z-index: 10;
+        }
+    </style>
 </head>
 
-<body class="has-background"><script src="global-ui.js"></script>
+<body class="has-background">
+    <script src="global-ui.js"></script>
     <div class="tv-container">
-        <div class="tv-main" style="width: 100%; max-width: 100%; flex: 1;">
+        <div class="tv-main" style="width: 100%; max-width: 100%; flex: 1; position: relative;">
+            <div id="tv-est-name">Star Tickets</div>
             <div class="customer-display" id="main-customer">Aguardando chamada...</div>
             <div class="ticket-display" id="main-ticket">---</div>
             <div class="room-display" id="main-room">---</div>
@@ -267,6 +282,12 @@
         checkAuth().then(user => {
             if (!user) return;
             userEstablishmentId = user.establishment_id;
+
+            // Set Establishment Name
+            if (user.establishment_name) {
+                document.getElementById('tv-est-name').innerText = user.establishment_name;
+            }
+
             // Initial load after authentication
             loadCalledTickets();
         });

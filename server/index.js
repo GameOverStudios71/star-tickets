@@ -143,7 +143,7 @@ const establishmentRoutes = require('./routes/establishments');
 const qrcodeRoutes = require('./routes/qrcode');
 const adminRoutes = require('./routes/admin');
 
-const { requireAuth, requireEstablishmentScope } = require('./middleware/auth');
+const { requireAuth, requireEstablishmentScope, requireRole } = require('./middleware/auth');
 
 // Mount Routes
 // Public routes (no auth required)
@@ -157,7 +157,7 @@ app.use('/api', establishmentRoutes(db));
 
 // Protected routes (require authentication and establishment scope)
 app.use('/api/dashboard', requireEstablishmentScope, dashboardRoutes(db));
-app.use('/api/admin', requireEstablishmentScope, adminRoutes(db));
+app.use('/api/admin', requireRole('admin', 'manager'), adminRoutes(db));
 
 // Ticket routes - some need auth, some are public (totem creates tickets)
 app.use('/api', ticketRoutes(db, io)); // Will handle auth internally per-route

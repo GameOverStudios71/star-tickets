@@ -794,6 +794,9 @@
                             <span class="user-name">${user.name}</span>
                             <span class="user-role">${user.role}</span>
                         </div>
+                        <button onclick="logout()" class="logout-btn" title="Sair do sistema">
+                            🚪 Sair
+                        </button>
                     </div>
                     ` : ''}
                 </div>
@@ -1211,19 +1214,19 @@
             let actionButtons = '';
             if (isWaitingReception) {
                 actionButtons = `
-                    <button class="btn btn-large btn-accent" onclick="callToReception(${ticket.id})" style="width:100%; margin-bottom:15px; background: rgba(33, 150, 243, 0.6); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.3); color: white; font-weight: 600;">
+                    <button class="btn btn-large btn-accent" onclick="callToReception(${ticket.id})" style="width:100%; padding: 25px; font-size: 1.2rem; margin-bottom:15px; background: rgba(33, 150, 243, 0.6); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.3); color: white; font-weight: 600;">
                         📢 CHAMAR PARA RECEPÇÃO
                     </button>
                 `;
             } else if (isCalledReception) {
                 actionButtons = `
-                    <button class="btn btn-large" onclick="startAttendance(${ticket.id})" style="width:100%; margin-bottom:15px; background: linear-gradient(135deg, rgba(76, 175, 80, 0.8) 0%, rgba(56, 142, 60, 0.9) 100%); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); color:white;">
+                    <button class="btn btn-large" onclick="startAttendance(${ticket.id})" style="width:100%; padding: 25px; font-size: 1.2rem; margin-bottom:15px; background: linear-gradient(135deg, rgba(76, 175, 80, 0.8) 0%, rgba(56, 142, 60, 0.9) 100%); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); color:white;">
                         🔔 INÍCIO DO ATENDIMENTO
                     </button>
                 `;
             } else if (isInReception) {
                 actionButtons = `
-                    <button class="btn btn-large" onclick="finishReception(${ticket.id})" style="width:100%; margin-bottom:15px; background: linear-gradient(135deg, rgba(255, 152, 0, 0.8) 0%, rgba(251, 140, 0, 0.9) 100%); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); color:white;">
+                    <button class="btn btn-large" onclick="finishReception(${ticket.id})" style="width:100%; padding: 25px; font-size: 1.2rem; margin-bottom:15px; background: linear-gradient(135deg, rgba(255, 152, 0, 0.8) 0%, rgba(251, 140, 0, 0.9) 100%); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); color:white;">
                         ✓ FINALIZAR E LIBERAR PARA SERVIÇOS
                     </button>
                 `;

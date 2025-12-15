@@ -358,10 +358,22 @@ module.exports = (db) => {
     // ==================== ESTABLISHMENTS ====================
 
     router.get('/establishments', (req, res) => {
-        db.all("SELECT * FROM establishments ORDER BY name", [], (err, rows) => {
-            if (err) return res.status(500).json({ error: err.message });
-            res.json(rows);
-        });
+        const establishmentId = req.establishmentId;
+        const isAdmin = req.isAdmin;
+
+        // Managers can only see their own establishment
+        if (establishmentId && !isAdmin) {
+            db.all("SELECT * FROM establishments WHERE id = ?", [establishmentId], (err, rows) => {
+                if (err) return res.status(500).json({ error: err.message });
+                res.json(rows);
+            });
+        } else {
+            // Admin sees all
+            db.all("SELECT * FROM establishments ORDER BY name", [], (err, rows) => {
+                if (err) return res.status(500).json({ error: err.message });
+                res.json(rows);
+            });
+        }
     });
 
     // ==================== USERS ====================
@@ -484,17 +496,28 @@ module.exports = (db) => {
 
     router.get('/reports/tickets', (req, res) => {
         const { start_date, end_date } = req.query;
+        const establishmentId = req.establishmentId;
+        const isAdmin = req.isAdmin;
+
         let query = `
             SELECT 
                 date(created_at) as date,
                 count(*) as total_tickets,
                 count(DISTINCT customer_id) as unique_customers
             FROM tickets
+            WHERE 1=1
         `;
 
         const params = [];
+
+        // Managers only see their establishment's tickets
+        if (establishmentId && !isAdmin) {
+            query += " AND establishment_id = ?";
+            params.push(establishmentId);
+        }
+
         if (start_date && end_date) {
-            query += " WHERE date(created_at) BETWEEN ? AND ?";
+            query += " AND date(created_at) BETWEEN ? AND ?";
             params.push(start_date, end_date);
         }
 
@@ -507,7 +530,10 @@ module.exports = (db) => {
     });
 
     router.get('/reports/attendance', (req, res) => {
-        const query = `
+        const establishmentId = req.establishmentId;
+        const isAdmin = req.isAdmin;
+
+        let query = `
             SELECT 
                 s.name as service_name,
                 count(al.id) as total_attendances,
@@ -516,11 +542,18 @@ module.exports = (db) => {
             JOIN ticket_services ts ON al.ticket_service_id = ts.id
             JOIN services s ON ts.service_id = s.id
             WHERE al.finished_at IS NOT NULL
-            GROUP BY s.id
-            ORDER BY total_attendances DESC
         `;
+        const params = [];
 
-        db.all(query, [], (err, rows) => {
+        // Managers only see their establishment's services
+        if (establishmentId && !isAdmin) {
+            query += " AND s.establishment_id = ?";
+            params.push(establishmentId);
+        }
+
+        query += " GROUP BY s.id ORDER BY total_attendances DESC";
+
+        db.all(query, params, (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json(rows);
         });
