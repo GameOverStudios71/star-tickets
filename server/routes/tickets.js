@@ -338,7 +338,8 @@ module.exports = (db, io) => {
             AND t.status = 'WAITING_PROFESSIONAL'
             AND t.temp_customer_name IS NOT NULL
             AND t.temp_customer_name != ''
-            AND date(t.created_at, 'localtime') = date('now', 'localtime')
+            AND t.temp_customer_name != ''
+            AND date(t.created_at) = date('now')
             -- Ensure previous services for this ticket are completed
             AND NOT EXISTS (
                 SELECT 1 FROM ticket_services ts_prev 
