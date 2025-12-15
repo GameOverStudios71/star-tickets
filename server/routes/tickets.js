@@ -572,6 +572,53 @@ module.exports = (db, io) => {
         });
     });
 
+    // Uncall a ticket - resets CALLED status back to PENDING - PROTECTED
+    router.post('/uncall', requireEstablishmentScope, (req, res) => {
+        const { ticketServiceId } = req.body;
+        const logger = require('../utils/logger');
+
+        if (!ticketServiceId) {
+            return res.status(400).json({ error: 'ticketServiceId is required' });
+        }
+
+        // Verify ownership and that ticket is in CALLED status
+        const verifyQuery = `
+            SELECT ts.id, ts.status, t.display_code
+            FROM ticket_services ts
+            JOIN tickets t ON ts.ticket_id = t.id
+            WHERE ts.id = ?
+            ${req.establishmentId ? 'AND t.establishment_id = ?' : ''}
+        `;
+        const verifyParams = req.establishmentId ? [ticketServiceId, req.establishmentId] : [ticketServiceId];
+
+        db.get(verifyQuery, verifyParams, (err, row) => {
+            if (err) return queries.handleDbError(res, err);
+            if (!row) return res.status(404).json({ error: 'Ticket service not found' });
+
+            // Only allow uncalling if status is CALLED (not IN_PROGRESS)
+            if (row.status !== 'CALLED') {
+                return res.status(400).json({ 
+                    error: 'invalid_status',
+                    message: `Só é possível cancelar chamada de tickets com status CALLED. Status atual: ${row.status}` 
+                });
+            }
+
+            logger.info(`[Uncall] Uncalling ticket ${row.display_code} (Service ID: ${ticketServiceId})`);
+
+            // Reset to PENDING and clear room_id
+            db.run(
+                "UPDATE ticket_services SET status = 'PENDING', room_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                [ticketServiceId],
+                function(err) {
+                    if (err) return queries.handleDbError(res, err);
+                    
+                    io.emit('ticket_updated', { ticketServiceId });
+                    res.json({ success: true, message: 'Chamada cancelada' });
+                }
+            );
+        });
+    });
+
     // Start service - marks ticket as IN_PROGRESS - PROTECTED
     router.post('/start-service', requireEstablishmentScope, (req, res) => {
         const { ticketServiceId } = req.body;

@@ -387,6 +387,15 @@
         }
 
         let isServiceInProgress = false;
+        // Modal Functions
+        function showBusyModal(message) {
+            document.getElementById('busy-modal-message').innerText = message;
+            document.getElementById('busy-modal').style.display = 'flex';
+        }
+
+        function closeBusyModal() {
+            document.getElementById('busy-modal').style.display = 'none';
+        }
 
         async function loadQueue() {
             const newRoomId = currentRoomId; // Already updated by selectRoom
@@ -544,16 +553,9 @@
         let currentTicketName = '';
 
         async function callTicket(ticketServiceId, code, name) {
-            // Block explicitly if service started
-            if (isServiceInProgress) {
-                showToast('Finalize o atendimento atual antes de chamar o próximo!', 'warning');
-                return;
-            }
-
-            if (currentTicketServiceId) {
-                // Show custom modal instead of native confirm
-                // Pass new details to modal so it can pass them to executeCallTicket
-                showConfirmModal(ticketServiceId, code, name);
+            // Block explicitly if service started OR if there is a current ticket called
+            if (isServiceInProgress || currentTicketServiceId) {
+                showBusyModal('Você já está com uma senha em atendimento ou chamada. Finalize o processo atual antes de chamar a próxima.');
                 return;
             }
 
@@ -572,7 +574,8 @@
                 if (!res.ok) {
                     const err = await res.json();
                     if (err.error === 'room_busy') {
-                        showToast(`⚠️ ${err.message}`, 'warning');
+                        // Show modal instead of toast for better visibility
+                        showBusyModal(err.message || 'Você já está atendendo um paciente. Finalize o atendimento atual primeiro.');
                     } else {
                         showToast(err.message || `Erro ao chamar senha: ${err.error}`, 'error');
                     }
@@ -662,7 +665,7 @@
                         <h1 style="font-size: 4rem; margin: 0; line-height: 1;">${currentTicketCode}</h1>
                         <h2 style="font-size: 2rem; margin: 10px 0 0; color: rgba(255,255,255,0.8);">${currentTicketName}</h2>
                     </div>
-                    <button class="btn btn-large" onclick="finishTicket()" style="width:100%; background:#4CAF50; color:white;">
+                    <button class="btn btn-large" onclick="finishTicket()" style="width:100%; background:#4CAF50; color:white; padding: 25px; font-size: 1.4rem;">
                         ✓ FINALIZAR ATENDIMENTO
                     </button>
                 `;
@@ -674,7 +677,7 @@
                         <h1 style="font-size: 4rem; margin: 0; line-height: 1;">${currentTicketCode}</h1>
                         <h2 style="font-size: 2rem; margin: 10px 0 0; color: rgba(255,255,255,0.8);">${currentTicketName}</h2>
                     </div>
-                    <button class="btn btn-large" onclick="startService()" style="width:100%; background:#2196F3; color:white;">
+                    <button class="btn btn-large" onclick="startService()" style="width:100%; background:#2196F3; color:white; padding: 25px; font-size: 1.4rem;">
                         🔔 INÍCIO DO ATENDIMENTO
                     </button>
                 `;
@@ -692,20 +695,21 @@
     </script>
     <script src="js/common/trace.js"></script>
     <script src="js/common/toast.js"></script>
-    <div id="confirm-modal"
+    <!-- Confirm modal removed --> <!-- Busy Modal - Shown when room is busy -->
+    <div id="busy-modal"
         style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(5px);">
         <div
-            style="background: #1a252f; padding: 30px; border-radius: 12px; max-width: 400px; width: 90%; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 25px rgba(0,0,0,0.5); text-align: center;">
-            <div style="font-size: 3rem; margin-bottom: 20px;">⚠️</div>
-            <h3 style="color: white; margin-top: 0; margin-bottom: 10px;">Atenção</h3>
-            <p style="color: rgba(255,255,255,0.8); margin-bottom: 25px;">
-                Deseja finalizar o atendimento atual antes de chamar a próxima senha?
+            style="background: #1a252f; padding: 30px; border-radius: 12px; max-width: 450px; width: 90%; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 25px rgba(0,0,0,0.5); text-align: center;">
+            <div style="font-size: 3rem; margin-bottom: 20px;">🚫</div>
+            <h3 style="color: #ff6b6b; margin-top: 0; margin-bottom: 10px;">Sala Ocupada</h3>
+            <p id="busy-modal-message" style="color: rgba(255,255,255,0.8); margin-bottom: 25px;">
+                Você já está atendendo um paciente. Finalize o atendimento atual primeiro.
             </p>
             <div style="display: flex; gap: 10px; justify-content: center;">
-                <button onclick="closeConfirmModal()" class="btn"
-                    style="background: rgba(255,255,255,0.1); color: white;">Cancelar</button>
-                <button id="confirm-modal-btn" class="btn" style="background: #27ae60; color: white;">Sim, Finalizar e
-                    Chamar</button>
+                <button onclick="closeBusyModal()" class="btn"
+                    style="background: #3498db; color: white; padding: 12px 30px;">
+                    Entendi
+                </button>
             </div>
         </div>
     </div>
