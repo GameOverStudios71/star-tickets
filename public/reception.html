@@ -22,6 +22,8 @@
             padding: 20px;
             height: calc(100vh - 80px);
             /* Altura total menos header */
+            margin-top: 80px;
+            /* Header Offset */
             overflow: hidden;
         }
 
@@ -772,7 +774,8 @@
             header.className = 'app-header';
 
             header.innerHTML = `
-                <div class="header-left">
+                <div class="header-left" style="display:flex; align-items:center; gap:15px;">
+                    <a href="index.html" class="home-btn" title="Voltar para Home" style="text-decoration:none; font-size:1.5rem; color:white; background:rgba(255,255,255,0.1); padding:5px 10px; border-radius:5px; transition:all 0.2s;">🏠</a>
                     <h1>Recepção / Triagem</h1>
                 </div>
                 <div class="header-right" style="display: flex; align-items: center; gap: 20px;">

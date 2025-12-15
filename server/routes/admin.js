@@ -57,25 +57,41 @@ module.exports = (db) => {
 
     router.delete('/services/:id', (req, res) => {
         const serviceId = req.params.id;
+        const establishmentId = req.establishmentId;
 
-        // Check if service is in use in tickets
-        db.get("SELECT count(*) as count FROM ticket_services WHERE service_id = ?", [serviceId], (err, row) => {
+        // Security check: ensure service belongs to establishment
+        let checkQuery = "SELECT id FROM services WHERE id = ?";
+        const checkParams = [serviceId];
+
+        if (establishmentId && !req.isAdmin) {
+            checkQuery += " AND (establishment_id = ? OR establishment_id IS NULL)";
+            checkParams.push(establishmentId);
+        }
+
+        db.get(checkQuery, checkParams, (err, row) => {
             if (err) return res.status(500).json({ error: err.message });
-            if (row.count > 0) {
-                return res.status(400).json({ error: "Serviço está em uso em senhas e não pode ser excluído" });
-            }
+            if (!row) return res.status(403).json({ error: 'Serviço não encontrado ou sem permissão' });
 
-            // Delete related records first in proper sequence
-            db.run("DELETE FROM room_services WHERE service_id = ?", [serviceId], (err) => {
+            // Check if service is in use in tickets
+            db.get("SELECT count(*) as count FROM ticket_services WHERE service_id = ?", [serviceId], (err, row) => {
+
                 if (err) return res.status(500).json({ error: err.message });
+                if (row.count > 0) {
+                    return res.status(400).json({ error: "Serviço está em uso em senhas e não pode ser excluído" });
+                }
 
-                db.run("DELETE FROM service_menus WHERE service_id = ?", [serviceId], (err) => {
+                // Delete related records first in proper sequence
+                db.run("DELETE FROM room_services WHERE service_id = ?", [serviceId], (err) => {
                     if (err) return res.status(500).json({ error: err.message });
 
-                    // Finally delete the service itself
-                    db.run("DELETE FROM services WHERE id = ?", [serviceId], function (err) {
+                    db.run("DELETE FROM service_menus WHERE service_id = ?", [serviceId], (err) => {
                         if (err) return res.status(500).json({ error: err.message });
-                        res.json({ success: true, message: 'Serviço excluído com sucesso' });
+
+                        // Finally delete the service itself
+                        db.run("DELETE FROM services WHERE id = ?", [serviceId], function (err) {
+                            if (err) return res.status(500).json({ error: err.message });
+                            res.json({ success: true, message: 'Serviço excluído com sucesso' });
+                        });
                     });
                 });
             });
@@ -182,19 +198,53 @@ module.exports = (db) => {
 
     router.post('/room-services', (req, res) => {
         const { room_id, service_id } = req.body;
-        db.run(
-            "INSERT INTO room_services (room_id, service_id) VALUES (?, ?)",
-            [room_id, service_id],
-            function (err) {
-                if (err) return res.status(500).json({ error: err.message });
-                res.json({ id: this.lastID });
-            }
-        );
+        const establishmentId = req.establishmentId;
+        const isAdmin = req.isAdmin;
+
+        // Security: Verify if room belongs to user's establishment
+        let checkRoomQuery = "SELECT id FROM rooms WHERE id = ?";
+        const params = [room_id];
+
+        if (establishmentId && !isAdmin) {
+            checkRoomQuery += " AND establishment_id = ?";
+            params.push(establishmentId);
+        }
+
+        db.get(checkRoomQuery, params, (err, row) => {
+            if (err) return res.status(500).json({ error: err.message });
+            if (!row) return res.status(403).json({ error: 'Sala inválida ou sem permissão' });
+
+            db.run(
+                "INSERT INTO room_services (room_id, service_id) VALUES (?, ?)",
+                [room_id, service_id],
+                function (err) {
+                    if (err) return res.status(500).json({ error: err.message });
+                    res.json({ id: this.lastID });
+                }
+            );
+        });
     });
 
     router.delete('/room-services/:id', (req, res) => {
-        db.run("DELETE FROM room_services WHERE id = ?", [req.params.id], function (err) {
+        const id = req.params.id;
+        const establishmentId = req.establishmentId;
+        const isAdmin = req.isAdmin;
+
+        // Security: Delete only if the room (linked via room_id) belongs to establishment
+        // SQLite DELETE with JOIN/Subquery
+        let query = "DELETE FROM room_services WHERE id = ?";
+        const params = [id];
+
+        if (establishmentId && !isAdmin) {
+            query += ` AND room_id IN (SELECT id FROM rooms WHERE establishment_id = ?)`;
+            params.push(establishmentId);
+        }
+
+        db.run(query, params, function (err) {
             if (err) return res.status(500).json({ error: err.message });
+            if (this.changes === 0) {
+                return res.status(403).json({ error: 'Item não encontrado ou permissão negada' });
+            }
             res.json({ success: true });
         });
     });
@@ -240,11 +290,23 @@ module.exports = (db) => {
 
     router.put('/menus/:id', (req, res) => {
         const { parent_id, label, service_id, order_index, icon } = req.body;
-        db.run(
-            "UPDATE service_menus SET parent_id = ?, label = ?, service_id = ?, order_index = ?, icon = ? WHERE id = ?",
-            [parent_id || null, label, service_id || null, order_index, icon, req.params.id],
+        const establishmentId = req.establishmentId;
+        const isAdmin = req.isAdmin;
+
+        let query = "UPDATE service_menus SET parent_id = ?, label = ?, service_id = ?, order_index = ?, icon = ? WHERE id = ?";
+        const params = [parent_id || null, label, service_id || null, order_index, icon, req.params.id];
+
+        if (establishmentId && !isAdmin) {
+            query += " AND establishment_id = ?";
+            params.push(establishmentId);
+        }
+
+        db.run(query, params,
             function (err) {
                 if (err) return res.status(500).json({ error: err.message });
+                if (this.changes === 0) {
+                    return res.status(403).json({ error: 'Menu não encontrado ou permissão negada' });
+                }
                 res.json({ success: true, changes: this.changes });
             }
         );
@@ -252,15 +314,43 @@ module.exports = (db) => {
 
     router.delete('/menus/:id', (req, res) => {
         const menuId = req.params.id;
+        const establishmentId = req.establishmentId;
+        const isAdmin = req.isAdmin;
 
-        // Delete children first
-        db.run("DELETE FROM service_menus WHERE parent_id = ?", [menuId], (err) => {
+        // Verify ownership
+        let checkQuery = "SELECT id FROM service_menus WHERE id = ?";
+        const checkParams = [menuId];
+
+        if (establishmentId && !isAdmin) {
+            checkQuery += " AND establishment_id = ?";
+            checkParams.push(establishmentId);
+        }
+
+        db.get(checkQuery, checkParams, (err, row) => {
             if (err) return res.status(500).json({ error: err.message });
+            if (!row) return res.status(403).json({ error: 'Menu não encontrado ou permissão negada' });
 
-            // Then delete the menu item itself
-            db.run("DELETE FROM service_menus WHERE id = ?", [menuId], function (err) {
+            // Delete children first
+            // Implicit assumption: We trust the parent check, or we should loop delete safely. 
+            // Ideally Cascade delete in DB, but here manual.
+            // We can proceed since we verified the parent menu belongs to us.
+            db.run("DELETE FROM service_menus WHERE parent_id = ?", [menuId], (err) => {
                 if (err) return res.status(500).json({ error: err.message });
-                res.json({ success: true, message: 'Item de menu excluído com sucesso' });
+
+                // Then delete the menu item itself
+                let deleteQuery = "DELETE FROM service_menus WHERE id = ?";
+                const deleteParams = [menuId];
+
+                // Extra safety on delete
+                if (establishmentId && !isAdmin) {
+                    deleteQuery += " AND establishment_id = ?";
+                    deleteParams.push(establishmentId);
+                }
+
+                db.run(deleteQuery, deleteParams, function (err) {
+                    if (err) return res.status(500).json({ error: err.message });
+                    res.json({ success: true, message: 'Item de menu excluído com sucesso' });
+                });
             });
         });
     });
@@ -273,6 +363,8 @@ module.exports = (db) => {
             res.json(rows);
         });
     });
+
+    // ==================== USERS ====================
 
     // ==================== USERS ====================
 
@@ -305,6 +397,11 @@ module.exports = (db) => {
         const { name, username, password, role } = req.body;
         const establishmentId = req.establishmentId;
 
+        // Validation: Manager cannot create Admin
+        if (!req.isAdmin && role === 'admin') {
+            return res.status(403).json({ error: 'Gerentes não podem criar Administradores' });
+        }
+
         // In production, hash the password!
         db.run(
             "INSERT INTO users (name, username, password, role, establishment_id) VALUES (?, ?, ?, ?, ?)",
@@ -318,25 +415,67 @@ module.exports = (db) => {
 
     router.put('/users/:id', (req, res) => {
         const { name, username, password, role } = req.body;
-        let query, params;
+        const userId = req.params.id;
+        const establishmentId = req.establishmentId;
+        const isAdmin = req.isAdmin;
+
+        // Security: Non-admin can only update users from their own establishment
+        let whereClause = "id = ?";
+        const params = [name, username];
+
+        // Passowrd update logic
+        let querySet = "SET name = ?, username = ?";
 
         if (password) {
-            query = "UPDATE users SET name = ?, username = ?, password = ?, role = ? WHERE id = ?";
-            params = [name, username, password, role, req.params.id];
-        } else {
-            query = "UPDATE users SET name = ?, username = ?, role = ? WHERE id = ?";
-            params = [name, username, role, req.params.id];
+            querySet += ", password = ?";
+            params.push(password);
         }
 
-        db.run(query, params, function (err) {
+        if (role) {
+            // Manager cannot promote to Admin
+            if (!isAdmin && role === 'admin') {
+                return res.status(403).json({ error: 'Nao é permitido atribuir perfil de Administrador' });
+            }
+            querySet += ", role = ?";
+            params.push(role);
+        }
+
+        params.push(userId);
+
+        if (!isAdmin) {
+            whereClause += " AND establishment_id = ?";
+            params.push(establishmentId);
+        }
+
+        const fullQuery = `UPDATE users ${querySet} WHERE ${whereClause}`;
+
+        db.run(fullQuery, params, function (err) {
             if (err) return res.status(500).json({ error: err.message });
+            if (this.changes === 0) {
+                return res.status(403).json({ error: 'Usuário não encontrado ou permissão negada' });
+            }
             res.json({ success: true, changes: this.changes });
         });
     });
 
     router.delete('/users/:id', (req, res) => {
-        db.run("DELETE FROM users WHERE id = ?", [req.params.id], function (err) {
+        const userId = req.params.id;
+        const establishmentId = req.establishmentId;
+        const isAdmin = req.isAdmin;
+
+        let query = "DELETE FROM users WHERE id = ?";
+        const params = [userId];
+
+        if (!isAdmin) {
+            query += " AND establishment_id = ?";
+            params.push(establishmentId);
+        }
+
+        db.run(query, params, function (err) {
             if (err) return res.status(500).json({ error: err.message });
+            if (this.changes === 0) {
+                return res.status(403).json({ error: 'Usuário não encontrado ou permissão negada' });
+            }
             res.json({ success: true });
         });
     });
@@ -372,11 +511,11 @@ module.exports = (db) => {
             SELECT 
                 s.name as service_name,
                 count(al.id) as total_attendances,
-                avg((julianday(al.end_time) - julianday(al.start_time)) * 24 * 60) as avg_duration_minutes
+                avg((julianday(al.finished_at) - julianday(al.started_at)) * 24 * 60) as avg_duration_minutes
             FROM attendance_logs al
             JOIN ticket_services ts ON al.ticket_service_id = ts.id
             JOIN services s ON ts.service_id = s.id
-            WHERE al.end_time IS NOT NULL
+            WHERE al.finished_at IS NOT NULL
             GROUP BY s.id
             ORDER BY total_attendances DESC
         `;

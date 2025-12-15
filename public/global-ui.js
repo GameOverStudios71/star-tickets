@@ -16,7 +16,8 @@ async function renderAppHeader(title = 'Star Tickets') {
 
     const headerHtml = `
     <header class="app-header">
-        <div class="header-left">
+        <div class="header-left" style="display:flex; align-items:center; gap:15px;">
+            <a href="index.html" class="home-btn" title="Voltar para Home" style="text-decoration:none; font-size:1.5rem; color:white; background:rgba(255,255,255,0.1); padding:5px 10px; border-radius:5px; transition:all 0.2s;">🏠</a>
             <h1>${title}</h1>
         </div>
         <div class="header-right">
@@ -169,9 +170,22 @@ function hideOfflineModal() {
 const originalFetch = window.fetch;
 
 // Override fetch to intercept errors
+// Override fetch to intercept errors
 window.fetch = async function (...args) {
     try {
         const response = await originalFetch(...args);
+
+        // Check for Auth Errors (401/403)
+        if (response.status === 401 || response.status === 403) {
+            // Avoid redirect loop if already on login page
+            if (!window.location.pathname.includes('login.html')) {
+                console.warn('Authentication failed (401/403). Redirecting to login...');
+                window.location.href = '/login.html?reason=auth_failed';
+                // We return a never-resolving promise or just the response to prevent further errors?
+                // Returning response allows code to handle it if needed, but page will redirect.
+            }
+        }
+
         return response;
     } catch (error) {
         // If it's a network error (failed to fetch)

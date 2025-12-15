@@ -116,11 +116,16 @@
     </style>
 </head>
 
-<body class="has-background"><script src="global-ui.js"></script>
-    <header>
-        <h1>📊 Dashboard - Star Tickets</h1>
-        <div id="user-info"></div>
-    </header>
+<body class="has-background">
+    <script src="global-ui.js"></script>
+    <div id="user-info" style="display:none;"></div>
+    <!-- Hidden container for script compatibility if needed, or remove -->
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            renderAppHeader('Dashboard - Star Tickets');
+        });
+    </script>
 
     <div class="container">
         <div class="dashboard-header">
