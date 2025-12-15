@@ -108,8 +108,10 @@ db.serialize(() => {
             status TEXT DEFAULT 'PENDING',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME,
+            room_id INTEGER,
             FOREIGN KEY (ticket_id) REFERENCES tickets(id),
-            FOREIGN KEY (service_id) REFERENCES services(id)
+            FOREIGN KEY (service_id) REFERENCES services(id),
+            FOREIGN KEY (room_id) REFERENCES rooms(id)
         )
     `);
 

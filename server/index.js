@@ -149,6 +149,7 @@ const { requireAuth, requireEstablishmentScope } = require('./middleware/auth');
 // Public routes (no auth required)
 app.use('/api/auth', authRoutes(db));
 app.use('/api', qrcodeRoutes()); // QR Code generation is public
+app.get('/api/health', (req, res) => res.status(200).json({ status: 'ok' })); // Health check for frontend monitoring
 
 // Semi-public routes (totem/tv need these without login)
 // Establishments routes include /config, /rooms, /establishments - all public for totem

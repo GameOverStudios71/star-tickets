@@ -525,11 +525,9 @@ module.exports = (db, io) => {
             SELECT ts.id, t.display_code, ts.status
             FROM ticket_services ts
             JOIN tickets t ON ts.ticket_id = t.id
-            JOIN services s ON ts.service_id = s.id
-            JOIN room_services rs ON rs.service_id = s.id
-            WHERE rs.room_id = ? 
-            AND ts.status IN ('CALLED', 'IN_PROGRESS')
-            AND date(ts.updated_at, 'localtime') = date('now', 'localtime') -- Optimization: only check today's tickets
+            WHERE ts.room_id = ?
+            AND ts.status IN('CALLED', 'IN_PROGRESS')
+            AND date(ts.updated_at, 'localtime') = date('now', 'localtime')-- Optimization: only check today's tickets
             ${req.establishmentId ? 'AND t.establishment_id = ?' : ''}
         `;
         const checkParams = req.establishmentId ? [roomId, req.establishmentId] : [roomId];
@@ -551,8 +549,15 @@ module.exports = (db, io) => {
             db.get(query, params, (err, row) => {
                 if (err || !row) return queries.handleNotFound(res);
 
-                db.run("UPDATE ticket_services SET status = 'CALLED', updated_at = CURRENT_TIMESTAMP WHERE id = ?", [ticketServiceId], (err) => {
-                    if (err) return queries.handleDbError(res, err);
+                const logger = require('../utils/logger');
+                logger.info(`[Call Service] Calling ticket ${row.display_code} (Service ID: ${ticketServiceId}).Previous Status: ${row.status} `);
+
+                db.run("UPDATE ticket_services SET status = 'CALLED', room_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", [roomId, ticketServiceId], (err) => {
+                    if (err) {
+                        logger.error(`[Call Service] DB Error updating status to CALLED`, err);
+                        return queries.handleDbError(res, err);
+                    }
+
                     io.emit('call_ticket', {
                         displayCode: row.display_code,
                         customerName: row.temp_customer_name,
@@ -568,13 +573,18 @@ module.exports = (db, io) => {
     // Start service - marks ticket as IN_PROGRESS - PROTECTED
     router.post('/start-service', requireEstablishmentScope, (req, res) => {
         const { ticketServiceId } = req.body;
+        const logger = require('../utils/logger'); // Import logger
+
         const { query, params } = queries.ticketServiceQueries.verifyOwnership(ticketServiceId, req.establishmentId);
 
         db.get(query, params, (err, row) => {
             if (err || !row) return queries.handleNotFound(res);
 
+            logger.info(`[Start Service] Attempting to start.Current Status: ${row.status}, ID: ${ticketServiceId} `);
+
             // [SECURITY CHECK] Strict status transition
             if (row.status !== 'CALLED') {
+                logger.warn(`[Start Service]Failed.Expected CALLED, got ${row.status} `);
                 return res.status(400).json({ error: "O paciente precisa ser chamado antes de iniciar o atendimento." });
             }
 
@@ -631,26 +641,26 @@ module.exports = (db, io) => {
 
         let query = `
             SELECT ts.id as ticket_service_id, t.id as ticket_id, t.display_code, t.temp_customer_name, s.name as service_name,
-            (SELECT COUNT(*) FROM ticket_services ts2 WHERE ts2.ticket_id = t.id AND ts2.status = 'PENDING' AND ts2.id != ts.id) as other_services_count
+        (SELECT COUNT(*) FROM ticket_services ts2 WHERE ts2.ticket_id = t.id AND ts2.status = 'PENDING' AND ts2.id != ts.id) as other_services_count
             FROM ticket_services ts
             JOIN tickets t ON ts.ticket_id = t.id
             JOIN services s ON ts.service_id = s.id
             JOIN room_services rs ON rs.service_id = s.id
             WHERE rs.room_id = ?
-            AND ts.status = 'PENDING'
+        AND ts.status = 'PENDING'
             AND t.status = 'WAITING_PROFESSIONAL'
             AND date(t.created_at, 'localtime') = date('now', 'localtime')
-            AND NOT EXISTS (
-                SELECT 1 FROM ticket_services ts_prev 
+            AND NOT EXISTS(
+            SELECT 1 FROM ticket_services ts_prev 
                 WHERE ts_prev.ticket_id = ts.ticket_id 
                 AND ts_prev.order_sequence < ts.order_sequence 
                 AND ts_prev.status != 'COMPLETED'
-            )
+        )
         `;
         const params = [roomId];
 
         if (establishmentId) {
-            query += ` AND t.establishment_id = ?`;
+            query += ` AND t.establishment_id = ? `;
             params.push(establishmentId);
         }
         query += ` ORDER BY t.is_priority DESC, ts.created_at ASC`;
@@ -676,7 +686,7 @@ module.exports = (db, io) => {
         const verifyParams = [ticketServiceId];
 
         if (establishmentId) {
-            verifyQuery += ` AND t.establishment_id = ?`;
+            verifyQuery += ` AND t.establishment_id = ? `;
             verifyParams.push(establishmentId);
         }
 
@@ -689,7 +699,7 @@ module.exports = (db, io) => {
                 SELECT id, order_sequence FROM ticket_services 
                 WHERE ticket_id = ? AND status = 'PENDING' 
                 ORDER BY order_sequence ASC LIMIT 1
-            `, [ticketId], (err, firstService) => {
+        `, [ticketId], (err, firstService) => {
                 if (err) return res.status(500).json({ error: err.message });
                 if (!firstService) return res.status(400).json({ error: "No pending services found" });
 
@@ -716,13 +726,13 @@ module.exports = (db, io) => {
         const establishmentId = req.establishmentId;
 
         let query = `
-            SELECT 
-                t.id as ticket_id, 
-                t.display_code, 
-                t.temp_customer_name,
-                ts_target.id as target_service_id,
-                current_s.name as current_service_name,
-                current_r.name as current_room_name
+    SELECT
+    t.id as ticket_id,
+        t.display_code,
+        t.temp_customer_name,
+        ts_target.id as target_service_id,
+        current_s.name as current_service_name,
+        current_r.name as current_room_name
             FROM tickets t
             JOIN ticket_services ts_target ON t.id = ts_target.ticket_id
             JOIN services s_target ON ts_target.service_id = s_target.id
@@ -732,24 +742,24 @@ module.exports = (db, io) => {
             LEFT JOIN room_services current_rs ON current_rs.service_id = current_s.id
             LEFT JOIN rooms current_r ON current_rs.room_id = current_r.id
             WHERE rs_target.room_id = ?
-            AND ts_target.status = 'PENDING'
+        AND ts_target.status = 'PENDING'
             AND t.status = 'WAITING_PROFESSIONAL'
             AND date(t.created_at, 'localtime') = date('now', 'localtime')
             AND t.temp_customer_name IS NOT NULL
             AND t.temp_customer_name != ''
             AND ts_current.status = 'PENDING'
-            AND NOT EXISTS (
-                SELECT 1 FROM ticket_services ts_prev 
+            AND NOT EXISTS(
+            SELECT 1 FROM ticket_services ts_prev 
                 WHERE ts_prev.ticket_id = t.id 
                 AND ts_prev.status = 'PENDING'
                 AND ts_prev.order_sequence < ts_current.order_sequence
-            )
+        )
             AND ts_target.id != ts_current.id
         `;
         const params = [targetRoomId];
 
         if (establishmentId) {
-            query += ` AND t.establishment_id = ?`;
+            query += ` AND t.establishment_id = ? `;
             params.push(establishmentId);
         }
         query += ` ORDER BY t.is_priority DESC, t.created_at ASC`;
@@ -766,7 +776,7 @@ module.exports = (db, io) => {
                         JOIN services s ON ts.service_id = s.id
                         WHERE ts.ticket_id = ? AND ts.status = 'PENDING'
                         ORDER BY ts.order_sequence
-                    `;
+        `;
                     db.all(servicesQuery, [ticket.ticket_id], (err, services) => {
                         resolve({
                             ...ticket,
@@ -802,7 +812,7 @@ module.exports = (db, io) => {
                     JOIN services s ON ts.service_id = s.id
                     JOIN room_services rs ON rs.service_id = s.id
                     WHERE ts.ticket_id = ? AND rs.room_id = ? AND ts.status = 'PENDING'
-            `, [ticketId, targetRoomId], (err, targetService) => {
+        `, [ticketId, targetRoomId], (err, targetService) => {
                     if (err) return reject(err);
                     if (!targetService) return resolve(); // Skip if not found (shouldn't happen if list is fresh)
 
@@ -811,7 +821,7 @@ module.exports = (db, io) => {
                         SELECT id, order_sequence FROM ticket_services 
                         WHERE ticket_id = ? AND status = 'PENDING' 
                         ORDER BY order_sequence ASC LIMIT 1
-            `, [ticketId], (err, firstService) => {
+        `, [ticketId], (err, firstService) => {
                         if (err) return reject(err);
                         if (!firstService || firstService.id === targetService.id) return resolve(); // Already first or none
 
@@ -835,6 +845,31 @@ module.exports = (db, io) => {
         Promise.all(ticketIds.map(processTicket))
             .then(() => res.json({ success: true }))
             .catch(err => res.status(500).json({ error: err.message }));
+    });
+
+    // Get active ticket for a room (CALLED or IN_PROGRESS) - PROTECTED
+    router.get('/active-ticket/:roomId', requireEstablishmentScope, (req, res) => {
+        const { roomId } = req.params;
+
+        // Find any ticket for this room that is active
+        const query = `
+            SELECT ts.*, s.name as service_name, s.prefix, t.display_code, t.temp_customer_name
+            FROM ticket_services ts
+            JOIN services s ON ts.service_id = s.id
+            JOIN tickets t ON ts.ticket_id = t.id
+            WHERE ts.room_id = ? 
+            AND ts.status IN ('CALLED', 'IN_PROGRESS')
+            AND t.establishment_id = ?
+            ORDER BY ts.updated_at DESC
+            LIMIT 1
+        `;
+
+        db.get(query, [roomId, req.establishmentId], (err, row) => {
+            if (err) return queries.handleDbError(res, err);
+            if (!row) return res.status(404).json({ message: "No active ticket" });
+
+            res.json(row);
+        });
     });
 
     return router;

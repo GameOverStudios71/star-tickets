@@ -138,7 +138,7 @@ const ticketServiceQueries = {
      */
     verifyOwnership(ticketServiceId, establishmentId) {
         let query = `
-            SELECT ts.id, ts.ticket_id 
+            SELECT ts.id, ts.ticket_id, ts.status
             FROM ticket_services ts
             JOIN tickets t ON ts.ticket_id = t.id
             WHERE ts.id = ?

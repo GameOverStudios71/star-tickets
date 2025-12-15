@@ -94,17 +94,114 @@
         .queue-item:hover {
             background: rgba(255, 255, 255, 0.1);
         }
+
+        /* Custom Select Styles */
+        .custom-select {
+            position: relative;
+            font-family: inherit;
+            min-width: 250px;
+        }
+
+        .select-selected {
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.4) 100%);
+            backdrop-filter: blur(25px) saturate(180%) brightness(1.1);
+            -webkit-backdrop-filter: blur(25px) saturate(180%) brightness(1.1);
+            color: #ffffff;
+            padding: 10px 15px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 6px;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s;
+        }
+
+        .select-selected:hover {
+            border-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .select-selected:after {
+            content: "";
+            width: 0;
+            height: 0;
+            border: 6px solid transparent;
+            border-color: #fff transparent transparent transparent;
+            margin-left: 10px;
+            margin-top: 5px;
+        }
+
+        .select-selected.select-arrow-active:after {
+            border-color: transparent transparent #fff transparent;
+            margin-top: -5px;
+        }
+
+        .select-items {
+            position: absolute;
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.5) 100%);
+            backdrop-filter: blur(25px) saturate(180%) brightness(1.1);
+            -webkit-backdrop-filter: blur(25px) saturate(180%) brightness(1.1);
+            top: 105%;
+            left: 0;
+            right: 0;
+            z-index: 99;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            /* Rounded corners for list */
+            max-height: 300px;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        }
+
+        .select-hide {
+            display: none;
+        }
+
+        .select-items div {
+            color: #ffffff;
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .select-items div:last-child {
+            border-bottom: none;
+        }
+
+        .select-items div:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Scrollbar styles for list */
+        .select-items::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .select-items::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+
+        .select-items::-webkit-scrollbar-thumb {
+            background: #444;
+            border-radius: 4px;
+        }
     </style>
 </head>
 
 <body class="has-background">
+    <script src="global-ui.js"></script>
     <header class="app-header">
         <div class="header-left" style="display:flex; align-items:center; gap:15px;">
             <h1>Área do Profissional</h1>
-            <select id="room-select" onchange="loadQueue()"
-                style="padding:8px; border-radius:5px; border:1px solid rgba(255,255,255,0.3); background:rgba(0,0,0,0.2); color:white;">
-                <option value="" style="color:black;">Selecione sua Sala...</option>
-            </select>
+            <div class="custom-select" id="room-custom-select">
+                <div class="select-selected" onclick="toggleSelect()">Selecione sua Sala...</div>
+                <div class="select-items select-hide" id="room-options">
+                    <!-- Options injected via JS -->
+                </div>
+            </div>
         </div>
         <div class="header-right" id="header-user-container">
             <!-- User info injected here -->
@@ -188,36 +285,109 @@
             document.cookie = name + "=" + (value || "") + expires + "; path=/";
         }
 
+        // Check for active ticket (CALLED or IN_PROGRESS) to restore state
+        async function checkActiveTicket(roomId) {
+            if (!roomId) return;
+
+            try {
+                const res = await fetch(`/api/active-ticket/${roomId}`);
+                if (res.ok) {
+                    const ticket = await res.json();
+                    // Restore state
+                    currentTicketServiceId = ticket.id;
+                    currentTicketCode = ticket.display_code;
+                    currentTicketName = ticket.temp_customer_name || 'Sem nome';
+                    isServiceInProgress = (ticket.status === 'IN_PROGRESS');
+
+                    updateCurrentDisplay(ticket.id, isServiceInProgress);
+                } else {
+                    // No active ticket, ensure clear state
+                    currentTicketServiceId = null;
+                    isServiceInProgress = false;
+                    document.getElementById('current-ticket').innerHTML = '<h3 style="color:rgba(255,255,255,0.5) !important;">Nenhum cliente em atendimento</h3>';
+                }
+            } catch (e) {
+                console.error("Error checking active ticket:", e);
+            }
+        }
+
         async function loadRooms() {
             const res = await fetch('/api/rooms');
             const rooms = await res.json();
-            const select = document.getElementById('room-select');
+
+            const optionsContainer = document.getElementById('room-options');
+            const selectedDisplay = document.querySelector('.select-selected');
+            optionsContainer.innerHTML = '';
 
             // Get saved room
             const savedRoomId = localStorage.getItem('star_tickets_professional_room') || getCookie('star_tickets_professional_room');
 
             rooms.forEach(r => {
-                const opt = document.createElement('option');
-                opt.value = r.id;
-                opt.innerText = r.name;
-                select.appendChild(opt);
+                const div = document.createElement('div');
+                div.innerText = r.name;
+                div.onclick = function () {
+                    selectRoom(r.id, r.name);
+                };
+                optionsContainer.appendChild(div);
             });
 
             // Restore selection
             if (savedRoomId) {
-                select.value = savedRoomId;
-                // If value matches (room exists), load queue
-                if (select.value === savedRoomId) {
-                    loadQueue();
+                const savedRoom = rooms.find(r => r.id == savedRoomId);
+                if (savedRoom) {
+                    selectRoom(savedRoomId, savedRoom.name);
                 }
             }
+        }
+
+        function toggleSelect() {
+            const items = document.getElementById("room-options");
+            const selected = document.querySelector(".select-selected");
+            items.classList.toggle("select-hide");
+            selected.classList.toggle("select-arrow-active");
+        }
+
+        // Close select when clicking outside
+        document.addEventListener("click", function (e) {
+            const select = document.getElementById("room-custom-select");
+            const items = document.getElementById("room-options");
+            const selected = document.querySelector(".select-selected");
+            if (!select.contains(e.target)) {
+                items.classList.add("select-hide");
+                selected.classList.remove("select-arrow-active");
+            }
+        });
+
+        async function selectRoom(id, name) {
+            const selectedDisplay = document.querySelector('.select-selected');
+            selectedDisplay.innerText = name;
+
+            // Hide dropdown
+            document.getElementById("room-options").classList.add("select-hide");
+            document.querySelector(".select-selected").classList.remove("select-arrow-active");
+
+            currentRoomId = id; // Update global state directly
+
+            // Trigger logic similar to onchange
+            await checkActiveTicket(currentRoomId);
+            loadQueue();
+
+            // Save state
+            localStorage.setItem('star_tickets_professional_room', currentRoomId);
+            setCookie('star_tickets_professional_room', currentRoomId, 30);
         }
 
         let isServiceInProgress = false;
 
         async function loadQueue() {
-            const select = document.getElementById('room-select');
-            currentRoomId = select.value;
+            const newRoomId = currentRoomId; // Already updated by selectRoom
+
+            // If room changed, re-check active ticket for new room
+            if (newRoomId && newRoomId !== currentRoomId) {
+                await checkActiveTicket(newRoomId);
+            }
+
+            currentRoomId = newRoomId;
 
             if (currentRoomId) {
                 // Save selection
@@ -341,12 +511,20 @@
                 div.className = 'ticket-list-item';
                 div.style.opacity = '0.7';
                 div.innerHTML = `
-                    <div>
+                    <div style="flex: 1;">
                         <strong>${item.display_code}</strong> - ${item.temp_customer_name || 'Sem nome'}
                         <br><small>${item.service_name}</small>
                         <br><small style="color:green;">Finalizado às ${new Date(item.finished_at).toLocaleTimeString()}</small>
                     </div>
+                    <div>
+                        <button class="btn" style="padding: 5px 10px; font-size: 0.8rem; background-color: #28a745; color: white; border: none;" onclick="callTicket(${item.ticket_service_id}, '${item.display_code}', '${item.temp_customer_name || 'Sem nome'}')">
+                            🔄 Chamar Novamente
+                        </button>
+                    </div>
                 `;
+                div.style.display = 'flex';
+                div.style.alignItems = 'center';
+                div.style.justifyContent = 'space-between';
                 container.appendChild(div);
             });
         }
@@ -470,9 +648,7 @@
             if (isServiceStarted) {
                 // Service already started - show finish button
                 document.getElementById('current-ticket').innerHTML = `
-                    <div style="background:#d4edda; padding:15px; border-radius:5px; margin-bottom:15px; text-align:center;">
-                        <strong>✅ Cliente em atendimento</strong>
-                    </div>
+                    
                     <div style="margin-bottom:20px;">
                         <h1 style="font-size: 4rem; margin: 0; line-height: 1;">${currentTicketCode}</h1>
                         <h2 style="font-size: 2rem; margin: 10px 0 0; color: rgba(255,255,255,0.8);">${currentTicketName}</h2>
@@ -484,9 +660,7 @@
             } else {
                 // Just called - show start button
                 document.getElementById('current-ticket').innerHTML = `
-                    <div style="background:#fff3cd; padding:15px; border-radius:5px; margin-bottom:15px; text-align:center;">
-                        <strong>🔔 Senha chamada - Rotacionando na TV</strong>
-                    </div>
+                   
                     <div style="margin-bottom:20px;">
                         <h1 style="font-size: 4rem; margin: 0; line-height: 1;">${currentTicketCode}</h1>
                         <h2 style="font-size: 2rem; margin: 10px 0 0; color: rgba(255,255,255,0.8);">${currentTicketName}</h2>

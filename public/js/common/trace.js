@@ -22,6 +22,10 @@ class TraceSystem {
         };
 
         window.onunhandledrejection = (event) => {
+            // Ignore network errors as they are handled by global-ui
+            if (event.reason && (event.reason.message === 'Failed to fetch' || event.reason.message.includes('NetworkError'))) {
+                return;
+            }
             this.error('Unhandled Rejection', event.reason);
             this.showErrorModal('Unhandled Promise Rejection', event.reason);
         };

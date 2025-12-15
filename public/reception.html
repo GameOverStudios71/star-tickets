@@ -399,6 +399,42 @@
             margin-bottom: 25px;
             line-height: 1.5;
         }
+
+        /* Enforce Desk Selection */
+        .disabled-state {
+            opacity: 0.5;
+            pointer-events: none;
+            position: relative;
+            filter: grayscale(0.8);
+            transition: all 0.3s;
+        }
+
+        .desk-required-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .desk-required-msg {
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-weight: bold;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            text-align: center;
+        }
     </style>
 </head>
 
@@ -407,7 +443,16 @@
 
     <div class="reception-layout">
         <!-- Left Column: Filters + Ticket List -->
-        <div class="left-column" style="display: flex; flex-direction: column; gap: 20px;">
+        <div class="left-column" id="reception-left-column"
+            style="display: flex; flex-direction: column; gap: 20px; position: relative;">
+
+            <!-- Overlay for Desk Requirement -->
+            <div id="desk-overlay" class="desk-required-overlay" style="display: flex;">
+                <div class="desk-required-msg">
+                    <span>Selecione sua mesa acima<br>para começar</span>
+                </div>
+            </div>
+
             <!-- Filtros -->
             <div class="filter-section">
 
@@ -527,6 +572,9 @@
             localStorage.setItem('star_tickets_reception_desk', data.deskId);
             setCookie('star_tickets_reception_desk', data.deskId, 30); // 30 days
 
+            // Unlock UI
+            toggleDeskOverlay(false);
+
             if (!isAutoJoining) {
                 // Se foi troca manual, recarrega a página para atualizar tudo do zero na nova mesa
                 document.querySelector('.desk-selector').style.background = 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)';
@@ -561,7 +609,27 @@
             setCookie('star_tickets_reception_desk', "", -1);
 
             document.querySelector('.desk-selector').style.background = 'linear-gradient(135deg, #0a3d3e 0%, #0d4d4f 100%)';
+
+            // Lock UI
+            toggleDeskOverlay(true);
         });
+
+        function toggleDeskOverlay(show) {
+            const overlay = document.getElementById('desk-overlay');
+            const leftCol = document.getElementById('reception-left-column');
+            const filters = document.querySelector('.filter-section');
+            const list = document.querySelector('.tickets-card');
+
+            if (show) {
+                overlay.style.display = 'flex';
+                if (filters) filters.classList.add('disabled-state');
+                if (list) list.classList.add('disabled-state');
+            } else {
+                overlay.style.display = 'none';
+                if (filters) filters.classList.remove('disabled-state');
+                if (list) list.classList.remove('disabled-state');
+            }
+        }
 
         // Load reception desks - backend now filters by session automatically
         async function loadDesks() {
@@ -738,6 +806,9 @@
                 socket.emit('leave_desk');
                 localStorage.removeItem('star_tickets_reception_desk');
                 document.querySelector('.desk-selector').style.background = 'linear-gradient(135deg, #0a3d3e 0%, #0d4d4f 100%)';
+
+                // Show blocking overlay
+                toggleDeskOverlay(true);
                 return;
             }
 
