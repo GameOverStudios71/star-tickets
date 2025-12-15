@@ -370,7 +370,15 @@
                 0 16px 32px rgba(0, 0, 0, 0.1),
                 0 32px 64px rgba(0, 0, 0, 0.12),
                 inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            inset 0 1px 0 rgba(255, 255, 255, 0.2);
             transition: all 0.3s ease;
+            padding: 40px 20px !important;
+            border-radius: 20px !important;
+            min-height: 220px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
         }
 
         .menu-item:hover {
@@ -404,7 +412,8 @@
     </style>
 </head>
 
-<body class="has-background"><script src="global-ui.js"></script>
+<body class="has-background">
+    <script src="global-ui.js"></script>
 
     <!-- Logo no canto superior direito -->
     <div id="totem-logo" style="
@@ -566,7 +575,7 @@
 
             <button class="btn btn-large btn-accent"
                 onclick="playConfirmSound(); setTimeout(() => window.location.reload(), 500)"
-                style="margin-top:10px; width:100%;">
+                style="margin-top:20px; width:100%; padding: 30px; font-size: 2.2rem; border-radius: 20px; font-weight: bold; box-shadow: 0 10px 20px rgba(0,0,0,0.2);">
                 FINALIZAR ATENDIMENTO
             </button>
         </div>
