@@ -6,6 +6,7 @@ const db = new sqlite3.Database(dbPath);
 
 db.serialize(() => {
     // Drop existing tables
+    db.run("DROP TABLE IF EXISTS ticket_status_logs");
     db.run("DROP TABLE IF EXISTS attendance_logs");
     db.run("DROP TABLE IF EXISTS ticket_services");
     db.run("DROP TABLE IF EXISTS tickets");
@@ -166,6 +167,24 @@ db.serialize(() => {
             finished_at DATETIME,
             FOREIGN KEY (user_id) REFERENCES users(id),
             FOREIGN KEY (ticket_service_id) REFERENCES ticket_services(id)
+        )
+    `);
+
+    // Create ticket_status_logs table (for timeline tracking)
+    db.run(`
+        CREATE TABLE ticket_status_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ticket_id INTEGER NOT NULL,
+            status TEXT NOT NULL,
+            changed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            user_id INTEGER,
+            room_id INTEGER,
+            desk_id INTEGER,
+            notes TEXT,
+            FOREIGN KEY (ticket_id) REFERENCES tickets(id),
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            FOREIGN KEY (room_id) REFERENCES rooms(id),
+            FOREIGN KEY (desk_id) REFERENCES reception_desks(id)
         )
     `);
 

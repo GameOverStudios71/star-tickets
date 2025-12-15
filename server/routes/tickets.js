@@ -5,6 +5,21 @@ const queries = require('../database/queries');
 
 module.exports = (db, io) => {
 
+    // Helper function to log status changes for timeline tracking
+    const logStatusChange = (ticketId, status, options = {}) => {
+        const { userId = null, roomId = null, deskId = null, notes = null } = options;
+        db.run(
+            `INSERT INTO ticket_status_logs (ticket_id, status, user_id, room_id, desk_id, notes) VALUES (?, ?, ?, ?, ?, ?)`,
+            [ticketId, status, userId, roomId, deskId, notes],
+            (err) => {
+                if (err) {
+                    const logger = require('../utils/logger');
+                    logger.error('Error logging status change:', err);
+                }
+            }
+        );
+    };
+
     // 2. Create Ticket (Totem) - PUBLIC route, establishment comes from body
     router.post('/tickets', (req, res) => {
         const { serviceIds, establishmentId = 1, isPriority = false, healthInsuranceName = null } = req.body;
@@ -54,6 +69,9 @@ module.exports = (db, io) => {
                                     logger.error("Error finalizing ticket services", err);
                                     // We don't rollback here (sqlite limitations in this simple flow), but we log it.
                                 }
+
+                                // Log initial status
+                                logStatusChange(ticketId, 'WAITING_RECEPTION', { notes: 'Senha gerada no totem' });
 
                                 logger.info(`Ticket created: ${displayCode} (ID: ${ticketId})`);
                                 io.emit('new_ticket', { ticketId, displayCode, isPriority, healthInsuranceName });
@@ -462,6 +480,9 @@ module.exports = (db, io) => {
                             });
                         }
 
+                        // Log status change
+                        logStatusChange(ticketId, 'CALLED_RECEPTION', { deskId, notes: `Chamado na ${deskName}` });
+
                         io.emit('call_ticket', {
                             ticketId,
                             displayCode: row.display_code,
@@ -487,6 +508,10 @@ module.exports = (db, io) => {
 
             db.run("UPDATE tickets SET status = 'IN_RECEPTION' WHERE id = ?", [ticketId], (err) => {
                 if (err) return queries.handleDbError(res, err);
+
+                // Log status change
+                logStatusChange(ticketId, 'IN_RECEPTION', { deskId: row.reception_desk_id, notes: 'Atendimento iniciado na recepção' });
+
                 io.emit('ticket_updated', { ticketId });
                 res.json({ success: true });
             });
@@ -501,6 +526,10 @@ module.exports = (db, io) => {
         db.run(query, params, function (err) {
             if (err) return queries.handleDbError(res, err);
             if (this.changes === 0) return queries.handleNotFound(res);
+
+            // Log status change
+            logStatusChange(ticketId, 'WAITING_PROFESSIONAL', { notes: 'Atendimento na recepção finalizado, aguardando profissional' });
+
             io.emit('ticket_updated', { ticketId });
             res.json({ success: true, message: 'Cliente liberado para filas de serviço' });
         });
@@ -560,6 +589,9 @@ module.exports = (db, io) => {
                         return queries.handleDbError(res, err);
                     }
 
+                    // Log status change (using ticket_id from row)
+                    logStatusChange(row.ticket_id, 'CALLED', { roomId, notes: `Chamado para ${row.room_name}` });
+
                     io.emit('call_ticket', {
                         displayCode: row.display_code,
                         customerName: row.temp_customer_name,
@@ -597,9 +629,9 @@ module.exports = (db, io) => {
 
             // Only allow uncalling if status is CALLED (not IN_PROGRESS)
             if (row.status !== 'CALLED') {
-                return res.status(400).json({ 
+                return res.status(400).json({
                     error: 'invalid_status',
-                    message: `Só é possível cancelar chamada de tickets com status CALLED. Status atual: ${row.status}` 
+                    message: `Só é possível cancelar chamada de tickets com status CALLED. Status atual: ${row.status}`
                 });
             }
 
@@ -609,9 +641,9 @@ module.exports = (db, io) => {
             db.run(
                 "UPDATE ticket_services SET status = 'PENDING', room_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
                 [ticketServiceId],
-                function(err) {
+                function (err) {
                     if (err) return queries.handleDbError(res, err);
-                    
+
                     io.emit('ticket_updated', { ticketServiceId });
                     res.json({ success: true, message: 'Chamada cancelada' });
                 }
@@ -639,6 +671,10 @@ module.exports = (db, io) => {
 
             db.run("UPDATE ticket_services SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = ?", [ticketServiceId], function (err) {
                 if (err) return queries.handleDbError(res, err);
+
+                // Log status change
+                logStatusChange(row.ticket_id, 'IN_PROGRESS', { roomId: row.room_id, notes: 'Atendimento iniciado pelo profissional' });
+
                 io.emit('ticket_updated', { ticketServiceId });
                 res.json({ success: true });
             });
@@ -662,9 +698,14 @@ module.exports = (db, io) => {
             db.run("UPDATE ticket_services SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?", [ticketServiceId], function (err) {
                 if (err) return queries.handleDbError(res, err);
 
+                // Log status change
+                logStatusChange(ticketId, 'SERVICE_COMPLETED', { roomId: row.room_id, notes: 'Serviço concluído' });
+
                 db.get("SELECT count(*) as count FROM ticket_services WHERE ticket_id = ? AND status = 'PENDING'", [ticketId], (err, countRow) => {
                     if (countRow.count === 0) {
                         db.run("UPDATE tickets SET status = 'DONE' WHERE id = ?", [ticketId]);
+                        // Log final DONE status
+                        logStatusChange(ticketId, 'DONE', { notes: 'Todos os serviços concluídos' });
                     }
                     res.json({ success: true });
                 });

@@ -119,24 +119,31 @@
         };
 
         // Check authentication
-        checkAuth().then(user => {
-            if (!user) return;
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth().then(user => {
+                if (!user) return;
 
-            // Filtrar menu por role
-            const allowedPages = menuPermissions[user.role] || [];
-            document.querySelectorAll('[data-page]').forEach(card => {
-                const page = card.dataset.page;
-                if (!allowedPages.includes(page)) {
-                    card.style.display = 'none';
-                }
+                // Filtrar menu por role
+                const allowedPages = menuPermissions[user.role] || [];
+                document.querySelectorAll('[data-page]').forEach(card => {
+                    const page = card.dataset.page;
+                    if (!allowedPages.includes(page)) {
+                        card.style.display = 'none';
+                    }
+                });
+
+                // Show user info in header
+                // Wait a bit for header to be rendered by global-ui
+                setTimeout(() => {
+                    const header = document.querySelector('header');
+                    if (header) {
+                        const userInfoDiv = document.createElement('div');
+                        userInfoDiv.style.cssText = 'text-align: right; margin-top: 10px;';
+                        userInfoDiv.innerHTML = showUserInfo(user);
+                        header.appendChild(userInfoDiv);
+                    }
+                }, 100);
             });
-
-            // Show user info in header
-            const header = document.querySelector('header');
-            const userInfoDiv = document.createElement('div');
-            userInfoDiv.style.cssText = 'text-align: right; margin-top: 10px;';
-            userInfoDiv.innerHTML = showUserInfo(user);
-            header.appendChild(userInfoDiv);
         });
     </script>
 </body>

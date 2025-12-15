@@ -113,6 +113,142 @@
         h3 {
             color: white;
         }
+
+        /* Timeline Search Section */
+        .timeline-search-section {
+            background: rgba(var(--acrylic-base-color), 0.1);
+            backdrop-filter: blur(var(--acrylic-blur));
+            -webkit-backdrop-filter: blur(var(--acrylic-blur));
+            border: 1px solid rgba(var(--acrylic-base-color), 0.2);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .timeline-search-section h3 {
+            margin: 0 0 15px 0;
+        }
+
+        .search-form {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .search-form input {
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(0, 0, 0, 0.2);
+            color: white;
+            font-size: 1rem;
+            min-width: 200px;
+        }
+
+        .search-form input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .search-form button {
+            padding: 10px 25px;
+            border-radius: 8px;
+            border: none;
+            background: linear-gradient(135deg, rgba(39, 174, 96, 0.8), rgba(46, 204, 113, 0.8));
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .search-form button:hover {
+            background: linear-gradient(135deg, rgba(39, 174, 96, 1), rgba(46, 204, 113, 1));
+            transform: translateY(-2px);
+        }
+
+        /* Timeline Display */
+        .timeline-results {
+            margin-top: 20px;
+        }
+
+        .timeline-ticket {
+            background: rgba(var(--acrylic-base-color), 0.1);
+            backdrop-filter: blur(var(--acrylic-blur));
+            border: 1px solid rgba(var(--acrylic-base-color), 0.2);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+
+        .timeline-ticket-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .timeline-ticket-header h4 {
+            margin: 0;
+            color: var(--color-success);
+        }
+
+        .timeline-steps {
+            position: relative;
+            padding-left: 30px;
+        }
+
+        .timeline-steps::before {
+            content: '';
+            position: absolute;
+            left: 10px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .timeline-step {
+            position: relative;
+            padding: 10px 0;
+            padding-left: 20px;
+        }
+
+        .timeline-step::before {
+            content: '';
+            position: absolute;
+            left: -24px;
+            top: 18px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--color-success);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .timeline-step .step-status {
+            font-weight: bold;
+            color: white;
+            margin-bottom: 3px;
+        }
+
+        .timeline-step .step-time {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+        }
+
+        .timeline-step .step-notes {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.85rem;
+            margin-top: 3px;
+        }
+
+        .timeline-step .step-location {
+            color: var(--color-info);
+            font-size: 0.85rem;
+        }
     </style>
 </head>
 
@@ -158,8 +294,82 @@
             </div>
         </div>
 
+        <!-- Timeline Search Section -->
+        <div class="timeline-search-section">
+            <h3>📊 Buscar Timeline do Cliente</h3>
+            <div class="search-form">
+                <input type="text" id="timeline-search-code" placeholder="Código da senha (ex: ANA001)">
+                <input type="text" id="timeline-search-name" placeholder="Nome do cliente">
+                <input type="date" id="timeline-search-date"
+                    style="padding: 10px 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.3); background: rgba(0, 0, 0, 0.2); color: white; font-size: 1rem;">
+                <button onclick="searchTimeline()">🔍 Buscar</button>
+            </div>
+            <div id="timeline-results" class="timeline-results">
+                <!-- Timeline results will be rendered here -->
+            </div>
+        </div>
+
         <div class="tickets-table">
-            <h3>Senhas Ativas</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3>Senhas Ativas</h3>
+            </div>
+
+            <!-- Filter Checkboxes -->
+            <div style="margin-bottom: 20px;">
+                <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
+                    <label
+                        style="color: white; display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: bold; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 5px;">
+                        <input type="checkbox" id="active-only-toggle" onchange="toggleActiveOnly()" checked>
+                        🟢 Apenas Senhas Ativas
+                    </label>
+
+                    <button class="btn" onclick="toggleStatusFilterDropdown()"
+                        style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 8px 15px; border-radius: 5px; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                        🛠️ Filtrar por Status <span id="filter-arrow">▼</span>
+                    </button>
+                </div>
+
+                <div id="status-filter-dropdown"
+                    style="display: none; background: rgba(var(--acrylic-base-color), 0.1); padding: 15px; border-radius: 10px; border: 1px solid rgba(var(--acrylic-base-color), 0.2);">
+                    <h4 style="margin-top: 0; margin-bottom: 15px; color: white;">Status Detalhados:</h4>
+                    <div class="status-filters"
+                        style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px;">
+                        <label style="color: white; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" class="status-cb" onchange="filterAndRenderTickets()" checked
+                                value="waiting_reception"> 🎫 Aguardando Recepção
+                        </label>
+                        <label style="color: white; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" class="status-cb" onchange="filterAndRenderTickets()" checked
+                                value="called_reception"> 📢 Chamando Recepção
+                        </label>
+                        <label style="color: white; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" class="status-cb" onchange="filterAndRenderTickets()" checked
+                                value="in_reception"> 👤 Em Atendimento Recepção
+                        </label>
+                        <label style="color: white; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" class="status-cb" onchange="filterAndRenderTickets()" checked
+                                value="waiting_professional"> ⏳ Aguardando Profissional
+                        </label>
+                        <label style="color: white; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" class="status-cb" onchange="filterAndRenderTickets()" checked
+                                value="called_professional"> 📢 Chamando Profissional
+                        </label>
+                        <label style="color: white; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" class="status-cb" onchange="filterAndRenderTickets()" checked
+                                value="in_progress_professional"> 🏥 Em Atendimento Profissional
+                        </label>
+                        <label style="color: white; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" class="status-cb" onchange="filterAndRenderTickets()" checked
+                                value="service_completed"> ✅ Serviço Concluído
+                        </label>
+                        <label style="color: white; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" class="status-cb" id="cb-done" onchange="filterAndRenderTickets()"
+                                value="done"> 🎉 Finalizado
+                        </label>
+                    </div>
+                </div>
+            </div>
+
             <table>
                 <thead>
                     <tr>
@@ -204,7 +414,7 @@
                 await loadEstablishments();
             } else {
                 document.getElementById('filter-container').innerHTML = `
-                    <p style="color: #666;">Estabelecimento: <strong>${currentUser.establishment_name}</strong></p>
+                    <p style="color: #FFF;">Estabelecimento: <strong>${currentUser.establishment_name}</strong></p>
                 `;
             }
 
@@ -226,63 +436,162 @@
             }
         }
 
+        let allTickets = [];
+
         async function loadDashboard() {
-            const select = document.getElementById('establishment-filter');
-            const establishmentId = select ? select.value : '';
-            const params = establishmentId ? `?establishment_id=${establishmentId}` : '';
+            try {
+                const select = document.getElementById('establishment-filter');
+                const establishmentId = select ? select.value : '';
+                const params = establishmentId ? `?establishment_id=${establishmentId}` : '';
 
-            // Show Skeletons
-            document.getElementById('stat-total').innerHTML = '<span class="skeleton skeleton-text" style="width: 60px;"></span>';
-            document.getElementById('stat-waiting').innerHTML = '<span class="skeleton skeleton-text" style="width: 60px;"></span>';
-            document.getElementById('stat-in-service').innerHTML = '<span class="skeleton skeleton-text" style="width: 60px;"></span>';
-            document.getElementById('stat-completed').innerHTML = '<span class="skeleton skeleton-text" style="width: 60px;"></span>';
-            document.getElementById('stat-avg-time').innerHTML = '<span class="skeleton skeleton-text" style="width: 80px;"></span>';
+                // Load stats
+                const statsRes = await fetch(`/api/dashboard/stats${params}`);
+                if (!statsRes.ok) throw new Error(`Erro ao carregar estatísticas: ${statsRes.status}`);
+                const stats = await statsRes.json();
 
-            const tbody = document.getElementById('tickets-tbody');
-            tbody.innerHTML = '';
-            // Add 5 skeleton rows
-            for (let i = 0; i < 5; i++) {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td><span class="skeleton skeleton-text" style="width: 120px;"></span></td>
-                    <td><span class="skeleton skeleton-text" style="width: 80px;"></span></td>
-                    <td><span class="skeleton skeleton-text" style="width: 150px;"></span></td>
-                    <td><span class="skeleton skeleton-text" style="width: 100px;"></span></td>
-                    <td><span class="skeleton skeleton-text" style="width: 90px; border-radius: 15px;"></span></td>
-                    <td><span class="skeleton skeleton-text" style="width: 70px;"></span></td>
-                `;
-                tbody.appendChild(tr);
+                document.getElementById('stat-total').textContent = stats.totalToday;
+                document.getElementById('stat-waiting').textContent = stats.waiting;
+                document.getElementById('stat-in-service').textContent = stats.inService;
+                document.getElementById('stat-completed').textContent = stats.completed;
+                document.getElementById('stat-avg-time').innerHTML = `${stats.avgTime}<small style="font-size:1rem;">min</small>`;
+
+                // Load active tickets
+                const ticketsRes = await fetch(`/api/dashboard/tickets${params}`);
+                if (!ticketsRes.ok) throw new Error(`Erro ao carregar tickets: ${ticketsRes.status}`);
+                const tickets = await ticketsRes.json();
+
+                allTickets = tickets;
+
+                // Initial Sync of Filters
+                toggleActiveOnly(true); // Initialize state without re-rendering yet
+                filterAndRenderTickets();
+            } catch (err) {
+                console.error(err);
+                document.getElementById('tickets-tbody').innerHTML = `<tr><td colspan="6" style="text-align:center; color:#ff4444;">Erro: ${err.message}</td></tr>`;
+            }
+        }
+
+        function toggleStatusFilterDropdown() {
+            const dropdown = document.getElementById('status-filter-dropdown');
+            const arrow = document.getElementById('filter-arrow');
+            if (dropdown.style.display === 'none') {
+                dropdown.style.display = 'block';
+                arrow.innerText = '▲';
+            } else {
+                dropdown.style.display = 'none';
+                arrow.innerText = '▼';
+            }
+        }
+
+        function toggleActiveOnly(skipRender = false) {
+            const activeOnly = document.getElementById('active-only-toggle').checked;
+            const doneCb = document.getElementById('cb-done');
+
+            if (activeOnly) {
+                // If Active Only is CHECKED -> Uncheck 'Done' and disable it?
+                // User said: "if uncheck the selection shows everything from today"
+                // So if Checked -> Show Active. If Unchecked -> Show All.
+                doneCb.checked = false;
+                // Maybe we should check all others?
+                // Let's assume user wants to see standard active flow.
+            } else {
+                // If Active Only is UNCHECKED -> Check 'Done' to show everything?
+                // "shows everything from today".
+                doneCb.checked = true;
+
+                // Ensure other filters are also checked to show "everything"?
+                document.querySelectorAll('.status-cb').forEach(cb => cb.checked = true);
             }
 
-            // Load stats (will use session establishment_id automatically if not admin)
-            const statsRes = await fetch(`/api/dashboard/stats${params}`);
-            const stats = await statsRes.json();
+            if (!skipRender) filterAndRenderTickets();
+        }
 
-            document.getElementById('stat-total').textContent = stats.totalToday;
-            document.getElementById('stat-waiting').textContent = stats.waiting;
-            document.getElementById('stat-in-service').textContent = stats.inService;
-            document.getElementById('stat-completed').textContent = stats.completed;
-            document.getElementById('stat-avg-time').innerHTML = `${stats.avgTime}<small style="font-size:1rem;">min</small>`;
-
-            // Load active tickets
-            const ticketsRes = await fetch(`/api/dashboard/tickets${params}`);
-            const tickets = await ticketsRes.json();
-
+        function filterAndRenderTickets() {
+            const tbody = document.getElementById('tickets-tbody');
             tbody.innerHTML = '';
 
-            if (tickets.length === 0) {
+            // Get selected filters
+            // const checkboxes = document.querySelectorAll('.status-filters input:checked'); // This line is implicit logic below
+            const filters = Array.from(document.querySelectorAll('.status-cb:checked')).map(cb => cb.value);
+
+            // Active Only Override
+            const activeOnly = document.getElementById('active-only-toggle').checked;
+
+            if (activeOnly) {
+                // If active only, we rely on the filter logic below to handle what's shown
+                // But conceptually 'done' status is excluded via filter logic if not selected, 
+                // and toggle logic manages checkbox state.
+            }
+
+            // Update Header with count
+            const header = document.querySelector('.tickets-table h3');
+            if (header) header.innerText = `Senhas Ativas (${allTickets.length})`;
+
+            if (allTickets.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999;">Nenhuma senha ativa</td></tr>';
                 return;
             }
 
-            tickets.forEach(t => {
+            const filteredTickets = allTickets.filter(t => {
+                let statusGroup = '';
+
+                // Mapeamento de Status Backend -> Frontend Filter Group
+                if (t.status === 'WAITING_RECEPTION' || t.status === 'WAITING') statusGroup = 'waiting_reception';
+                else if (t.status === 'CALLED_RECEPTION') statusGroup = 'called_reception';
+                else if (t.status === 'IN_RECEPTION') statusGroup = 'in_reception';
+                else if (t.status === 'DONE') statusGroup = 'done';
+                else if (t.status === 'WAITING_PROFESSIONAL') {
+                    // Check service status
+                    if (!t.service_status || t.service_status === 'PENDING') statusGroup = 'waiting_professional';
+                    else if (t.service_status === 'CALLED') statusGroup = 'called_professional';
+                    else if (t.service_status === 'IN_PROGRESS') statusGroup = 'in_progress_professional';
+                    else if (t.service_status === 'COMPLETED') statusGroup = 'service_completed';
+                    else statusGroup = 'waiting_professional'; // Fallback
+                }
+
+                return filters.includes(statusGroup);
+            });
+
+            if (filteredTickets.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999;">Nenhum ticket encontrado com os filtros selecionados.</td></tr>';
+                return;
+            }
+
+            filteredTickets.forEach(t => {
                 const tr = document.createElement('tr');
-                const statusClass = `status-${t.status.toLowerCase().replace('_', '-')}`;
-                const statusText = {
-                    'WAITING': 'Aguardando',
-                    'CALLED': 'Chamado',
-                    'IN_SERVICE': 'Em Atendimento'
-                }[t.status] || t.status;
+
+                let statusText = '';
+                let statusClass = 'status-default';
+
+                // Determinar texto e classe baseado no status real (incluindo serviço)
+                if (t.status === 'WAITING_RECEPTION') {
+                    statusText = 'Aguardando Recepção';
+                    statusClass = 'status-waiting';
+                } else if (t.status === 'CALLED_RECEPTION') {
+                    statusText = 'Chamando Recepção';
+                    statusClass = 'status-called';
+                } else if (t.status === 'IN_RECEPTION') {
+                    statusText = 'Em Atendimento Recepção';
+                    statusClass = 'status-in-service';
+                } else if (t.status === 'DONE') {
+                    statusText = 'Finalizado';
+                    statusClass = 'status-done';
+                } else {
+                    // Waiting Professional logic
+                    if (t.service_status === 'CALLED') {
+                        statusText = `Chamando: ${t.room_name || 'Sala'}`;
+                        statusClass = 'status-called';
+                    } else if (t.service_status === 'IN_PROGRESS') {
+                        statusText = `Atendendo: ${t.room_name || 'Sala'}`;
+                        statusClass = 'status-in-service';
+                    } else if (t.service_status === 'COMPLETED') {
+                        statusText = 'Serviço Concluído';
+                        statusClass = 'status-done';
+                    } else {
+                        statusText = 'Aguardando Profissional';
+                        statusClass = 'status-waiting';
+                    }
+                }
 
                 const createdDate = new Date(t.created_at);
                 const timeAgo = Math.floor((Date.now() - createdDate) / 60000);
@@ -292,7 +601,7 @@
                     <td><strong>${t.display_code}</strong></td>
                     <td>${t.temp_customer_name || '-'}</td>
                     <td>${t.services_list || '-'}</td>
-                    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                    <td><span class="status-badge ${statusClass}" style="font-size: 0.85rem;">${statusText}</span></td>
                     <td>${timeAgo}min atrás</td>
                 `;
                 tbody.appendChild(tr);
@@ -303,6 +612,103 @@
         socket.on('new_ticket', () => loadDashboard());
         socket.on('ticket_updated', () => loadDashboard());
         socket.on('call_ticket', () => loadDashboard());
+
+        // Timeline Search Function
+        async function searchTimeline() {
+            const ticketCode = document.getElementById('timeline-search-code').value.trim();
+            const customerName = document.getElementById('timeline-search-name').value.trim();
+            const date = document.getElementById('timeline-search-date').value;
+            const resultsDiv = document.getElementById('timeline-results');
+
+            if (!ticketCode && !customerName && !date) {
+                resultsDiv.innerHTML = '<p style="color: #ffc107;">Por favor, informe o código da senha, nome do cliente ou data.</p>';
+                return;
+            }
+
+            resultsDiv.innerHTML = '<p>Buscando...</p>';
+
+            try {
+                const params = new URLSearchParams();
+                if (ticketCode) params.append('ticket_code', ticketCode);
+                if (customerName) params.append('customer_name', customerName);
+                if (date) params.append('date', date);
+
+                const res = await fetch(`/api/dashboard/ticket-timeline?${params}`);
+                const data = await res.json();
+
+                if (!data.tickets || data.tickets.length === 0) {
+                    resultsDiv.innerHTML = '<p style="color: #999;">Nenhum resultado encontrado.</p>';
+                    return;
+                }
+
+                // Render timeline for each ticket
+                resultsDiv.innerHTML = data.tickets.map(ticket => {
+                    const timeline = ticket.timeline || [];
+
+                    // Calculate duration between steps
+                    const timelineHtml = timeline.map((step, index) => {
+                        const time = new Date(step.changed_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                        const date = new Date(step.changed_at).toLocaleDateString('pt-BR');
+
+                        let duration = '';
+                        if (index > 0) {
+                            const prevTime = new Date(timeline[index - 1].changed_at);
+                            const currTime = new Date(step.changed_at);
+                            const diffMin = Math.round((currTime - prevTime) / 60000);
+                            duration = `(+${diffMin}min)`;
+                        }
+
+                        const statusLabels = {
+                            'WAITING_RECEPTION': '🎫 Aguardando Recepção',
+                            'CALLED_RECEPTION': '📢 Chamado na Recepção',
+                            'IN_RECEPTION': '👤 Em Atendimento na Recepção',
+                            'WAITING_PROFESSIONAL': '⏳ Aguardando Profissional',
+                            'CALLED': '📢 Chamado para Sala',
+                            'IN_PROGRESS': '🏥 Em Atendimento',
+                            'SERVICE_COMPLETED': '✅ Serviço Concluído',
+                            'DONE': '🎉 Finalizado'
+                        };
+
+                        const location = step.room_name || step.desk_name || '';
+
+                        return `
+                            <div class="timeline-step">
+                                <div class="step-status">${statusLabels[step.status] || step.status}</div>
+                                <div class="step-time">${date} ${time} ${duration}</div>
+                                ${location ? `<div class="step-location">📍 ${location}</div>` : ''}
+                                ${step.notes ? `<div class="step-notes">${step.notes}</div>` : ''}
+                            </div>
+                        `;
+                    }).join('');
+
+                    // Calculate total duration
+                    let totalDuration = '';
+                    if (timeline.length >= 2) {
+                        const first = new Date(timeline[0].changed_at);
+                        const last = new Date(timeline[timeline.length - 1].changed_at);
+                        const diffMin = Math.round((last - first) / 60000);
+                        totalDuration = `Duração total: ${diffMin} minutos`;
+                    }
+
+                    return `
+                        <div class="timeline-ticket">
+                            <div class="timeline-ticket-header">
+                                <h4>${ticket.display_code} - ${ticket.temp_customer_name || 'Cliente'}</h4>
+                                <span>${ticket.establishment_name}</span>
+                            </div>
+                            ${totalDuration ? `<p style="margin-bottom: 15px; color: rgba(255,255,255,0.7);">⏱️ ${totalDuration}</p>` : ''}
+                            <div class="timeline-steps">
+                                ${timelineHtml || '<p style="color: #999;">Nenhum histórico disponível.</p>'}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (err) {
+                console.error('Error searching timeline:', err);
+                resultsDiv.innerHTML = '<p style="color: #ff6b6b;">Erro ao buscar timeline.</p>';
+            }
+        }
 
         // Initialize
         init();

@@ -9,10 +9,111 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="auth-helper.js"></script>
     <style>
+        /* Split Screen Layout */
+        .tv-split-container {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .tv-split-left {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .tv-split-right {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: transparent;
+        }
+
+        /* YouTube section - top 60% */
+        .tv-youtube-section {
+            flex: 6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tv-youtube-section iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* History section - bottom 40% with acrylic effect */
+        .tv-history-section {
+            flex: 4;
+            background: rgba(var(--acrylic-base-color), 0.1);
+            backdrop-filter: blur(var(--acrylic-blur));
+            -webkit-backdrop-filter: blur(var(--acrylic-blur));
+            border-top: 1px solid rgba(var(--acrylic-base-color), 0.2);
+            padding: 15px 20px;
+            overflow: hidden;
+        }
+
+        .tv-history-title {
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 500;
+        }
+
+        .tv-history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow: hidden;
+        }
+
+        .tv-history-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 10px 15px;
+            background: rgba(var(--acrylic-base-color), 0.1);
+            backdrop-filter: blur(var(--acrylic-blur));
+            -webkit-backdrop-filter: blur(var(--acrylic-blur));
+            border: 1px solid rgba(var(--acrylic-base-color), 0.2);
+            border-radius: 8px;
+            border-left: 4px solid var(--color-accent, #e74c3c);
+        }
+
+        .tv-history-item .ticket-code {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--color-accent, #e74c3c);
+            min-width: 80px;
+        }
+
+        .tv-history-item .customer-name {
+            flex: 1;
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.9);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .tv-history-item .room-name {
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.7);
+            text-align: right;
+        }
+
         #tv-est-name {
             position: absolute;
             top: 40px;
-            font-size: 3rem;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 2.5rem;
             color: rgba(255, 255, 255, 0.8);
             font-weight: 300;
             text-transform: uppercase;
@@ -20,17 +121,61 @@
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
             z-index: 10;
         }
+
+        /* Override tv-container for split layout */
+        .tv-split-left .tv-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tv-split-left .tv-main {
+            width: 100%;
+            max-width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
     </style>
 </head>
 
 <body class="has-background">
     <script src="global-ui.js"></script>
-    <div class="tv-container">
-        <div class="tv-main" style="width: 100%; max-width: 100%; flex: 1; position: relative;">
-            <div id="tv-est-name">Star Tickets</div>
-            <div class="customer-display" id="main-customer">Aguardando chamada...</div>
-            <div class="ticket-display" id="main-ticket">---</div>
-            <div class="room-display" id="main-room">---</div>
+
+    <div class="tv-split-container">
+        <!-- Left Side: Ticket Display -->
+        <div class="tv-split-left">
+            <div class="tv-container" style="width: 100%; height: 100%;">
+                <div class="tv-main" style="width: 100%; max-width: 100%; flex: 1; position: relative;">
+                    <div id="tv-est-name">Star Tickets</div>
+                    <div class="customer-display" id="main-customer">Aguardando chamada...</div>
+                    <div class="ticket-display" id="main-ticket">---</div>
+                    <div class="room-display" id="main-room">---</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Side: YouTube + History -->
+        <div class="tv-split-right">
+            <!-- YouTube Video - Top -->
+            <div class="tv-youtube-section">
+                <iframe src="https://www.youtube.com/embed/L4u7_B7ErwE?autoplay=1&mute=1&loop=1&playlist=L4u7_B7ErwE"
+                    title="YouTube video"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen>
+                </iframe>
+            </div>
+
+            <!-- History - Bottom -->
+            <div class="tv-history-section">
+                <div class="tv-history-title">Últimas Chamadas</div>
+                <div class="tv-history-list" id="history-list">
+                    <!-- History items will be inserted here by JavaScript -->
+                </div>
+            </div>
         </div>
     </div>
 
@@ -38,7 +183,8 @@
         const socket = io();
 
 
-        let calledTickets = []; // Array of tickets that have been called
+        let calledTickets = []; // Array of tickets that have been called (from backend)
+        let callHistory = []; // Local history of ALL calls (frontend only, persists)
         let currentIndex = 0;
         let rotationInterval = null;
 
@@ -153,7 +299,47 @@
         // Establishment ID do usuário logado (será preenchido após checkAuth)
         let userEstablishmentId = null;
 
-        // Fetch all called tickets from backend
+        // Render history list from local callHistory (most recent first, no scroll)
+        function renderHistory() {
+            const historyList = document.getElementById('history-list');
+            if (!historyList) return;
+
+            // Calculate how many items fit based on container height
+            // Each item is roughly 50px, so we show max 5 items
+            const maxItems = 5;
+
+            // callHistory is already most recent first
+            const displayItems = callHistory.slice(0, maxItems);
+
+            historyList.innerHTML = displayItems.map(ticket => `
+                <div class="tv-history-item">
+                    <span class="ticket-code">${ticket.display_code}</span>
+                    <span class="customer-name">${ticket.temp_customer_name || 'Cliente'}</span>
+                    <span class="room-name">${ticket.room_name || '---'}</span>
+                </div>
+            `).join('');
+        }
+
+        // Add a ticket to local history (called when WebSocket receives a call)
+        function addToHistory(ticket) {
+            // Add to beginning of history (most recent first)
+            callHistory.unshift({
+                display_code: ticket.display_code || ticket.displayCode,
+                temp_customer_name: ticket.temp_customer_name || ticket.customerName || 'Cliente',
+                room_name: ticket.room_name || ticket.roomName || '---',
+                called_at: new Date()
+            });
+
+            // Keep only last 20 items in memory
+            if (callHistory.length > 20) {
+                callHistory = callHistory.slice(0, 20);
+            }
+
+            // Re-render
+            renderHistory();
+        }
+
+        // Fetch all called tickets from backend (for main display rotation only)
         async function loadCalledTickets() {
             try {
                 // Usar establishment do usuário logado
@@ -267,7 +453,10 @@
 
             playAlert();
 
-            // Reload the called tickets list
+            // Add to local history (persist even when ticket goes to service)
+            addToHistory(data);
+
+            // Reload the called tickets list (for main display rotation)
             loadCalledTickets();
         });
 
