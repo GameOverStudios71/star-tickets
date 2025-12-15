@@ -384,7 +384,11 @@
 
                 if (!res.ok) {
                     const err = await res.json();
-                    showToast(`Erro ao chamar senha: ${err.error || 'Erro desconhecido'}`, 'error');
+                    if (err.error === 'room_busy') {
+                        showToast(`⚠️ ${err.message}`, 'warning');
+                    } else {
+                        showToast(err.message || `Erro ao chamar senha: ${err.error}`, 'error');
+                    }
                     return;
                 }
 
@@ -401,36 +405,30 @@
             }
         }
 
-        function showConfirmModal(nextTicketId, code, name) {
-            const modal = document.getElementById('confirm-modal');
-            const confirmBtn = document.getElementById('confirm-modal-btn');
-
-            // Set up one-time click handler
-            confirmBtn.onclick = async () => {
-                await finishTicket();
-                modal.style.display = 'none';
-                await executeCallTicket(nextTicketId, code, name);
-            };
-
-            modal.style.display = 'flex';
-        }
-
-        function closeConfirmModal() {
-            document.getElementById('confirm-modal').style.display = 'none';
-        }
+        // ...
 
         async function startService() {
             if (!currentTicketServiceId) return;
 
-            await fetch('/api/start-service', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ticketServiceId: currentTicketServiceId })
-            });
+            try {
+                const res = await fetch('/api/start-service', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ticketServiceId: currentTicketServiceId })
+                });
 
-            isServiceInProgress = true; // Set flag
-            updateCurrentDisplay(currentTicketServiceId, true); // true = service started
-            loadQueue(); // Refresh to update disabled buttons
+                if (!res.ok) {
+                    const err = await res.json();
+                    showToast(err.message || err.error || 'Erro ao iniciar atendimento', 'error');
+                    return;
+                }
+
+                isServiceInProgress = true; // Set flag
+                updateCurrentDisplay(currentTicketServiceId, true); // true = service started
+                loadQueue(); // Refresh to update disabled buttons
+            } catch (e) {
+                showToast('Erro ao iniciar atendimento', 'error');
+            }
         }
 
         async function finishTicket() {
@@ -439,22 +437,32 @@
             // Save ID before clearing
             const ticketServiceId = currentTicketServiceId;
 
-            // Immediately clear the display
-            currentTicketServiceId = null;
-            isServiceInProgress = false; // Reset flag
-            document.getElementById('current-ticket').innerHTML = '<h3 style="color:gray;">Nenhum cliente em atendimento</h3>';
+            try {
+                // Send finish request to backend
+                const res = await fetch('/api/finish', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ticketServiceId })
+                });
 
-            // Send finish request to backend
-            await fetch('/api/finish', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ticketServiceId })
-            });
+                if (!res.ok) {
+                    const err = await res.json();
+                    showToast(err.message || err.error || 'Erro ao finalizar atendimento', 'error');
+                    return;
+                }
 
-            // Wait a moment for backend to process, then refresh queue
-            setTimeout(() => {
-                loadQueue();
-            }, 300);
+                // Immediately clear the display ONLY if success
+                currentTicketServiceId = null;
+                isServiceInProgress = false; // Reset flag
+                document.getElementById('current-ticket').innerHTML = '<h3 style="color:gray;">Nenhum cliente em atendimento</h3>';
+
+                // Wait a moment for backend to process, then refresh queue
+                setTimeout(() => {
+                    loadQueue();
+                }, 300);
+            } catch (e) {
+                showToast('Erro ao finalizar atendimento', 'error');
+            }
         }
 
         function updateCurrentDisplay(id, isServiceStarted) {

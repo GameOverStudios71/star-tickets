@@ -8,37 +8,60 @@ module.exports = (db, io) => {
     // 2. Create Ticket (Totem) - PUBLIC route, establishment comes from body
     router.post('/tickets', (req, res) => {
         const { serviceIds, establishmentId = 1, isPriority = false, healthInsuranceName = null } = req.body;
+
+        // Debug Log
+        const logger = require('../utils/logger');
+        logger.info(`Creating ticket for Services: [${serviceIds}], Priority: ${isPriority}`);
+
         if (!serviceIds || serviceIds.length === 0) return res.status(400).json({ error: "No services selected" });
 
-        // Generate Display Code (Simplified logic: Get prefix of first service + sequence)
-        db.get("SELECT prefix FROM services WHERE id = ?", [serviceIds[0]], (err, row) => {
-            if (err) return res.status(500).json({ error: err.message });
+        db.serialize(() => {
+            db.get("SELECT prefix FROM services WHERE id = ?", [serviceIds[0]], (err, row) => {
+                if (err) {
+                    logger.error("Error fetching service prefix", err);
+                    return res.status(500).json({ error: err.message });
+                }
 
-            const prefix = row ? row.prefix : 'GEN';
+                const prefix = row ? row.prefix : 'GEN';
 
-            // Get today's count for this prefix to generate number
-            db.get("SELECT count(*) as count FROM tickets WHERE display_code LIKE ? AND date(created_at, 'localtime') = date('now', 'localtime')", [`${prefix}%`], (err, countRow) => {
-                const number = (countRow.count + 1).toString().padStart(3, '0');
-                const displayCode = `${prefix}${number}`;
-
-                db.run("INSERT INTO tickets (display_code, status, is_priority, health_insurance_name, establishment_id) VALUES (?, 'WAITING_RECEPTION', ?, ?, ?)",
-                    [displayCode, isPriority ? 1 : 0, healthInsuranceName, establishmentId],
-                    function (err) {
-                        if (err) return res.status(500).json({ error: err.message });
-                        const ticketId = this.lastID;
-
-                        // Insert Ticket Services
-                        const stmt = db.prepare("INSERT INTO ticket_services (ticket_id, service_id, order_sequence, status) VALUES (?, ?, ?, ?)");
-                        serviceIds.forEach((serviceId, index) => {
-                            // First service is PENDING, others are BLOCKED (conceptually) but we use PENDING + order_sequence logic
-                            stmt.run(ticketId, serviceId, index + 1, 'PENDING');
-                        });
-                        stmt.finalize();
-
-                        io.emit('new_ticket', { ticketId, displayCode, isPriority, healthInsuranceName });
-                        res.json({ ticketId, displayCode, isPriority, healthInsuranceName });
+                // Get today's count for this prefix to generate number
+                db.get("SELECT count(*) as count FROM tickets WHERE display_code LIKE ? AND date(created_at, 'localtime') = date('now', 'localtime')", [`${prefix}%`], (err, countRow) => {
+                    if (err) {
+                        logger.error("Error generating ticket number", err);
+                        return res.status(500).json({ error: err.message });
                     }
-                );
+
+                    const number = (countRow.count + 1).toString().padStart(3, '0');
+                    const displayCode = `${prefix}${number}`;
+
+                    db.run("INSERT INTO tickets (display_code, status, is_priority, health_insurance_name, establishment_id) VALUES (?, 'WAITING_RECEPTION', ?, ?, ?)",
+                        [displayCode, isPriority ? 1 : 0, healthInsuranceName, establishmentId],
+                        function (err) {
+                            if (err) {
+                                logger.error("Error inserting ticket", err);
+                                return res.status(500).json({ error: err.message });
+                            }
+                            const ticketId = this.lastID;
+
+                            // Insert Ticket Services
+                            const stmt = db.prepare("INSERT INTO ticket_services (ticket_id, service_id, order_sequence, status) VALUES (?, ?, ?, ?)");
+                            serviceIds.forEach((serviceId, index) => {
+                                // First service is PENDING, others are BLOCKED (conceptually) but we use PENDING + order_sequence logic
+                                stmt.run(ticketId, serviceId, index + 1, 'PENDING');
+                            });
+                            stmt.finalize((err) => {
+                                if (err) {
+                                    logger.error("Error finalizing ticket services", err);
+                                    // We don't rollback here (sqlite limitations in this simple flow), but we log it.
+                                }
+
+                                logger.info(`Ticket created: ${displayCode} (ID: ${ticketId})`);
+                                io.emit('new_ticket', { ticketId, displayCode, isPriority, healthInsuranceName });
+                                res.json({ ticketId, displayCode, isPriority, healthInsuranceName });
+                            });
+                        }
+                    );
+                });
             });
         });
     });
@@ -370,60 +393,83 @@ module.exports = (db, io) => {
     router.post('/reception/call', requireEstablishmentScope, (req, res) => {
         const { ticketId, deskId } = req.body;
 
+        if (!deskId) return res.status(400).json({ error: "Desk ID is required" });
+
         const getDeskName = (callback) => {
-            if (!deskId) return callback(null, 'RECEPÇÃO');
             db.get("SELECT name FROM reception_desks WHERE id = ?", [deskId], (err, desk) => {
                 callback(null, desk?.name || 'RECEPÇÃO');
             });
         };
 
-        // Buscar ticket com informação da mesa atual
-        const ticketQuery = `
-            SELECT t.id, t.display_code, t.temp_customer_name, t.status, t.reception_desk_id,
-                   rd.name as current_desk_name
-            FROM tickets t
-            LEFT JOIN reception_desks rd ON t.reception_desk_id = rd.id
-            WHERE t.id = ? ${req.establishmentId ? 'AND t.establishment_id = ?' : ''}
+        // 1. [SECURITY CHECK] Verify if this desk already has an active ticket
+        // Statuses that imply the desk is busy: CALLED_RECEPTION (calling), IN_RECEPTION (attending)
+        const checkDeskBusyQuery = `
+            SELECT id, display_code, temp_customer_name, status 
+            FROM tickets 
+            WHERE reception_desk_id = ? 
+            AND status IN ('CALLED_RECEPTION', 'IN_RECEPTION')
+            ${req.establishmentId ? 'AND establishment_id = ?' : ''}
         `;
-        const ticketParams = req.establishmentId ? [ticketId, req.establishmentId] : [ticketId];
+        const checkParams = req.establishmentId ? [deskId, req.establishmentId] : [deskId];
 
-        db.get(ticketQuery, ticketParams, (err, row) => {
-            if (err || !row) return queries.handleNotFound(res);
+        db.get(checkDeskBusyQuery, checkParams, (err, busyRow) => {
+            if (err) return queries.handleDbError(res, err);
 
-            // Verificar se já está sendo atendido
-            if (row.status !== 'WAITING_RECEPTION') {
+            if (busyRow) {
+                // Determine user friendly message
+                const action = busyRow.status === 'CALLED_RECEPTION' ? 'chamando' : 'atendendo';
                 return res.status(409).json({
-                    error: 'already_in_progress',
-                    message: `Esta senha já está sendo atendida${row.current_desk_name ? ' pela ' + row.current_desk_name : ''}`,
-                    attendingDesk: row.current_desk_name
+                    error: 'desk_busy',
+                    message: `Você já está ${action} a senha ${busyRow.display_code}. Finalize-a antes de chamar outra.`
                 });
             }
 
-            getDeskName((err, deskName) => {
-                const updateQuery = deskId
-                    ? "UPDATE tickets SET status = 'CALLED_RECEPTION', reception_desk_id = ? WHERE id = ? AND status = 'WAITING_RECEPTION'"
-                    : "UPDATE tickets SET status = 'CALLED_RECEPTION' WHERE id = ? AND status = 'WAITING_RECEPTION'";
-                const updateParams = deskId ? [deskId, ticketId] : [ticketId];
+            // 2. Fetch ticket to be called
+            const ticketQuery = `
+                SELECT t.id, t.display_code, t.temp_customer_name, t.status, t.reception_desk_id,
+                       rd.name as current_desk_name
+                FROM tickets t
+                LEFT JOIN reception_desks rd ON t.reception_desk_id = rd.id
+                WHERE t.id = ? ${req.establishmentId ? 'AND t.establishment_id = ?' : ''}
+            `;
+            const ticketParams = req.establishmentId ? [ticketId, req.establishmentId] : [ticketId];
 
-                db.run(updateQuery, updateParams, function (err) {
-                    if (err) return queries.handleDbError(res, err);
+            db.get(ticketQuery, ticketParams, (err, row) => {
+                if (err || !row) return queries.handleNotFound(res);
 
-                    // Verificar se realmente atualizou (proteção extra contra race condition)
-                    if (this.changes === 0) {
-                        return res.status(409).json({
-                            error: 'already_in_progress',
-                            message: 'Esta senha acabou de ser atendida por outra recepcionista'
-                        });
-                    }
-
-                    io.emit('call_ticket', {
-                        ticketId,
-                        displayCode: row.display_code,
-                        customerName: row.temp_customer_name || 'Cliente',
-                        roomName: deskName
+                // 3. [SECURITY CHECK] Verify if ticket is already being attended by SOMEONE ELSE
+                if (row.status !== 'WAITING_RECEPTION') {
+                    return res.status(409).json({
+                        error: 'already_in_progress',
+                        message: `Esta senha já está sendo atendida${row.current_desk_name ? ' pela ' + row.current_desk_name : ''}`,
+                        attendingDesk: row.current_desk_name
                     });
-                    io.emit('ticket_updated'); // Para atualizar outras telas
-                    res.json({ success: true });
+                }
+
+                getDeskName((err, deskName) => {
+                    const updateQuery = "UPDATE tickets SET status = 'CALLED_RECEPTION', reception_desk_id = ? WHERE id = ? AND status = 'WAITING_RECEPTION'";
+                    const updateParams = [deskId, ticketId];
+
+                    db.run(updateQuery, updateParams, function (err) {
+                        if (err) return queries.handleDbError(res, err);
+
+                        // Optimistic lock check
+                        if (this.changes === 0) {
+                            return res.status(409).json({
+                                error: 'already_in_progress',
+                                message: 'Esta senha acabou de ser atendida por outra recepcionista'
+                            });
+                        }
+
+                        io.emit('call_ticket', {
+                            ticketId,
+                            displayCode: row.display_code,
+                            customerName: row.temp_customer_name || 'Cliente',
+                            roomName: deskName
+                        });
+                        io.emit('ticket_updated'); // Update lists
+                        res.json({ success: true });
+                    });
                 });
             });
         });
@@ -473,18 +519,48 @@ module.exports = (db, io) => {
         const { ticketServiceId, roomId } = req.body;
         const { query, params } = queries.ticketServiceQueries.getCallInfo(ticketServiceId, roomId, req.establishmentId);
 
-        db.get(query, params, (err, row) => {
-            if (err || !row) return queries.handleNotFound(res);
+        // 1. [SECURITY CHECK] Verify if room already has an active patient
+        // We check if there is any ticket_service for this room that is CALLED or IN_PROGRESS
+        const checkRoomBusyQuery = `
+            SELECT ts.id, t.display_code, ts.status
+            FROM ticket_services ts
+            JOIN tickets t ON ts.ticket_id = t.id
+            JOIN services s ON ts.service_id = s.id
+            JOIN room_services rs ON rs.service_id = s.id
+            WHERE rs.room_id = ? 
+            AND ts.status IN ('CALLED', 'IN_PROGRESS')
+            AND date(ts.updated_at, 'localtime') = date('now', 'localtime') -- Optimization: only check today's tickets
+            ${req.establishmentId ? 'AND t.establishment_id = ?' : ''}
+        `;
+        const checkParams = req.establishmentId ? [roomId, req.establishmentId] : [roomId];
 
-            db.run("UPDATE ticket_services SET status = 'CALLED' WHERE id = ?", [ticketServiceId], (err) => {
-                if (err) return queries.handleDbError(res, err);
-                io.emit('call_ticket', {
-                    displayCode: row.display_code,
-                    customerName: row.temp_customer_name,
-                    roomName: row.room_name,
-                    establishmentId: row.establishment_id
+        db.get(checkRoomBusyQuery, checkParams, (err, busyRow) => {
+            if (err) return queries.handleDbError(res, err);
+
+            if (busyRow) {
+                // If it's the SAME ticket service, we allow re-calling (idempotency/re-announce)
+                if (busyRow.id != ticketServiceId) {
+                    const action = busyRow.status === 'CALLED' ? 'chamando' : 'atendendo';
+                    return res.status(409).json({
+                        error: 'room_busy',
+                        message: `Sua sala já está ${action} a senha ${busyRow.display_code}. Finalize o atendimento atual.`
+                    });
+                }
+            }
+
+            db.get(query, params, (err, row) => {
+                if (err || !row) return queries.handleNotFound(res);
+
+                db.run("UPDATE ticket_services SET status = 'CALLED', updated_at = CURRENT_TIMESTAMP WHERE id = ?", [ticketServiceId], (err) => {
+                    if (err) return queries.handleDbError(res, err);
+                    io.emit('call_ticket', {
+                        displayCode: row.display_code,
+                        customerName: row.temp_customer_name,
+                        roomName: row.room_name,
+                        establishmentId: row.establishment_id
+                    });
+                    res.json({ success: true });
                 });
-                res.json({ success: true });
             });
         });
     });
@@ -496,6 +572,11 @@ module.exports = (db, io) => {
 
         db.get(query, params, (err, row) => {
             if (err || !row) return queries.handleNotFound(res);
+
+            // [SECURITY CHECK] Strict status transition
+            if (row.status !== 'CALLED') {
+                return res.status(400).json({ error: "O paciente precisa ser chamado antes de iniciar o atendimento." });
+            }
 
             db.run("UPDATE ticket_services SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = ?", [ticketServiceId], function (err) {
                 if (err) return queries.handleDbError(res, err);
@@ -512,6 +593,11 @@ module.exports = (db, io) => {
 
         db.get(query, params, (err, row) => {
             if (err || !row) return queries.handleNotFound(res);
+
+            // [SECURITY CHECK] Strict status transition
+            if (row.status !== 'IN_PROGRESS') {
+                return res.status(400).json({ error: "O atendimento precisa ser iniciado antes de finalizar." });
+            }
 
             const ticketId = row.ticket_id;
             db.run("UPDATE ticket_services SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?", [ticketServiceId], function (err) {

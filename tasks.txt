@@ -1,3 +1,7 @@
 agora precisa fazer também as validações de permissões de usuários como usuários que só são recepcionistas, gerentes, e profissionais das salas poderem entrar somente nas páginas permitidas, mostrar os botoes no menu principal que pode acessar depois de se logar para cada tipo de usuario diferente , tem que ser dinamica a página e fazer as validações no sql também... verifique tudo e faça um plano de implementação também 
 
 quando uma senha estiver em atendimento com a recepcionista para as outras recepcionistas deveria aparecer na lista sei lá, um background verde ou contorno da div ou uma tag avisando que esta senha já esta em atendimento e a recepcionista que nao seja a que esta atendendo nao pode acessar
+
+
+
+REFATORAÇÃO CODIGO BLOQUEIO PELO SQL NOS ENDPOINTS PRECISA TESTAR TUDO!!!!

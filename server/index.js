@@ -7,6 +7,7 @@ const path = require('path');
 const session = require('express-session');
 const fs = require('fs');
 const { execSync } = require('child_process');
+const logger = require('./utils/logger');
 
 const app = express();
 const server = http.createServer(app);
@@ -21,6 +22,9 @@ const io = new Server(server, {
 const activeDesks = new Map();
 
 io.on('connection', (socket) => {
+    // Trace all socket events
+    logger.socket(socket, () => { });
+
     // Send current active desks to new client
     socket.emit('active_desks_update', Array.from(activeDesks.entries()));
 
@@ -91,6 +95,7 @@ const db = new sqlite3.Database(dbPath);
 
 app.use(cors());
 app.use(express.json());
+app.use(logger.http); // Trace HTTP requests
 
 // Livereload for development (auto-refresh browser on file changes)
 if (process.env.NODE_ENV !== 'production') {
@@ -174,4 +179,10 @@ io.on('connection', (socket) => {
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
+});
+
+// Global Error Handler (Explosive Logs)
+app.use((err, req, res, next) => {
+    logger.error('Unhandled Server Error', err);
+    res.status(500).json({ error: 'Internal Server Error' });
 });

@@ -1432,10 +1432,17 @@
                     currentReceptionTicket = ticketId;
                     showToast('Senha chamada! Rotacionando na TV.', 'success');
                     loadTickets();
-                } else if (res.status === 409 && data.error === 'already_in_progress') {
-                    // Outra recepcionista já está atendendo
-                    showTicketLockedPopup(data.attendingDesk);
-                    loadTickets(); // Recarregar para mostrar status atualizado
+                } else if (res.status === 409) {
+                    if (data.error === 'already_in_progress') {
+                        // Outra recepcionista já está atendendo
+                        showTicketLockedPopup(data.attendingDesk);
+                        loadTickets();
+                    } else if (data.error === 'desk_busy') {
+                        // Eu já tenho ativo ativo - Novo erro do backend
+                        showWarningModal('Atenção', data.message);
+                    } else {
+                        showToast(data.error || 'Erro ao chamar senha', 'error');
+                    }
                 } else {
                     showToast(data.error || 'Erro ao chamar senha', 'error');
                 }
