@@ -1,0 +1,33 @@
+/* ================================================================
+   TYPOGRAPHY UTILITIES
+   ================================================================ */
+
+.st-text-title,
+.st-text-title * {
+    color: var(--st-text-title) !important;
+}
+
+.st-text-subtitle,
+.st-text-subtitle * {
+    color: var(--st-text-subtitle) !important;
+}
+
+.st-text-body,
+.st-text-body * {
+    color: var(--st-text-body) !important;
+}
+
+.st-text-inverse,
+.st-text-inverse * {
+    color: var(--st-text-inverse) !important;
+}
+
+.st-text-muted,
+.st-text-muted * {
+    color: var(--st-text-muted) !important;
+}
+
+.st-text-header,
+.st-text-header * {
+    color: var(--st-text-table-header) !important;
+}

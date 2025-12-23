@@ -1,0 +1,73 @@
+/* ================================================================
+   USER PROFILE
+   ================================================================ */
+
+.st-user-profile {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 5px 15px;
+    border-radius: 30px;
+    background: rgba(var(--st-acrylic-base-color), 0.1);
+    border: 1px solid rgba(var(--st-acrylic-base-color), 0.2);
+    transition: all 0.3s ease;
+}
+
+.st-user-profile:hover {
+    background: rgba(var(--st-acrylic-base-color), 0.2);
+}
+
+.st-user-avatar {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--st-color-info), #5dade2);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.2rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.st-user-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.st-user-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.st-user-role {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.7);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Info Rows */
+.st-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.st-info-row:last-child {
+    border-bottom: none;
+}
+
+.st-info-label {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.9rem;
+}
+
+.st-info-value {
+    color: rgba(255, 255, 255, 0.95);
+    font-weight: 500;
+}

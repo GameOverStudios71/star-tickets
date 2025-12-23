@@ -1,0 +1,40 @@
+/* ================================================================
+   CARDS
+   ================================================================ */
+
+.st-card {
+    background: rgba(var(--st-acrylic-base-color), 0.1);
+    backdrop-filter: blur(var(--st-acrylic-blur));
+    -webkit-backdrop-filter: blur(var(--st-acrylic-blur));
+    border: 1px solid rgba(var(--st-acrylic-base-color), 0.2);
+    border-radius: var(--st-radius-lg);
+    padding: var(--st-spacing-lg);
+    color: white;
+    transition: all var(--st-transition-normal);
+}
+
+.st-nav-card {
+    text-decoration: none;
+    text-align: center;
+    display: block;
+    cursor: pointer;
+}
+
+.st-nav-card .st-icon {
+    font-size: 3rem;
+    margin-bottom: 15px;
+    display: block;
+    text-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.st-nav-card h2 {
+    margin: 10px 0 5px 0;
+    font-size: 1.5rem;
+    color: white;
+}
+
+.st-nav-card p {
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0;
+    font-size: 0.9rem;
+}

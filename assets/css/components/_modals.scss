@@ -1,0 +1,81 @@
+/* ================================================================
+   MODALS
+   ================================================================ */
+
+.st-modal-confirm {
+    text-align: center;
+    padding: 1.5rem;
+    background: rgba(var(--st-acrylic-base-color), 0.1);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border: 1px solid rgba(var(--st-acrylic-base-color), 0.2);
+    border-radius: var(--st-radius-lg);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+    color: white;
+}
+
+/* Icon container background override */
+.st-modal-icon-container {
+    margin-left: auto;
+    margin-right: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    border-radius: 9999px;
+    /* rounded-full */
+    background-color: rgba(231, 76, 60, 0.15);
+    /* Softer Red background */
+    margin-bottom: 1.5rem;
+    width: 5rem;
+    /* increased size */
+    height: 5rem;
+    /* increased size */
+}
+
+.st-modal-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 0.5rem;
+}
+
+.st-modal-text {
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 1.5rem;
+}
+
+/* Modal Buttons */
+.st-modal-btn {
+    padding: 0.5rem 1.5rem;
+    border-radius: var(--st-radius-md);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    box-shadow: none !important;
+    /* Explicitly requested no shadow */
+    font-size: 0.95rem;
+}
+
+.st-modal-btn-cancel {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.st-modal-btn-cancel:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+}
+
+.st-modal-btn-confirm {
+    background: rgba(231, 76, 60, 0.8);
+    /* Softer red (accent color with opacity) */
+    color: white;
+    border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
+.st-modal-btn-confirm:hover {
+    background: rgba(231, 76, 60, 0.95);
+}

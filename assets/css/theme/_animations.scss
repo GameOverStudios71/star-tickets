@@ -1,0 +1,84 @@
+/* ================================================================
+   ANIMATIONS
+   ================================================================ */
+
+@keyframes st-fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes st-slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes st-pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+@keyframes st-shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+@keyframes gradientMove {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+.st-animate-fade-in {
+    animation: st-fadeIn 0.3s ease-out;
+}
+
+.st-animate-slide-up {
+    animation: st-slideUp 0.3s ease-out;
+}
+
+.st-animate-pulse {
+    animation: st-pulse 2s infinite;
+}
+
+/* Skeleton Loading */
+.st-skeleton {
+    background: linear-gradient(90deg,
+            rgba(255, 255, 255, 0.1) 25%,
+            rgba(255, 255, 255, 0.2) 50%,
+            rgba(255, 255, 255, 0.1) 75%);
+    background-size: 200% 100%;
+    animation: st-shimmer 1.5s infinite;
+    border-radius: 4px;
+}

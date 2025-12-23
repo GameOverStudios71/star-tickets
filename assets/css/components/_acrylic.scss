@@ -1,0 +1,58 @@
+/* ================================================================
+   EFEITOS ACRÍLICOS (Glassmorphism)
+   ================================================================ */
+
+.st-acrylic {
+    background: rgba(var(--st-acrylic-base-color), 0.1);
+    backdrop-filter: blur(var(--st-acrylic-blur));
+    -webkit-backdrop-filter: blur(var(--st-acrylic-blur));
+    border: 1px solid rgba(var(--st-acrylic-base-color), 0.2);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.st-acrylic-strong {
+    background: linear-gradient(135deg,
+            rgba(var(--st-acrylic-base-color), 0.6) 0%,
+            rgba(var(--st-acrylic-base-color), 0.5) 50%,
+            rgba(var(--st-acrylic-base-color), 0.55) 100%);
+    backdrop-filter: blur(30px) saturate(200%) brightness(1.15);
+    -webkit-backdrop-filter: blur(30px) saturate(200%) brightness(1.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+.st-acrylic-light {
+    background: linear-gradient(135deg,
+            rgba(var(--st-acrylic-base-color), 0.35) 0%,
+            rgba(var(--st-acrylic-base-color), 0.3) 50%,
+            rgba(var(--st-acrylic-base-color), 0.32) 100%);
+    backdrop-filter: blur(12px) saturate(150%) brightness(1.05);
+    -webkit-backdrop-filter: blur(12px) saturate(150%) brightness(1.05);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.st-acrylic-dark {
+    background: linear-gradient(135deg,
+            rgba(0, 0, 0, 0.5) 0%,
+            rgba(0, 0, 0, 0.4) 50%,
+            rgba(0, 0, 0, 0.45) 100%);
+    backdrop-filter: blur(25px) saturate(180%) brightness(0.85);
+    -webkit-backdrop-filter: blur(25px) saturate(180%) brightness(0.85);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+    color: white;
+}
+
+.st-acrylic-success {
+    background: linear-gradient(135deg,
+            rgba(39, 174, 96, 0.5) 0%,
+            rgba(46, 204, 113, 0.45) 100%);
+    backdrop-filter: blur(20px) saturate(180%) brightness(1.1);
+    -webkit-backdrop-filter: blur(20px) saturate(180%) brightness(1.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px rgba(39, 174, 96, 0.3);
+    color: white;
+}

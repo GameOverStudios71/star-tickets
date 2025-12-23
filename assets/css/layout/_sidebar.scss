@@ -1,0 +1,22 @@
+/* Admin Sidebar Links */
+.st-admin-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 15px;
+    border-radius: var(--st-radius-md);
+    color: rgba(255, 255, 255, 0.9);
+    text-decoration: none;
+    transition: all var(--st-transition-fast);
+    background: transparent;
+}
+
+.st-admin-link:hover {
+    background: rgba(var(--st-acrylic-base-color), 0.3);
+    transform: translateX(5px);
+}
+
+.st-admin-link.active {
+    background: rgba(var(--st-acrylic-base-color), 0.4);
+    border-left: 3px solid var(--st-color-success);
+}

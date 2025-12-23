@@ -1,0 +1,93 @@
+:root {
+    /* ==================== CORES ==================== */
+    --st-color-primary: #2c3e50;
+    --st-color-primary-light: #34495e;
+    --st-color-primary-dark: #1a252f;
+
+    --st-color-accent: #e74c3c;
+    --st-color-accent-dark: #c0392b;
+
+    --st-color-success: #27ae60;
+    --st-color-success-light: #2ecc71;
+    --st-color-warning: #f39c12;
+    --st-color-info: #3498db;
+    --st-color-danger: #e74c3c;
+
+    /* ==================== EFEITO ACRÍLICO ==================== */
+    --st-acrylic-base-color: 190, 190, 190;
+    --st-acrylic-opacity: 0.1;
+    --st-acrylic-opacity-hover: 0.15;
+    --st-acrylic-opacity-strong: 0.2;
+    --st-acrylic-blur: 20px;
+    --st-acrylic-blur-strong: 30px;
+    --st-acrylic-saturate: 180%;
+    --st-acrylic-brightness: 1.1;
+
+    /* Glass variables */
+    --st-glass-bg: rgba(var(--st-acrylic-base-color), var(--st-acrylic-opacity));
+    --st-glass-bg-strong: rgba(var(--st-acrylic-base-color), var(--st-acrylic-opacity-strong));
+    --st-glass-bg-dark: rgba(0, 0, 0, 0.3);
+    --st-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+
+    /* ==================== TYPOGRAPHY ==================== */
+    --st-font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
+
+    /* Text Colors - Standardized */
+    --st-text-title: #FFFFFF;
+    --st-text-subtitle: #E5E7EB;
+    /* Gray 200 */
+    --st-text-body: #D1D5DB;
+    /* Gray 300 */
+    --st-text-muted: #9CA3AF;
+    /* Gray 400 */
+    --st-text-table-header: #E5E7EB;
+    --st-text-link: #60A5FA;
+    /* Blue 400 */
+    --st-text-hover: #FFFFFF;
+    --st-text-inverse: #374151;
+    /* Gray 700 */
+
+    /* ==================== TABLE COLORS ==================== */
+    --st-table-bg-odd: rgba(0, 0, 0, 0.2);
+    --st-table-bg-even: rgba(255, 255, 255, 0.05);
+    --st-table-bg-hover: rgba(255, 255, 255, 0.15);
+
+    /* ==================== BADGE COLORS ==================== */
+    --st-badge-code-bg: #f1c40f;
+    /* Yellow */
+    --st-badge-code-text: #1f2937;
+    --st-badge-success-bg: #27ae60;
+    /* Green */
+    --st-badge-success-text: #ffffff;
+    --st-badge-error-bg: #e74c3c;
+    /* Red */
+    --st-badge-error-text: #ffffff;
+
+    /* ==================== LAYOUT ==================== */
+    --st-header-height: 80px;
+    --st-container-max-width: 1200px;
+
+    /* ==================== SPACING ==================== */
+    --st-spacing-xs: 0.25rem;
+    --st-spacing-sm: 0.5rem;
+    --st-spacing-md: 1rem;
+    --st-spacing-lg: 1.5rem;
+    --st-spacing-xl: 2rem;
+
+    /* ==================== RADIUS ==================== */
+    --st-radius-sm: 4px;
+    --st-radius-md: 8px;
+    --st-radius-lg: 12px;
+    --st-radius-xl: 16px;
+    --st-radius-full: 50px;
+
+    /* ==================== SHADOWS ==================== */
+    --st-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --st-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --st-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+    --st-shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.15);
+
+    /* ==================== TRANSITIONS ==================== */
+    --st-transition-fast: 0.15s ease;
+    --st-transition-normal: 0.3s ease;
+}

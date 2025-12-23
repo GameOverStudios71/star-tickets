@@ -1,0 +1,39 @@
+/* ================================================================
+   BASE STYLES
+   ================================================================ */
+
+.st-app {
+    font-family: var(--st-font-family);
+    min-height: 100vh;
+}
+
+.st-app.has-background {
+    background-image: url('/images/background.jpg');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-color: #000;
+}
+
+/* ================================================================
+   SCROLLBAR (Webkit)
+   ================================================================ */
+
+.st-app::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+}
+
+.st-app::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 2px;
+}
+
+.st-app::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: 2px;
+}
+
+.st-app::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.8);
+}

@@ -1,0 +1,95 @@
+/* ================================================================
+   BUTTONS
+   ================================================================ */
+
+.st-btn {
+    background: linear-gradient(135deg, rgba(39, 174, 96, 0.8) 0%, rgba(46, 204, 113, 0.8) 100%);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: var(--st-spacing-sm) var(--st-spacing-lg);
+    border-radius: var(--st-radius-md);
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 500;
+    transition: all var(--st-transition-normal);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--st-spacing-sm);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.st-btn:hover {
+    background: linear-gradient(135deg, rgba(39, 174, 96, 1) 0%, rgba(46, 204, 113, 1) 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(39, 174, 96, 0.3);
+}
+
+.st-btn-accent {
+    background: linear-gradient(135deg, rgba(231, 76, 60, 0.8) 0%, rgba(192, 57, 43, 0.8) 100%);
+}
+
+.st-btn-accent:hover {
+    background: linear-gradient(135deg, rgba(231, 76, 60, 1) 0%, rgba(192, 57, 43, 1) 100%);
+    box-shadow: 0 6px 12px rgba(231, 76, 60, 0.3);
+}
+
+.st-btn-acrylic {
+    background: linear-gradient(135deg,
+            rgba(var(--st-acrylic-base-color), 0.5) 0%,
+            rgba(var(--st-acrylic-base-color), 0.45) 100%);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(var(--st-acrylic-base-color), 0.4);
+}
+
+.st-btn-acrylic:hover {
+    background: linear-gradient(135deg,
+            rgba(var(--st-acrylic-base-color), 0.6) 0%,
+            rgba(var(--st-acrylic-base-color), 0.55) 100%);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+}
+
+.st-btn-large {
+    padding: var(--st-spacing-lg) var(--st-spacing-xl);
+    font-size: 1.2rem;
+}
+
+.st-logout-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: all 0.2s;
+}
+
+.st-logout-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+.st-btn-small {
+    padding: var(--st-spacing-xs) var(--st-spacing-md);
+    font-size: 0.875rem;
+}
+
+.st-btn-premium {
+    @extend .st-btn;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
+    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    background-size: 200% auto;
+    animation: gradientMove 3s ease infinite;
+
+    &:hover {
+        background-position: right center;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(139, 92, 246, 0.6);
+    }
+}
