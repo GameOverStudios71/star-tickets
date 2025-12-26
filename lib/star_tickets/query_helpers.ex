@@ -13,15 +13,32 @@ defmodule StarTickets.QueryHelpers do
 
       iex> query |> paginate(1, 20)
   """
+  def paginate(query, params) when is_map(params) do
+    page = to_int(params["page"] || 1)
+    per_page = to_int(params["page_size"] || @default_per_page)
+    paginate(query, page, per_page)
+  end
+
   def paginate(query, page, per_page \\ @default_per_page) do
-    page = max(page, 1)
-    per_page = max(per_page, 1)
+    page = to_int(page) |> max(1)
+    per_page = to_int(per_page) |> max(1)
     offset = (page - 1) * per_page
 
     query
     |> limit(^per_page)
     |> offset(^offset)
   end
+
+  defp to_int(val) when is_integer(val), do: val
+
+  defp to_int(val) when is_binary(val) do
+    case Integer.parse(val) do
+      {i, _} -> i
+      :error -> 1
+    end
+  end
+
+  defp to_int(_), do: 1
 
   @doc """
   Retorna dados paginados com metadados.

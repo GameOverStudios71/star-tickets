@@ -8,6 +8,7 @@ defmodule StarTickets.Accounts.Service do
     field(:duration, :integer)
 
     belongs_to(:client, StarTickets.Accounts.Client)
+    belongs_to(:form_template, StarTickets.Forms.FormTemplate)
 
     timestamps(type: :utc_datetime)
   end
@@ -15,7 +16,7 @@ defmodule StarTickets.Accounts.Service do
   @doc false
   def changeset(service, attrs) do
     service
-    |> cast(attrs, [:name, :duration, :client_id])
+    |> cast(attrs, [:name, :duration, :client_id, :form_template_id])
     |> validate_required([:name, :duration, :client_id])
     |> validate_number(:duration, greater_than: 0, message: "deve ser maior que zero")
     |> foreign_key_constraint(:client_id)

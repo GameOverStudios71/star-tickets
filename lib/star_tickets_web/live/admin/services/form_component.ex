@@ -2,6 +2,7 @@ defmodule StarTicketsWeb.Admin.Services.FormComponent do
   use StarTicketsWeb, :live_component
 
   alias StarTickets.Accounts
+  alias StarTickets.Forms
 
   @impl true
   def render(assigns) do
@@ -45,6 +46,8 @@ defmodule StarTicketsWeb.Admin.Services.FormComponent do
             <.input field={@form[:duration]} type="number" label="Duração (minutos)" placeholder="Ex: 30" required min="1" />
           </div>
 
+          <.input field={@form[:form_template_id]} type="select" label="Formulário de Atendimento (Opcional)" options={@templates} prompt="Selecione um formulário..." />
+
           <input type="hidden" name="service[client_id]" value={@client_id} />
         </div>
 
@@ -74,10 +77,13 @@ defmodule StarTicketsWeb.Admin.Services.FormComponent do
       (assigns[:current_user_scope] && assigns[:current_user_scope].user.client_id) ||
         service.client_id
 
+    templates = Forms.list_template_options(client_id) |> Enum.map(&{&1.name, &1.id})
+
     {:ok,
      socket
      |> assign(assigns)
      |> assign(:client_id, client_id)
+     |> assign(:templates, templates)
      |> assign_form(changeset)}
   end
 
