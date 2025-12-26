@@ -193,16 +193,16 @@ defmodule StarTicketsWeb.Components.AppLayout do
 
   def breadcrumb(assigns) do
     ~H"""
-    <nav class="st-text-subtitle text-sm">
-      <.link navigate="/dashboard" class="st-text-hover">
+    <nav class="st-text-subtitle text-sm flex items-center wrap">
+      <.link navigate="/dashboard" class="text-gray-400 hover:text-blue-300 hover:underline transition-colors flex items-center gap-1">
         <i class="fa-solid fa-house"></i> Home
       </.link>
       <%= for {item, index} <- Enum.with_index(@items) do %>
-        <span class="mx-2">/</span>
+        <span class="mx-2 text-gray-600">/</span>
         <%= if index == length(@items) - 1 do %>
-          <span class="st-text-title"><%= item.label %></span>
+          <span class="text-white font-semibold"><%= item.label %></span>
         <% else %>
-          <.link navigate={item.href} class="st-text-hover"><%= item.label %></.link>
+          <.link navigate={item.href} class="text-gray-400 hover:text-blue-300 hover:underline transition-colors"><%= item.label %></.link>
         <% end %>
       <% end %>
     </nav>
@@ -234,52 +234,6 @@ defmodule StarTicketsWeb.Components.AppLayout do
         <%= render_slot(@inner_block) %>
       </div>
     </div>
-    """
-  end
-
-  @doc """
-  Sidebar de administração com menu de navegação.
-  """
-  attr(:active, :string, default: nil)
-
-  def admin_sidebar(assigns) do
-    ~H"""
-    <aside class="st-acrylic" style="width: 220px; min-height: calc(100vh - 80px); padding: 20px; position: fixed; left: 0; top: 80px; bottom: 0;">
-      <h2 class="text-lg font-bold text-white mb-4 pb-2 border-b border-white/20">
-        <i class="fa-solid fa-gear"></i> Menu
-      </h2>
-      <nav class="space-y-1">
-        <a href="/admin/establishments" class={"st-admin-link #{if @active == "establishments", do: "active"}"}>
-          <i class="fa-solid fa-building fa-fw"></i>
-          <span>Estabelecimentos</span>
-        </a>
-
-        <a href="/admin/services" class={"st-admin-link #{if @active == "services", do: "active"}"}>
-          <i class="fa-solid fa-wrench fa-fw"></i>
-          <span>Serviços</span>
-        </a>
-
-        <a href="/admin/forms" class={"st-admin-link #{if @active == "forms", do: "active"}"}>
-          <i class="fa-solid fa-clipboard-list fa-fw"></i>
-          <span>Formulários</span>
-        </a>
-
-        <a href="/admin/rooms" class={"st-admin-link #{if @active == "rooms", do: "active"}"}>
-          <i class="fa-solid fa-door-open fa-fw"></i>
-          <span>Salas</span>
-        </a>
-
-        <a href="/admin/totems" class={"st-admin-link #{if @active == "totems", do: "active"}"}>
-          <i class="fa-solid fa-ticket fa-fw"></i>
-          <span>Totem</span>
-        </a>
-
-        <a href="/admin/users" class={"st-admin-link #{if @active == "users", do: "active"}"}>
-          <i class="fa-solid fa-users fa-fw"></i>
-          <span>Usuários</span>
-        </a>
-      </nav>
-    </aside>
     """
   end
 

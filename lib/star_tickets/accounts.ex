@@ -6,7 +6,7 @@ defmodule StarTickets.Accounts do
   import Ecto.Query, warn: false
   alias StarTickets.Repo
 
-  alias StarTickets.Accounts.{User, UserToken, UserNotifier, Establishment, Client}
+  alias StarTickets.Accounts.{User, UserToken, UserNotifier, Establishment, Client, Room}
 
   @doc """
   Gets a client by id.
@@ -653,5 +653,66 @@ defmodule StarTickets.Accounts do
 
   def change_service(%Service{} = service, attrs \\ %{}) do
     Service.changeset(service, attrs)
+  end
+
+  ## Rooms
+
+  def list_rooms(establishment_id, params \\ %{}) do
+    search_term = get_in(params, ["search"]) || ""
+
+    Room
+    |> where(establishment_id: ^establishment_id)
+    |> search_rooms(search_term)
+    |> preload(:services)
+    |> Repo.all()
+  end
+
+  defp search_rooms(query, ""), do: query
+
+  defp search_rooms(query, search_term) do
+    term = "%#{search_term}%"
+    where(query, [r], ilike(r.name, ^term))
+  end
+
+  def get_room!(id), do: Repo.get!(Room, id) |> Repo.preload(:services)
+
+  def create_room(attrs \\ %{}) do
+    %Room{}
+    |> Room.changeset(attrs)
+    |> put_room_services(attrs)
+    |> Repo.insert()
+  end
+
+  def update_room(%Room{} = room, attrs) do
+    room
+    |> Room.changeset(attrs)
+    |> put_room_services(attrs)
+    |> Repo.update()
+  end
+
+  def delete_room(%Room{} = room) do
+    Repo.delete(room)
+  end
+
+  def change_room(%Room{} = room, attrs \\ %{}) do
+    Room.changeset(room, attrs)
+  end
+
+  defp put_room_services(changeset, attrs) do
+    ids = attrs["service_ids"] || []
+
+    if Enum.empty?(ids) do
+      Ecto.Changeset.add_error(changeset, :services, "Selecione pelo menos um serviço.")
+    else
+      # Convert ids to integers safely
+      ids =
+        Enum.map(ids, fn
+          id when is_binary(id) -> String.to_integer(id)
+          id -> id
+        end)
+
+      services = Repo.all(from(s in Service, where: s.id in ^ids))
+      Ecto.Changeset.put_assoc(changeset, :services, services)
+    end
   end
 end
