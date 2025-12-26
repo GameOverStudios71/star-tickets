@@ -6,7 +6,7 @@ defmodule StarTickets.Accounts do
   import Ecto.Query, warn: false
   alias StarTickets.Repo
 
-  alias StarTickets.Accounts.{User, UserToken, UserNotifier, Establishment, Client, Room}
+  alias StarTickets.Accounts.{User, UserToken, UserNotifier, Establishment, Client, Room, TV}
 
   @doc """
   Gets a client by id.
@@ -713,6 +713,146 @@ defmodule StarTickets.Accounts do
 
       services = Repo.all(from(s in Service, where: s.id in ^ids))
       Ecto.Changeset.put_assoc(changeset, :services, services)
+    end
+  end
+
+  ## TVs
+
+  def list_tvs(establishment_id, params \\ %{}) do
+    search_term = get_in(params, ["search"]) || ""
+
+    TV
+    |> where(establishment_id: ^establishment_id)
+    |> search_tvs(search_term)
+    |> preload([:services, :user])
+    |> Repo.all()
+  end
+
+  defp search_tvs(query, ""), do: query
+
+  defp search_tvs(query, search_term) do
+    term = "%#{search_term}%"
+    where(query, [t], ilike(t.name, ^term))
+  end
+
+  def get_tv!(id), do: Repo.get!(TV, id) |> Repo.preload([:services, :user])
+
+  def create_tv(attrs \\ %{}) do
+    Repo.transaction(fn ->
+      establishment =
+        get_establishment!(attrs["establishment_id"] || attrs[:establishment_id])
+        |> Repo.preload(:client)
+
+      # Generate username: client.estab.tv.slug
+      slug_name =
+        (attrs["name"] || "tv")
+        |> String.normalize(:nfd)
+        |> String.replace(~r/\p{Mn}/u, "")
+        |> String.downcase()
+        |> String.replace(~r/[^a-z0-9]/, "_")
+
+      username =
+        "#{establishment.client.slug}.#{establishment.code}.tv.#{slug_name}" |> String.downcase()
+
+      # Default password if not provided (should be provided in form)
+      password = attrs["password"] || "star123"
+      email = "#{username}@star-tickets.local"
+
+      # Create User
+      user_params = %{
+        "name" => attrs["name"],
+        "username" => username,
+        "email" => email,
+        "password" => password,
+        "role" => "tv",
+        "client_id" => establishment.client_id,
+        "establishment_id" => establishment.id
+      }
+
+      user =
+        %User{}
+        |> User.admin_create_changeset(user_params)
+        |> Repo.insert()
+        |> case do
+          {:ok, user} -> user
+          {:error, changeset} -> Repo.rollback(changeset)
+        end
+
+      # Create TV
+      tv_params = Map.put(attrs, "user_id", user.id)
+
+      tv =
+        %TV{}
+        |> TV.changeset(tv_params)
+        |> put_tv_services(attrs)
+        |> Repo.insert()
+
+      case tv do
+        {:ok, tv} -> tv
+        {:error, changeset} -> Repo.rollback(changeset)
+      end
+    end)
+  end
+
+  def update_tv(%TV{} = tv, attrs) do
+    tv
+    |> TV.changeset(attrs)
+    |> put_tv_services(attrs)
+    |> Repo.update()
+  end
+
+  def delete_tv(%TV{} = tv) do
+    # Deleting the user should cascade delete the TV?
+    # Migration says: user_id references users on_delete: :delete_all
+    # So if we delete user, TV goes.
+    # But usually we delete TV. If we delete TV, User remains? Admin might want to keep user?
+    # Requirement: "Sistema deve gerar automaticamente um usuário". Implicitly, this user is dedicated to this TV.
+    # If TV is deleted, User should probably be deleted to avoid orphans.
+    Repo.transaction(fn ->
+      # Delete TV first? Or User first?
+      Repo.delete(tv)
+      # If I delete TV, User remains.
+      # Delete user. This creates a race/FK issue?
+      Repo.delete(tv.user)
+      # If TV references User (on_delete: delete_all of TV), deleting User deletes TV.
+      # So deleting User is enough.
+    end)
+
+    Repo.delete(tv.user)
+  end
+
+  def change_tv(%TV{} = tv, attrs \\ %{}) do
+    TV.changeset(tv, attrs)
+  end
+
+  defp put_tv_services(changeset, attrs) do
+    all_services = Ecto.Changeset.get_field(changeset, :all_services, false)
+    ids = attrs["service_ids"] || []
+
+    cond do
+      all_services ->
+        # If "All Services" is checked, we clear specific associations.
+        # This implies "Dynamic All".
+        Ecto.Changeset.put_assoc(changeset, :services, [])
+
+      Enum.empty?(ids) ->
+        # If "All Services" is NOT checked, we MUST have specific services.
+        Ecto.Changeset.add_error(
+          changeset,
+          :services,
+          "Selecione pelo menos um serviço ou marque 'Todos'."
+        )
+
+      true ->
+        # Convert ids to integers safely
+        ids =
+          Enum.map(ids, fn
+            id when is_binary(id) -> String.to_integer(id)
+            id -> id
+          end)
+
+        services = Repo.all(from(s in Service, where: s.id in ^ids))
+        Ecto.Changeset.put_assoc(changeset, :services, services)
     end
   end
 end

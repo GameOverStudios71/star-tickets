@@ -68,6 +68,12 @@ defmodule StarTicketsWeb.AdminLive do
               <p>Configuração dos terminais</p>
             </.link>
 
+            <.link navigate={~p"/admin/tvs"} class="st-card st-nav-card">
+              <span class="st-icon">📺</span>
+              <h2>TVs</h2>
+              <p>Configuração dos painéis</p>
+            </.link>
+
             <.link navigate={~p"/admin/users"} class="st-card st-nav-card">
               <span class="st-icon">👥</span>
               <h2>Usuários</h2>
