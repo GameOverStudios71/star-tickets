@@ -22,7 +22,6 @@ defmodule StarTicketsWeb.TvLive do
         </.page_header>
       </div>
 
-      <.app_footer />
     </div>
     """
   end

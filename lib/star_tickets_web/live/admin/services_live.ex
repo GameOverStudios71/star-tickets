@@ -192,7 +192,6 @@ defmodule StarTicketsWeb.Admin.ServicesLive do
         </.page_header>
       </div>
 
-      <.app_footer />
 
       <%= if @live_action in [:new, :edit] do %>
         <.modal id="service-modal" show on_cancel={JS.patch(~p"/admin/services")} transparent={true}>

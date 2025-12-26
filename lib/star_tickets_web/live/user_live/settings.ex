@@ -140,7 +140,6 @@ defmodule StarTicketsWeb.UserLive.Settings do
         </div>
       </div>
 
-      <.app_footer />
     </div>
     """
   end

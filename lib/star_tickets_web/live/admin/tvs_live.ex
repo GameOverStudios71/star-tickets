@@ -203,7 +203,6 @@ defmodule StarTicketsWeb.Admin.TVsLive do
         </.page_header>
       </div>
 
-      <.app_footer />
 
       <.modal :if={@show_confirm_modal} id="confirm-modal" show={@show_confirm_modal} transparent={true} on_cancel={JS.push("cancel_delete")}>
         <div class="st-modal-confirm">

@@ -15,7 +15,7 @@
     box-sizing: border-box;
     z-index: 1000;
 
-    background: rgba(var(--st-acrylic-base-color), 0.1);
+    background: rgba(0, 0, 0, 0.2);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border-bottom: 1px solid rgba(var(--st-acrylic-base-color), 0.2);

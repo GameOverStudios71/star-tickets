@@ -208,7 +208,6 @@ defmodule StarTicketsWeb.Admin.FormsLive do
         />
       </div>
 
-      <.app_footer />
 
       <%= if @live_action in [:new, :edit] do %>
         <.modal id="form-template-modal" show on_cancel={JS.patch(~p"/admin/forms")} transparent={true}>

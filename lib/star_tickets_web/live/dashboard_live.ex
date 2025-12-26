@@ -119,7 +119,6 @@ defmodule StarTicketsWeb.DashboardLive do
         </div>
       </div>
 
-      <.app_footer />
     </div>
     """
   end

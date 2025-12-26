@@ -145,7 +145,6 @@ defmodule StarTicketsWeb.Admin.FormBuilderLive do
         </div>
       </div>
 
-      <.app_footer />
 
       <%= if @active_field do %>
         <.modal id="field-editor-modal" show on_cancel={JS.push("cancel_edit")} transparent={true}>

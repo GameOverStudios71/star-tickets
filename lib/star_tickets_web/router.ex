@@ -74,6 +74,7 @@ defmodule StarTicketsWeb.Router do
       live("/admin/establishments", Admin.EstablishmentsLive, :index)
       live("/admin/establishments/new", Admin.EstablishmentsLive, :new)
       live("/admin/establishments/:id/edit", Admin.EstablishmentsLive, :edit)
+      live("/admin/establishments/:establishment_id/menus", Admin.TotemMenusLive, :index)
 
       live("/admin/services", Admin.ServicesLive, :index)
       live("/admin/services/new", Admin.ServicesLive, :new)

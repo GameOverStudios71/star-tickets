@@ -16,24 +16,31 @@
 }
 
 /* ================================================================
-   SCROLLBAR (Webkit)
+   SCROLLBAR (Webkit) - Global
    ================================================================ */
 
-.st-app::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
+*::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
 }
 
-.st-app::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 2px;
+*::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.9);
+    border-radius: 3px;
 }
 
-.st-app::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.6);
-    border-radius: 2px;
+*::-webkit-scrollbar-thumb {
+    background: rgba(249, 115, 22, 0.5);
+    /* Orange color to match theme */
+    border-radius: 3px;
 }
 
-.st-app::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.8);
+*::-webkit-scrollbar-thumb:hover {
+    background: rgba(249, 115, 22, 0.8);
+}
+
+/* Firefox scrollbar */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(249, 115, 22, 0.5) rgba(0, 0, 0, 0.9);
 }

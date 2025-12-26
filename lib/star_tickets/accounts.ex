@@ -6,7 +6,17 @@ defmodule StarTickets.Accounts do
   import Ecto.Query, warn: false
   alias StarTickets.Repo
 
-  alias StarTickets.Accounts.{User, UserToken, UserNotifier, Establishment, Client, Room, TV}
+  alias StarTickets.Accounts.{
+    User,
+    UserToken,
+    UserNotifier,
+    Establishment,
+    Client,
+    Room,
+    TV,
+    TotemMenu,
+    TotemMenuService
+  }
 
   @doc """
   Gets a client by id.
@@ -590,6 +600,16 @@ defmodule StarTickets.Accounts do
   @doc """
   Returns the list of services.
   """
+  def list_establishment_services(establishment_id) do
+    Repo.all(
+      from(s in Service,
+        join: e in StarTickets.Accounts.Establishment,
+        on: e.client_id == s.client_id,
+        where: e.id == ^establishment_id
+      )
+    )
+  end
+
   def list_services(params \\ %{}) do
     search_term = get_in(params, ["search"]) || ""
     page = String.to_integer(get_in(params, ["page"]) || "1")
@@ -855,4 +875,113 @@ defmodule StarTickets.Accounts do
         Ecto.Changeset.put_assoc(changeset, :services, services)
     end
   end
+
+  def list_totem_menus(establishment_id) do
+    TotemMenu
+    |> where([m], m.establishment_id == ^establishment_id)
+    |> order_by([m], asc: m.position, asc: m.inserted_at)
+    |> Repo.all()
+    |> Repo.preload(totem_menu_services: :service)
+  end
+
+  def get_totem_menu!(id),
+    do: Repo.get!(TotemMenu, id) |> Repo.preload([:children, totem_menu_services: :service])
+
+  def create_totem_menu(attrs \\ %{}) do
+    %TotemMenu{}
+    |> TotemMenu.changeset(attrs)
+    |> put_totem_menu_services(attrs)
+    |> Repo.insert()
+  end
+
+  def update_totem_menu(%TotemMenu{} = menu, attrs) do
+    menu
+    |> TotemMenu.changeset(attrs)
+    |> put_totem_menu_services(attrs)
+    |> Repo.update()
+  end
+
+  def delete_totem_menu(%TotemMenu{} = menu) do
+    Repo.delete(menu)
+  end
+
+  def change_totem_menu(%TotemMenu{} = menu, attrs \\ %{}) do
+    TotemMenu.changeset(menu, attrs)
+  end
+
+  def move_totem_menu(menu_id, direction) when direction in [:up, :down] do
+    menu = get_totem_menu!(menu_id)
+
+    # Fetch siblings
+    siblings =
+      TotemMenu
+      |> where(establishment_id: ^menu.establishment_id)
+      |> where(
+        [m],
+        m.parent_id == ^menu.parent_id or (is_nil(m.parent_id) and is_nil(^menu.parent_id))
+      )
+      |> order_by([m], asc: m.position, asc: m.inserted_at)
+      |> Repo.all()
+
+    # Find index
+    index = Enum.find_index(siblings, &(&1.id == menu.id))
+
+    case {direction, index} do
+      {:up, i} when i > 0 ->
+        swap_and_update(siblings, i, i - 1)
+
+      {:down, i} when i < length(siblings) - 1 ->
+        swap_and_update(siblings, i, i + 1)
+
+      _ ->
+        {:error, :cannot_move}
+    end
+  end
+
+  defp swap_and_update(siblings, idx_a, idx_b) do
+    # Create new list with swapped elements
+    {a, b} = {Enum.at(siblings, idx_a), Enum.at(siblings, idx_b)}
+
+    siblings_updated =
+      siblings
+      |> List.replace_at(idx_a, b)
+      |> List.replace_at(idx_b, a)
+
+    # Update positions for ALL to normalize
+    Repo.transaction(fn ->
+      Enum.with_index(siblings_updated)
+      |> Enum.each(fn {item, idx} ->
+        item
+        |> TotemMenu.changeset(%{position: idx})
+        |> Repo.update!()
+      end)
+    end)
+  end
+
+  defp put_totem_menu_services(changeset, attrs) do
+    services_data = attrs["services_data"] || attrs[:services_data]
+
+    if services_data && is_list(services_data) do
+      # Create TotemMenuService structs from list
+      # Each item: %{service_id: x, description: "..", icon_class: ".."}
+      menu_services =
+        Enum.with_index(services_data)
+        |> Enum.map(fn {item, index} ->
+          %TotemMenuService{
+            service_id: parse_id(item["service_id"] || item[:service_id]),
+            description: item["description"] || item[:description],
+            icon_class: item["icon_class"] || item[:icon_class],
+            position: index
+          }
+        end)
+
+      Ecto.Changeset.put_assoc(changeset, :totem_menu_services, menu_services)
+    else
+      changeset
+    end
+  end
+
+  defp parse_id(nil), do: nil
+  defp parse_id(id) when is_binary(id), do: String.to_integer(id)
+  defp parse_id(id) when is_integer(id), do: id
 end

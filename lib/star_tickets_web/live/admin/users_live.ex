@@ -230,7 +230,6 @@ defmodule StarTicketsWeb.Admin.UsersLive do
         </.modal>
       </div>
 
-      <.app_footer />
 
       <.modal :if={@live_action in [:new, :edit]} id="user-modal" transparent={true} show on_cancel={JS.patch(~p"/admin/users")}>
         <.live_component

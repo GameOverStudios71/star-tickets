@@ -39,7 +39,6 @@ defmodule StarTicketsWeb.ManagerLive do
         </.page_header>
       </div>
 
-      <.app_footer />
     </div>
     """
   end

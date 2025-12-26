@@ -214,7 +214,6 @@ defmodule StarTicketsWeb.Admin.EstablishmentsLive do
         </.modal>
       </div>
 
-      <.app_footer />
 
       <.modal :if={@live_action in [:new, :edit]} id="establishment-modal" transparent={true} show on_cancel={JS.patch(~p"/admin/establishments")}>
         <.live_component
