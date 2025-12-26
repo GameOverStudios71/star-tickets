@@ -51,14 +51,26 @@ defmodule StarTicketsWeb.Router do
   scope "/", StarTicketsWeb do
     pipe_through([:browser, :require_authenticated_user])
 
-    live_session :require_authenticated_user,
-      on_mount: [{StarTicketsWeb.UserAuth, :require_authenticated}] do
+    # Impersonation routes (admin/manager only, validated in controller)
+    post("/impersonate", ImpersonationController, :create)
+    delete("/impersonate", ImpersonationController, :delete)
+    post("/select-establishment", ImpersonationController, :select_establishment)
+
+    # Dashboard - all human users (admin, manager, reception, professional)
+    live_session :dashboard_access,
+      on_mount: [
+        {StarTicketsWeb.UserAuth, :require_authenticated},
+        {StarTicketsWeb.UserAuth, :require_dashboard}
+      ] do
       live("/dashboard", DashboardLive, :index)
-      live("/totem", TotemLive, :index)
-      live("/manager", ManagerLive, :index)
-      live("/reception", ReceptionLive, :index)
-      live("/tv", TvLive, :index)
-      live("/professional", ProfessionalLive, :index)
+    end
+
+    # Admin routes - admin only
+    live_session :admin_only,
+      on_mount: [
+        {StarTicketsWeb.UserAuth, :require_authenticated},
+        {StarTicketsWeb.UserAuth, :require_admin}
+      ] do
       live("/admin", AdminLive, :index)
       live("/admin/establishments", Admin.EstablishmentsLive, :index)
       live("/admin/establishments/new", Admin.EstablishmentsLive, :new)
@@ -68,6 +80,58 @@ defmodule StarTicketsWeb.Router do
       live("/admin/rooms", Admin.RoomsLive, :index)
       live("/admin/totems", Admin.TotemsLive, :index)
       live("/admin/users", Admin.UsersLive, :index)
+      live("/admin/users/new", Admin.UsersLive, :new)
+      live("/admin/users/:id/edit", Admin.UsersLive, :edit)
+    end
+
+    # Manager routes
+    live_session :manager_access,
+      on_mount: [
+        {StarTicketsWeb.UserAuth, :require_authenticated},
+        {StarTicketsWeb.UserAuth, :require_manager}
+      ] do
+      live("/manager", ManagerLive, :index)
+    end
+
+    # Reception routes
+    live_session :reception_access,
+      on_mount: [
+        {StarTicketsWeb.UserAuth, :require_authenticated},
+        {StarTicketsWeb.UserAuth, :require_reception}
+      ] do
+      live("/reception", ReceptionLive, :index)
+    end
+
+    # Professional routes
+    live_session :professional_access,
+      on_mount: [
+        {StarTicketsWeb.UserAuth, :require_authenticated},
+        {StarTicketsWeb.UserAuth, :require_professional}
+      ] do
+      live("/professional", ProfessionalLive, :index)
+    end
+
+    # TV Panel routes
+    live_session :tv_access,
+      on_mount: [
+        {StarTicketsWeb.UserAuth, :require_authenticated},
+        {StarTicketsWeb.UserAuth, :require_tv}
+      ] do
+      live("/tv", TvLive, :index)
+    end
+
+    # Totem routes
+    live_session :totem_access,
+      on_mount: [
+        {StarTicketsWeb.UserAuth, :require_authenticated},
+        {StarTicketsWeb.UserAuth, :require_totem}
+      ] do
+      live("/totem", TotemLive, :index)
+    end
+
+    # User settings - any authenticated user
+    live_session :user_settings,
+      on_mount: [{StarTicketsWeb.UserAuth, :require_authenticated}] do
       live("/users/settings", UserLive.Settings, :edit)
       live("/users/settings/confirm-email/:token", UserLive.Settings, :confirm_email)
     end

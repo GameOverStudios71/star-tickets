@@ -91,7 +91,7 @@ defmodule StarTicketsWeb.AdminComponents do
 
   def search_bar(assigns) do
     ~H"""
-    <form phx-change={@on_search} phx-submit={@on_search} class="form-control w-full max-w-xs">
+    <form phx-change={@on_search} phx-submit={@on_search} class="form-control w-full max-w-xs opacity-85">
       <div class="input-group">
         <input
           type="text"

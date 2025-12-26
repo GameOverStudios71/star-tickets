@@ -47,10 +47,17 @@ defmodule StarTickets.Accounts.User do
       |> validate_length(:email, max: 160)
 
     if Keyword.get(opts, :validate_unique, true) do
-      changeset
-      |> unsafe_validate_unique(:email, StarTickets.Repo)
-      |> unique_constraint(:email)
-      |> validate_email_changed()
+      changeset =
+        changeset
+        |> unsafe_validate_unique(:email, StarTickets.Repo)
+        |> unique_constraint(:email)
+
+      # Skip "did not change" check for admin updates
+      if Keyword.get(opts, :skip_email_changed_check, false) do
+        changeset
+      else
+        validate_email_changed(changeset)
+      end
     else
       changeset
     end
@@ -137,4 +144,37 @@ defmodule StarTickets.Accounts.User do
     Bcrypt.no_user_verify()
     false
   end
+
+  @doc """
+  A user changeset for admin creation.
+  """
+  def admin_create_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:name, :username, :email, :password, :role, :client_id, :establishment_id])
+    |> validate_required([:name, :username, :email, :password, :role, :client_id])
+    |> validate_email([])
+    |> validate_password([])
+    |> validate_inclusion(:role, ~w(reception professional manager tv totem admin))
+    |> foreign_key_constraint(:client_id)
+    |> foreign_key_constraint(:establishment_id)
+  end
+
+  @doc """
+  A user changeset for admin update.
+  """
+  def admin_update_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:name, :username, :email, :password, :role, :client_id, :establishment_id])
+    |> validate_required([:name, :username, :email, :role, :client_id])
+    |> validate_email(skip_email_changed_check: true)
+    |> validate_inclusion(:role, ~w(reception professional manager tv totem admin))
+    |> foreign_key_constraint(:client_id)
+    |> foreign_key_constraint(:establishment_id)
+    |> case do
+      %{changes: %{password: _}} = changeset -> validate_password(changeset, [])
+      changeset -> changeset
+    end
+  end
+
+  def roles, do: ~w(reception professional manager tv totem admin)
 end

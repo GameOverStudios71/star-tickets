@@ -49,7 +49,7 @@ defmodule StarTicketsWeb.UserLive.Login do
           <div class="st-form-group">
             <label>Email ou Nome de Usuário</label>
             <input
-              readonly={!!@current_scope}
+              readonly={@is_sudo_mode}
               type="text"
               name={f[:login].name}
               value={f[:login].value}
@@ -101,13 +101,15 @@ defmodule StarTicketsWeb.UserLive.Login do
 
   @impl true
   def mount(_params, _session, socket) do
-    login =
-      Phoenix.Flash.get(socket.assigns.flash, :login) ||
-        get_in(socket.assigns, [:current_scope, Access.key(:user), Access.key(:email)])
-
-    form = to_form(%{"login" => login}, as: "user")
-
-    {:ok, assign(socket, form: form, trigger_submit: false)}
+    # If user is already authenticated, redirect to dashboard
+    if socket.assigns.current_scope && socket.assigns.current_scope.user do
+      {:ok, push_navigate(socket, to: ~p"/dashboard")}
+    else
+      # Normal login: only use flash value (from failed login attempt)
+      login = Phoenix.Flash.get(socket.assigns.flash, :login)
+      form = to_form(%{"login" => login}, as: "user")
+      {:ok, assign(socket, form: form, trigger_submit: false, is_sudo_mode: false)}
+    end
   end
 
   @impl true

@@ -18,6 +18,7 @@ defmodule StarTicketsWeb.TvLive do
             %{label: "Painel TV"}
           ]}
         >
+        <hr class="my-6 border-white/500 opacity-40 border-dashed" />
         </.page_header>
       </div>
 

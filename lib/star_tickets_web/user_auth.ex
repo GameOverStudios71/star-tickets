@@ -56,19 +56,38 @@ defmodule StarTicketsWeb.UserAuth do
     conn
     |> renew_session(nil)
     |> delete_resp_cookie(@remember_me_cookie)
-    |> redirect(to: ~p"/")
+    |> redirect(to: ~p"/users/log-in")
   end
 
   @doc """
   Authenticates the user by looking into the session and remember me token.
 
   Will reissue the session token if it is older than the configured age.
+  Also checks for impersonation session to support admin/manager user switching.
   """
   def fetch_current_scope_for_user(conn, _opts) do
     with {token, conn} <- ensure_user_token(conn),
          {user, token_inserted_at} <- Accounts.get_user_by_session_token(token) do
+      # Check for impersonation
+      scope =
+        case get_session(conn, :impersonated_user_id) do
+          nil ->
+            Scope.for_user(user)
+
+          impersonated_user_id ->
+            case Accounts.get_user(impersonated_user_id) do
+              nil ->
+                # Invalid impersonation, clear it
+                Scope.for_user(user)
+
+              impersonated_user ->
+                # Valid impersonation
+                Scope.for_impersonation(user, impersonated_user)
+            end
+        end
+
       conn
-      |> assign(:current_scope, Scope.for_user(user))
+      |> assign(:current_scope, scope)
       |> maybe_reissue_user_session_token(user, token_inserted_at)
     else
       nil -> assign(conn, :current_scope, Scope.for_user(nil))
@@ -245,6 +264,93 @@ defmodule StarTicketsWeb.UserAuth do
     end
   end
 
+  # Role-based access control hooks
+  alias StarTicketsWeb.Authorization
+
+  @doc """
+  Requires the user to have admin role.
+  Use in live_session for /admin/* routes.
+  """
+  def on_mount(:require_admin, _params, session, socket) do
+    socket = mount_current_scope(socket, session)
+    check_role_access(socket, :admin)
+  end
+
+  @doc """
+  Requires the user to have dashboard access.
+  Allows admin, manager, reception, and professional roles.
+  """
+  def on_mount(:require_dashboard, _params, session, socket) do
+    socket = mount_current_scope(socket, session)
+    check_role_access(socket, :dashboard)
+  end
+
+  @doc """
+  Requires the user to have manager or admin role.
+  """
+  def on_mount(:require_manager, _params, session, socket) do
+    socket = mount_current_scope(socket, session)
+    check_role_access(socket, :manager)
+  end
+
+  @doc """
+  Requires the user to have reception access.
+  """
+  def on_mount(:require_reception, _params, session, socket) do
+    socket = mount_current_scope(socket, session)
+    check_role_access(socket, :reception)
+  end
+
+  @doc """
+  Requires the user to have professional access.
+  """
+  def on_mount(:require_professional, _params, session, socket) do
+    socket = mount_current_scope(socket, session)
+    check_role_access(socket, :professional)
+  end
+
+  @doc """
+  Requires the user to have TV panel access.
+  """
+  def on_mount(:require_tv, _params, session, socket) do
+    socket = mount_current_scope(socket, session)
+    check_role_access(socket, :tv)
+  end
+
+  @doc """
+  Requires the user to have totem access.
+  """
+  def on_mount(:require_totem, _params, session, socket) do
+    socket = mount_current_scope(socket, session)
+    check_role_access(socket, :totem)
+  end
+
+  defp check_role_access(socket, route_key) do
+    user = socket.assigns.current_scope && socket.assigns.current_scope.user
+
+    if user && Authorization.can_access?(user.role, route_key) do
+      {:cont, socket}
+    else
+      # Get the first route the user CAN access
+      redirect_path = get_default_path_for_role(user && user.role)
+
+      socket =
+        socket
+        |> Phoenix.LiveView.put_flash(:error, "Você não tem permissão para acessar esta página.")
+        |> Phoenix.LiveView.redirect(to: redirect_path)
+
+      {:halt, socket}
+    end
+  end
+
+  defp get_default_path_for_role("admin"), do: ~p"/dashboard"
+  defp get_default_path_for_role("manager"), do: ~p"/dashboard"
+  defp get_default_path_for_role("reception"), do: ~p"/reception"
+  defp get_default_path_for_role("professional"), do: ~p"/professional"
+  defp get_default_path_for_role("tv"), do: ~p"/tv"
+  defp get_default_path_for_role("totem"), do: ~p"/totem"
+  defp get_default_path_for_role(_), do: ~p"/users/log-in"
+
   defp mount_current_scope(socket, session) do
     Phoenix.Component.assign_new(socket, :current_scope, fn ->
       {user, _} =
@@ -252,17 +358,37 @@ defmodule StarTicketsWeb.UserAuth do
           Accounts.get_user_by_session_token(user_token)
         end || {nil, nil}
 
-      Scope.for_user(user)
+      if user do
+        # Check for impersonation in session
+        case session["impersonated_user_id"] do
+          nil ->
+            Scope.for_user(user)
+
+          impersonated_user_id ->
+            case Accounts.get_user(impersonated_user_id) do
+              nil ->
+                # Invalid impersonation, use normal user
+                Scope.for_user(user)
+
+              impersonated_user ->
+                # Valid impersonation
+                Scope.for_impersonation(user, impersonated_user)
+            end
+        end
+      else
+        Scope.for_user(nil)
+      end
     end)
   end
 
-  @doc "Returns the path to redirect to after log in."
-  # the user was already logged in, redirect to dashboard
-  def signed_in_path(%Plug.Conn{assigns: %{current_scope: %Scope{user: %Accounts.User{}}}}) do
-    ~p"/dashboard"
+  @doc "Returns the path to redirect to after log in based on user role."
+  def signed_in_path(%Plug.Conn{
+        assigns: %{current_scope: %Scope{user: %Accounts.User{role: role}}}
+      }) do
+    get_default_path_for_role(role)
   end
 
-  def signed_in_path(_), do: ~p"/dashboard"
+  def signed_in_path(_), do: ~p"/users/log-in"
 
   @doc """
   Plug for routes that require the user to be authenticated.

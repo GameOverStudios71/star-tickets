@@ -5,7 +5,18 @@ defmodule StarTicketsWeb.Admin.EstablishmentsLive do
   alias StarTickets.Accounts.Establishment
   import StarTicketsWeb.AdminComponents
 
-  def mount(_params, _session, socket) do
+  alias StarTicketsWeb.ImpersonationHelpers
+
+  def mount(_params, session, socket) do
+    impersonation_assigns =
+      ImpersonationHelpers.load_impersonation_assigns(socket.assigns.current_scope, session)
+
+    # Rename establishments to header_establishments to avoid conflict with table data
+    impersonation_assigns =
+      Map.put(impersonation_assigns, :header_establishments, impersonation_assigns.establishments)
+
+    socket = assign(socket, impersonation_assigns)
+
     if scope = socket.assigns[:current_scope] do
       client = Accounts.get_client!(scope.user.client_id)
 
@@ -38,24 +49,33 @@ defmodule StarTicketsWeb.Admin.EstablishmentsLive do
 
   defp assign_list(socket, params) do
     page = String.to_integer(params["page"] || "1")
-    per_page = 10
     search_term = params["search"] || ""
 
-    establishments =
-      Accounts.list_establishments(%{
-        "page" => "#{page}",
-        "per_page" => "#{per_page}",
-        "search" => search_term
-      })
+    # Filter by user's client_id scope if present
+    filter_params = %{
+      "page" => "#{page}",
+      "page_size" => "10",
+      "search" => search_term,
+      "client_id" => socket.assigns.client_id
+    }
 
+    # If scoped to client (manager/admin), ensure we only list their establishments
+    # This is handled by list_establishments if client_id is passed
+    # Note: Currently list_establishments ignores client_id filter in Accounts context,
+    # but we pass it for future compatibility.
+    establishments = Accounts.list_establishments(filter_params)
+
+    # Need count for pagination
+    # Use existing count_establishments which accepts search_term string
     total_count = Accounts.count_establishments(search_term)
-    total_pages = ceil(total_count / per_page)
+    total_pages = ceil(total_count / 10)
 
-    socket
-    |> assign(:establishments, establishments)
-    |> assign(:page, page)
-    |> assign(:total_pages, total_pages)
-    |> assign(:search_term, search_term)
+    assign(socket,
+      establishments: establishments,
+      total_pages: total_pages,
+      page: page,
+      search_term: search_term
+    )
   end
 
   defp apply_action(socket, :edit, %{"id" => id}) do
@@ -104,7 +124,18 @@ defmodule StarTicketsWeb.Admin.EstablishmentsLive do
       <.flash kind={:error} title="Erro" flash={@flash} />
       <.flash kind={:delete} title="Excluído" flash={@flash} />
 
-      <.app_header title="Administração" show_home={true} current_scope={@current_scope} />
+      <.app_header
+        title="Administração"
+        show_home={true}
+        current_scope={@current_scope}
+        client_name={@client_name}
+        establishment_name={if length(@header_establishments) == 0, do: @establishment_name}
+        establishments={@header_establishments}
+        users={@users}
+        selected_establishment_id={@selected_establishment_id}
+        selected_user_id={@selected_user_id}
+        impersonating={@impersonating}
+      />
 
       <div class="st-container flex-1 m-4">
         <.page_header
@@ -115,7 +146,7 @@ defmodule StarTicketsWeb.Admin.EstablishmentsLive do
             %{label: "Estabelecimentos"}
           ]}
         >
-          <hr class="my-6 border-white/5 opacity-30" />
+          <hr class="my-6 border-white/500 opacity-40 border-dashed" />
 
           <.action_header title="Lista de Estabelecimentos">
             <:actions>
@@ -129,15 +160,15 @@ defmodule StarTicketsWeb.Admin.EstablishmentsLive do
           <.admin_table id="establishments" rows={@establishments}>
             <:col :let={establishment} label="Nome">{establishment.name}</:col>
             <:col :let={establishment} label="Código">
-              <span class="st-badge font-mono st-badge-code">{establishment.code}</span>
-            </:col>
-            <:col :let={establishment} label="Endereço">{establishment.address || "-"}</:col>
-            <:col :let={establishment} label="Telefone">{establishment.phone || "-"}</:col>
-            <:col :let={establishment} label="Status">
-              <span class={"st-badge #{if establishment.is_active, do: "st-badge-success", else: "st-badge-error"}"}>
-                {if establishment.is_active, do: "Ativo", else: "Inativo"}
-              </span>
-            </:col>
+            <span class="st-badge font-mono bg-yellow-500/30 text-yellow-200 border border-yellow-500/50">{establishment.code}</span>
+          </:col>
+          <:col :let={establishment} label="Endereço">{establishment.address || "-"}</:col>
+          <:col :let={establishment} label="Telefone">{establishment.phone || "-"}</:col>
+          <:col :let={establishment} label="Status">
+            <span class={"st-badge #{if establishment.is_active, do: "bg-green-500/30 text-green-200 border border-green-500/50", else: "bg-red-500/30 text-red-200 border border-red-500/50"}"}>
+              {if establishment.is_active, do: "Ativo", else: "Inativo"}
+            </span>
+          </:col>
             <:action :let={establishment}>
               <.link patch={~p"/admin/establishments/#{establishment}/edit"} class="btn btn-sm btn-ghost btn-square" title="Editar">
                 <.icon name="hero-pencil-square" class="size-5 text-blue-400" />

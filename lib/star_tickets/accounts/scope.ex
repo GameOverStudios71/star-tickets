@@ -8,26 +8,44 @@ defmodule StarTickets.Accounts.Scope do
   such as "super user" or other privileges for use as authorization, or to
   ensure specific code paths can only be access for a given scope.
 
-  It is useful for logging as well as for scoping pubsub subscriptions and
-  broadcasts when a caller subscribes to an interface or performs a particular
-  action.
-
-  Feel free to extend the fields on this struct to fit the needs of
-  growing application requirements.
+  ## Impersonation Support
+  When an admin or manager impersonates another user:
+  - `user` contains the impersonated user (for permission checks)
+  - `real_user` contains the actual logged-in admin/manager (for audit logs)
   """
 
   alias StarTickets.Accounts.User
 
-  defstruct user: nil
+  defstruct user: nil, real_user: nil
 
   @doc """
   Creates a scope for the given user.
-
-  Returns nil if no user is given.
   """
   def for_user(%User{} = user) do
-    %__MODULE__{user: user}
+    %__MODULE__{user: user, real_user: nil}
   end
 
   def for_user(nil), do: nil
+
+  @doc """
+  Creates a scope for impersonation.
+  `real_user` is the admin/manager who is impersonating.
+  `impersonated_user` is the user being impersonated.
+  """
+  def for_impersonation(%User{} = real_user, %User{} = impersonated_user) do
+    %__MODULE__{user: impersonated_user, real_user: real_user}
+  end
+
+  @doc """
+  Returns true if the scope represents an impersonation session.
+  """
+  def impersonating?(%__MODULE__{real_user: real_user}) when not is_nil(real_user), do: true
+  def impersonating?(_), do: false
+
+  @doc """
+  Returns the real user (the one who logged in and is impersonating).
+  Returns nil if not impersonating.
+  """
+  def get_real_user(%__MODULE__{real_user: real_user}), do: real_user
+  def get_real_user(_), do: nil
 end

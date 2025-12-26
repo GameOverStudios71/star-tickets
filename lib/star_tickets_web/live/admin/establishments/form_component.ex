@@ -19,7 +19,7 @@ defmodule StarTicketsWeb.Admin.Establishments.FormComponent do
             </div>
           </div>
         </div>
-        <hr class="my-4 border-white/40" />
+        <hr class="my-4 border-white/40 border-dashed" />
       </.header>
 
       <.simple_form
@@ -80,9 +80,7 @@ defmodule StarTicketsWeb.Admin.Establishments.FormComponent do
           </div>
         </div>
 
-
-
-        <hr class="my-4 border-white/40" />
+        <hr class="my-4 border-white/40 border-dashed" />
 
         <:actions>
           <.link patch={@patch} class="btn btn-ghost text-white hover:bg-white/10 hover:shadow-none">Cancelar</.link>

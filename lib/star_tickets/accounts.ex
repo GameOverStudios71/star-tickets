@@ -88,6 +88,11 @@ defmodule StarTickets.Accounts do
   """
   def get_user!(id), do: Repo.get!(User, id)
 
+  @doc """
+  Gets a single user by ID. Returns nil if not found.
+  """
+  def get_user(id), do: Repo.get(User, id)
+
   ## User registration
 
   @doc """
@@ -446,4 +451,135 @@ defmodule StarTickets.Accounts do
   def change_establishment(%Establishment{} = establishment, attrs \\ %{}) do
     Establishment.changeset(establishment, attrs)
   end
+
+  ## Users (Admin)
+
+  @doc """
+  Returns the list of users.
+  """
+  def list_users(params \\ %{}) do
+    search_term = get_in(params, ["search"]) || ""
+    page = String.to_integer(get_in(params, ["page"]) || "1")
+    per_page = String.to_integer(get_in(params, ["per_page"]) || "10")
+    offset = (page - 1) * per_page
+    client_id = params["client_id"]
+    establishment_id = params["establishment_id"]
+
+    User
+    |> search_users(search_term)
+    |> filter_by_client(client_id)
+    |> filter_by_establishment(establishment_id)
+    |> order_by(desc: :inserted_at)
+    |> limit(^per_page)
+    |> offset(^offset)
+    |> preload([:client, :establishment])
+    |> Repo.all()
+  end
+
+  def count_users(params \\ %{}) do
+    search_term = get_in(params, ["search"]) || ""
+    client_id = params["client_id"]
+    establishment_id = params["establishment_id"]
+
+    User
+    |> search_users(search_term)
+    |> filter_by_client(client_id)
+    |> filter_by_establishment(establishment_id)
+    |> Repo.aggregate(:count, :id)
+  end
+
+  defp search_users(query, search_term) do
+    if search_term != "" do
+      term = "%#{search_term}%"
+      where(query, [u], ilike(u.name, ^term) or ilike(u.username, ^term) or ilike(u.email, ^term))
+    else
+      query
+    end
+  end
+
+  defp filter_by_client(query, nil), do: query
+  defp filter_by_client(query, client_id), do: where(query, [u], u.client_id == ^client_id)
+
+  defp filter_by_establishment(query, nil), do: query
+
+  defp filter_by_establishment(query, establishment_id),
+    do: where(query, [u], u.establishment_id == ^establishment_id)
+
+  def create_user(attrs \\ %{}) do
+    result =
+      %User{}
+      |> User.admin_create_changeset(attrs)
+      |> Repo.insert()
+
+    case result do
+      {:ok, user} ->
+        # Send welcome email asynchronously or synchronously?
+        # Typically sync is fine here, or via Task.
+        # Construct URL (assuming basic structure or passing it in?).
+        # Wait, deliver_welcome needs a URL.
+        # Ideally, we pass the login URL or confirmation URL.
+        # For simplicity, we'll send a mocked URL or handle it at the caller level?
+        # Caller (LiveView) knows the URL helper.
+        # But commonly context functions just do DB.
+        # "User requested system sends email".
+        # I'll return {:ok, user} and let the LiveView call the Notifier with the correct URL.
+        # OR I can do it here if I can generate the URL.
+        # Since I don't have the Endpoint/conn here easily without coupling, I will let the Controller/LiveView trigger the email.
+        {:ok, user}
+
+      error ->
+        error
+    end
+  end
+
+  def update_user(%User{} = user, attrs) do
+    user
+    |> User.admin_update_changeset(attrs)
+    |> Repo.update()
+  end
+
+  def delete_user(%User{} = user) do
+    Repo.delete(user)
+  end
+
+  def change_user(%User{} = user, attrs \\ %{}) do
+    if user.id do
+      User.admin_update_changeset(user, attrs)
+    else
+      User.admin_create_changeset(user, attrs)
+    end
+  end
+
+  ## Impersonation Helpers
+
+  @doc """
+  Returns a list of users for a given establishment (for dropdown selection).
+  Excludes the current user and only returns human-operable roles.
+  """
+  def list_users_for_dropdown(establishment_id)
+      when is_binary(establishment_id) or is_integer(establishment_id) do
+    User
+    |> where([u], u.establishment_id == ^establishment_id)
+    |> where([u], u.role in ["reception", "professional", "manager"])
+    |> order_by([u], asc: u.name)
+    |> select([u], %{id: u.id, name: u.name, role: u.role})
+    |> Repo.all()
+  end
+
+  def list_users_for_dropdown(nil), do: []
+
+  @doc """
+  Returns all establishment for a given client (for dropdown selection).
+  """
+  def list_establishments_for_dropdown(client_id)
+      when is_binary(client_id) or is_integer(client_id) do
+    Establishment
+    |> where([e], e.client_id == ^client_id)
+    |> where([e], e.is_active == true)
+    |> order_by([e], asc: e.name)
+    |> select([e], %{id: e.id, name: e.name})
+    |> Repo.all()
+  end
+
+  def list_establishments_for_dropdown(nil), do: []
 end
