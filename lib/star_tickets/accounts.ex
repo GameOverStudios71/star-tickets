@@ -582,4 +582,76 @@ defmodule StarTickets.Accounts do
   end
 
   def list_establishments_for_dropdown(nil), do: []
+
+  ## Services
+
+  alias StarTickets.Accounts.Service
+
+  @doc """
+  Returns the list of services.
+  """
+  def list_services(params \\ %{}) do
+    search_term = get_in(params, ["search"]) || ""
+    page = String.to_integer(get_in(params, ["page"]) || "1")
+    per_page = String.to_integer(get_in(params, ["per_page"]) || "10")
+    offset = (page - 1) * per_page
+    client_id = params["client_id"]
+
+    Service
+    |> search_services(search_term)
+    |> filter_services_by_client(client_id)
+    |> order_by(asc: :name)
+    |> limit(^per_page)
+    |> offset(^offset)
+    |> Repo.all()
+  end
+
+  @doc """
+  Returns the count of services.
+  """
+  def count_services(params \\ %{}) do
+    search_term = get_in(params, ["search"]) || ""
+    client_id = params["client_id"]
+
+    Service
+    |> search_services(search_term)
+    |> filter_services_by_client(client_id)
+    |> Repo.aggregate(:count, :id)
+  end
+
+  defp search_services(query, search_term) do
+    if search_term != "" do
+      term = "%#{search_term}%"
+      where(query, [s], ilike(s.name, ^term))
+    else
+      query
+    end
+  end
+
+  defp filter_services_by_client(query, nil), do: query
+
+  defp filter_services_by_client(query, client_id),
+    do: where(query, [s], s.client_id == ^client_id)
+
+  def get_service!(id), do: Repo.get!(Service, id)
+
+  def create_service(attrs \\ %{}) do
+    %Service{}
+    |> Service.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  def update_service(%Service{} = service, attrs) do
+    service
+    |> Service.changeset(attrs)
+    |> Repo.update()
+  end
+
+  def delete_service(%Service{} = service) do
+    Repo.delete(service)
+  end
+
+  def change_service(%Service{} = service, attrs \\ %{}) do
+    Service.changeset(service, attrs)
+  end
 end

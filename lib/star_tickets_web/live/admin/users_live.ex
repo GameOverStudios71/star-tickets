@@ -158,7 +158,7 @@ defmodule StarTicketsWeb.Admin.UsersLive do
             %{label: "Usuários"}
           ]}
         >
-          <hr class="my-6 border-white/10 opacity-70" />
+          <hr class="my-6 border-white/500 opacity-40 border-dashed" />
 
           <.action_header title="Lista de Usuários">
             <:actions>

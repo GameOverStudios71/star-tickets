@@ -124,4 +124,44 @@ defmodule StarTicketsWeb.AdminComponents do
     </div>
     """
   end
+
+  @doc """
+  Renders a confirmation modal with distinct styling (red warning).
+  """
+  attr(:show, :boolean, default: false)
+  attr(:title, :string, required: true)
+  attr(:message, :string, required: true)
+  attr(:confirm_label, :string, default: "Confirmar")
+  attr(:cancel_label, :string, default: "Cancelar")
+  attr(:on_confirm, :string, required: true)
+  attr(:on_cancel, :string, required: true)
+  attr(:id, :string, default: "confirm-modal")
+
+  def confirm_modal(assigns) do
+    ~H"""
+    <.modal :if={@show} id={@id} show={@show} on_cancel={JS.push(@on_cancel)} transparent={true}>
+      <div class="st-modal-confirm">
+        <div class="st-modal-icon-container">
+          <.icon name="hero-exclamation-triangle" class="size-12 text-red-500" />
+        </div>
+        <h3 class="st-modal-title">{@title}</h3>
+        <p class="st-modal-text">{@message}</p>
+        <div class="flex justify-center gap-3">
+          <button
+            class="st-modal-btn st-modal-btn-cancel"
+            phx-click={@on_cancel}
+          >
+            {@cancel_label}
+          </button>
+          <button
+            class="st-modal-btn st-modal-btn-confirm"
+            phx-click={@on_confirm}
+          >
+            {@confirm_label}
+          </button>
+        </div>
+      </div>
+    </.modal>
+    """
+  end
 end

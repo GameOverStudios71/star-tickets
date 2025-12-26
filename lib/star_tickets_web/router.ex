@@ -20,136 +20,78 @@ defmodule StarTicketsWeb.Router do
   scope "/", StarTicketsWeb do
     pipe_through(:browser)
 
-    live("/", LandingLive, :index)
-    live("/register", ClientRegisterLive, :new)
-  end
-
-  # Other scopes may use custom stacks.
-  # scope "/api", StarTicketsWeb do
-  #   pipe_through :api
-  # end
-
-  # Enable LiveDashboard and Swoosh mailbox preview in development
-  if Application.compile_env(:star_tickets, :dev_routes) do
-    # If you want to use the LiveDashboard in production, you should put
-    # it behind authentication and allow only admins to access it.
-    # If your application does not have an admins-only section yet,
-    # you can use Plug.BasicAuth to set up some basic authentication
-    # as long as you are also using SSL (which you should anyway).
-    import Phoenix.LiveDashboard.Router
-
-    scope "/dev" do
-      pipe_through(:browser)
-
-      live_dashboard("/dashboard", metrics: StarTicketsWeb.Telemetry)
-      forward("/mailbox", Plug.Swoosh.MailboxPreview)
-    end
+    get("/", PageController, :home)
   end
 
   ## Authentication routes
 
   scope "/", StarTicketsWeb do
+    pipe_through([:browser, :redirect_if_user_is_authenticated])
+
+    live_session :redirect_if_user_is_authenticated,
+      on_mount: [{StarTicketsWeb.UserAuth, :mount_current_user}] do
+      live("/users/register", UserRegistrationLive, :new)
+      live("/users/log-in", UserLoginLive, :new)
+      live("/users/reset_password", UserForgotPasswordLive, :new)
+      live("/users/reset_password/:token", UserResetPasswordLive, :edit)
+    end
+
+    post("/users/log-in", UserSessionController, :create)
+  end
+
+  scope "/", StarTicketsWeb do
     pipe_through([:browser, :require_authenticated_user])
 
-    # Impersonation routes (admin/manager only, validated in controller)
     post("/impersonate", ImpersonationController, :create)
     delete("/impersonate", ImpersonationController, :delete)
     post("/select-establishment", ImpersonationController, :select_establishment)
 
-    # Dashboard - all human users (admin, manager, reception, professional)
-    live_session :dashboard_access,
-      on_mount: [
-        {StarTicketsWeb.UserAuth, :require_authenticated},
-        {StarTicketsWeb.UserAuth, :require_dashboard}
-      ] do
-      live("/dashboard", DashboardLive, :index)
+    live_session :require_authenticated_user,
+      on_mount: [{StarTicketsWeb.UserAuth, :ensure_authenticated}] do
+      live("/users/settings", UserSettingsLive, :edit)
+      live("/users/settings/confirm_email/:token", UserSettingsLive, :confirm_email)
+
+      # Main Dashboards (Role protected inside LiveViews or hooks)
+      live("/dashboard", DashboardLive)
+      live("/reception", ReceptionLive)
+      live("/professional", ProfessionalLive)
+      live("/manager", ManagerLive)
     end
 
-    # Admin routes - admin only
+    # Admin / Manager Area (Scoped)
     live_session :admin_only,
       on_mount: [
-        {StarTicketsWeb.UserAuth, :require_authenticated},
-        {StarTicketsWeb.UserAuth, :require_admin}
+        {StarTicketsWeb.UserAuth, :ensure_authenticated},
+        {StarTicketsWeb.UserAuth, :ensure_admin_or_manager}
       ] do
-      live("/admin", AdminLive, :index)
-      live("/admin/establishments", Admin.EstablishmentsLive, :index)
-      live("/admin/establishments/new", Admin.EstablishmentsLive, :new)
-      live("/admin/establishments/:id/edit", Admin.EstablishmentsLive, :edit)
-      live("/admin/services", Admin.ServicesLive, :index)
-      live("/admin/forms", Admin.FormsLive, :index)
-      live("/admin/rooms", Admin.RoomsLive, :index)
-      live("/admin/totems", Admin.TotemsLive, :index)
+      live("/client-register", ClientRegisterLive, :new)
+      live("/admin", AdminLive)
+
       live("/admin/users", Admin.UsersLive, :index)
       live("/admin/users/new", Admin.UsersLive, :new)
       live("/admin/users/:id/edit", Admin.UsersLive, :edit)
-    end
 
-    # Manager routes
-    live_session :manager_access,
-      on_mount: [
-        {StarTicketsWeb.UserAuth, :require_authenticated},
-        {StarTicketsWeb.UserAuth, :require_manager}
-      ] do
-      live("/manager", ManagerLive, :index)
-    end
+      live("/admin/establishments", Admin.EstablishmentsLive, :index)
+      live("/admin/establishments/new", Admin.EstablishmentsLive, :new)
+      live("/admin/establishments/:id/edit", Admin.EstablishmentsLive, :edit)
 
-    # Reception routes
-    live_session :reception_access,
-      on_mount: [
-        {StarTicketsWeb.UserAuth, :require_authenticated},
-        {StarTicketsWeb.UserAuth, :require_reception}
-      ] do
-      live("/reception", ReceptionLive, :index)
-    end
+      live("/admin/services", Admin.ServicesLive, :index)
+      live("/admin/services/new", Admin.ServicesLive, :new)
+      live("/admin/services/:id/edit", Admin.ServicesLive, :edit)
 
-    # Professional routes
-    live_session :professional_access,
-      on_mount: [
-        {StarTicketsWeb.UserAuth, :require_authenticated},
-        {StarTicketsWeb.UserAuth, :require_professional}
-      ] do
-      live("/professional", ProfessionalLive, :index)
+      live("/admin/rooms", Admin.RoomsLive, :index)
+      live("/admin/totems", Admin.TotemsLive, :index)
+      live("/admin/forms", Admin.FormsLive, :index)
     end
-
-    # TV Panel routes
-    live_session :tv_access,
-      on_mount: [
-        {StarTicketsWeb.UserAuth, :require_authenticated},
-        {StarTicketsWeb.UserAuth, :require_tv}
-      ] do
-      live("/tv", TvLive, :index)
-    end
-
-    # Totem routes
-    live_session :totem_access,
-      on_mount: [
-        {StarTicketsWeb.UserAuth, :require_authenticated},
-        {StarTicketsWeb.UserAuth, :require_totem}
-      ] do
-      live("/totem", TotemLive, :index)
-    end
-
-    # User settings - any authenticated user
-    live_session :user_settings,
-      on_mount: [{StarTicketsWeb.UserAuth, :require_authenticated}] do
-      live("/users/settings", UserLive.Settings, :edit)
-      live("/users/settings/confirm-email/:token", UserLive.Settings, :confirm_email)
-    end
-
-    post("/users/update-password", UserSessionController, :update_password)
   end
 
   scope "/", StarTicketsWeb do
     pipe_through([:browser])
 
-    live_session :current_user,
-      on_mount: [{StarTicketsWeb.UserAuth, :mount_current_scope}] do
-      live("/users/register", UserLive.Registration, :new)
-      live("/users/log-in", UserLive.Login, :new)
-      live("/users/log-in/:token", UserLive.Confirmation, :new)
-    end
-
-    post("/users/log-in", UserSessionController, :create)
     delete("/users/log-out", UserSessionController, :delete)
+    get("/users/confirm", UserConfirmationController, :new)
+    post("/users/confirm", UserConfirmationController, :create)
+    get("/users/confirm/:token", UserConfirmationController, :edit)
+    post("/users/confirm/:token", UserConfirmationController, :update)
   end
 end

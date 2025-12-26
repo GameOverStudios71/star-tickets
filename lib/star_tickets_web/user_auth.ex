@@ -325,6 +325,26 @@ defmodule StarTicketsWeb.UserAuth do
     check_role_access(socket, :totem)
   end
 
+  def on_mount(:ensure_authenticated, params, session, socket) do
+    on_mount(:require_authenticated, params, session, socket)
+  end
+
+  def on_mount(:ensure_admin_or_manager, _params, session, socket) do
+    socket = mount_current_scope(socket, session)
+    user = socket.assigns.current_scope && socket.assigns.current_scope.user
+
+    if user && (user.role == "admin" || user.role == "manager") do
+      {:cont, socket}
+    else
+      socket =
+        socket
+        |> Phoenix.LiveView.put_flash(:error, "Você não tem permissão para acessar esta página.")
+        |> Phoenix.LiveView.redirect(to: get_default_path_for_role(user && user.role))
+
+      {:halt, socket}
+    end
+  end
+
   defp check_role_access(socket, route_key) do
     user = socket.assigns.current_scope && socket.assigns.current_scope.user
 
@@ -402,6 +422,16 @@ defmodule StarTicketsWeb.UserAuth do
       |> maybe_store_return_to()
       |> redirect(to: ~p"/users/log-in")
       |> halt()
+    end
+  end
+
+  def redirect_if_user_is_authenticated(conn, _opts) do
+    if conn.assigns[:current_scope] && conn.assigns.current_scope.user do
+      conn
+      |> redirect(to: signed_in_path(conn))
+      |> halt()
+    else
+      conn
     end
   end
 
