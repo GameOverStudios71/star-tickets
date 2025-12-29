@@ -984,4 +984,54 @@ defmodule StarTickets.Accounts do
   defp parse_id(nil), do: nil
   defp parse_id(id) when is_binary(id), do: String.to_integer(id)
   defp parse_id(id) when is_integer(id), do: id
+
+  @doc """
+  Duplicates a totem menu node and all its descendants to a new parent.
+  If target_parent_id is nil, creates as a root node.
+  Returns {:ok, new_menu} or {:error, changeset}.
+  """
+  def duplicate_totem_menu_tree(source_id, target_parent_id) do
+    source = get_totem_menu!(source_id)
+
+    Repo.transaction(fn ->
+      do_duplicate_node(source, target_parent_id, source.establishment_id)
+    end)
+  end
+
+  defp do_duplicate_node(source, parent_id, establishment_id) do
+    # Create copy of the node
+    attrs = %{
+      name: source.name,
+      description: source.description,
+      icon_class: source.icon_class,
+      position: source.position,
+      establishment_id: establishment_id,
+      parent_id: parent_id
+    }
+
+    # Also copy the services
+    services_data =
+      Enum.map(source.totem_menu_services, fn svc ->
+        %{
+          service_id: svc.service_id,
+          description: svc.description,
+          icon_class: svc.icon_class
+        }
+      end)
+
+    attrs = Map.put(attrs, :services_data, services_data)
+
+    {:ok, new_node} = create_totem_menu(attrs)
+
+    # Recursively copy children
+    children =
+      Repo.all(from(m in TotemMenu, where: m.parent_id == ^source.id))
+      |> Repo.preload(totem_menu_services: :service)
+
+    Enum.each(children, fn child ->
+      do_duplicate_node(child, new_node.id, establishment_id)
+    end)
+
+    new_node
+  end
 end

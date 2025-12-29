@@ -6,8 +6,8 @@ defmodule StarTickets.Accounts.TotemMenu do
     field(:name, :string)
     field(:description, :string)
     field(:icon_class, :string)
-    field(:type, Ecto.Enum, values: [:tag, :category])
     field(:position, :integer, default: 0)
+    field(:is_taggable, :boolean, default: false)
 
     belongs_to(:establishment, StarTickets.Accounts.Establishment)
     belongs_to(:parent, StarTickets.Accounts.TotemMenu)
@@ -24,13 +24,13 @@ defmodule StarTickets.Accounts.TotemMenu do
     totem_menu
     |> cast(attrs, [
       :name,
-      :type,
       :position,
       :establishment_id,
       :parent_id,
       :description,
-      :icon_class
+      :icon_class,
+      :is_taggable
     ])
-    |> validate_required([:name, :type, :establishment_id])
+    |> validate_required([:name, :establishment_id])
   end
 end

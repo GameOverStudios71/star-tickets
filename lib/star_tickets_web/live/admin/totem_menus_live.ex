@@ -99,30 +99,27 @@ defmodule StarTicketsWeb.Admin.TotemMenusLive do
                  <.form for={@form} phx-change="validate" phx-submit="save" class="space-y-6">
                    <div class="grid grid-cols-1 gap-6">
                      <div>
-                       <label class="label text-white/90 font-medium mb-2">Nome (Texto no Botão via Totem)</label>
-                       <.input field={@form[:name]} placeholder="Ex: Atendimento Prioritário" class="input-bordered bg-white/5 border-white/10 text-white placeholder-white/30 w-full h-12 text-lg px-4 focus:bg-white/10 focus:border-blue-500/50 transition-all" />
-                     </div>
+                        <label class="label text-white/90 font-medium mb-2">Nome (Texto no Botão via Totem)</label>
+                        <.input field={@form[:name]} placeholder="Ex: Atendimento Prioritário" class="input-bordered bg-white/5 border-white/10 text-white placeholder-white/30 w-full h-12 text-lg px-4 focus:bg-white/10 focus:border-orange-500/50 focus:outline-none transition-all" />
+                      </div>
 
-                     <div class="grid grid-cols-2 gap-6">
-                       <div>
-                          <label class="label text-white/90 font-medium mb-2">Ícone (FontAwesome Class)</label>
-                          <.input field={@form[:icon_class]} placeholder="Ex: fa-solid fa-user-doctor" class="input-bordered bg-white/5 border-white/10 text-white placeholder-white/30 w-full h-12 text-lg px-4 focus:bg-white/10 focus:border-blue-500/50 transition-all" />
-                       </div>
-                       <div>
-                         <label class="label text-white/90 font-medium mb-2">Tipo</label>
-                         <div class="relative">
-                           <.input field={@form[:type]} type="select" options={[{"Etiqueta (Navegação)", "tag"}, {"Categoria (Agrupador)", "category"}]} class="select-bordered bg-black/40 border-white/10 text-white w-full h-12 text-lg focus:bg-black/60 focus:border-orange-500/50 focus:outline-none transition-all appearance-none px-4" />
-                           <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-white/50">
-                             <.icon name="hero-chevron-down" class="w-5 h-5" />
-                           </div>
-                         </div>
-                       </div>
-                     </div>
+                      <div>
+                         <label class="label text-white/90 font-medium mb-2">Ícone (FontAwesome Class)</label>
+                         <.input field={@form[:icon_class]} placeholder="Ex: fa-solid fa-user-doctor" class="input-bordered bg-white/5 border-white/10 text-white placeholder-white/30 w-full h-12 text-lg px-4 focus:bg-white/10 focus:border-orange-500/50 focus:outline-none transition-all" />
+                      </div>
 
                      <div>
                         <label class="label text-white/90 font-medium mb-2">Descrição (Exibido abaixo do nome)</label>
                         <.input field={@form[:description]} type="textarea" placeholder="Ex: Selecione para atendimento preferencial..." class="textarea-bordered bg-white/5 border-white/10 text-white placeholder-white/30 w-full text-lg px-4 py-3 h-24 focus:bg-white/10 focus:border-blue-500/50 transition-all" />
                      </div>
+
+                      <div class="flex items-center gap-3 p-4 rounded-lg bg-white/5 border border-white/10">
+                        <.input field={@form[:is_taggable]} type="checkbox" class="checkbox checkbox-primary" />
+                        <div>
+                          <label class="label text-white/90 font-medium cursor-pointer">🏷️ Usar como Filtro</label>
+                          <p class="text-white/50 text-sm">Marque para exibir este item como opção de filtro na tela da recepção</p>
+                        </div>
+                      </div>
                    </div>
 
                    <%= if @selected_node.id do %>
@@ -197,7 +194,11 @@ defmodule StarTicketsWeb.Admin.TotemMenusLive do
                    <div class="grid grid-cols-2 gap-4">
                       <div class="p-4 rounded border border-white/10 bg-white/5 hover:bg-white/10 hover:border-orange-500/50 transition cursor-pointer" phx-click="add_child" phx-value-parent_id={@selected_node.id}>
                         <div class="font-bold mb-1 text-white">+ Adicionar Sub-Item</div>
-                        <div class="text-xs text-white/60">Criar uma nova etiqueta ou categoria dentro de "<%= @selected_node.name %>"</div>
+                        <div class="text-xs text-white/60">Criar novo item dentro de "<%= @selected_node.name %>"</div>
+                      </div>
+                      <div class="p-4 rounded border border-white/10 bg-white/5 hover:bg-white/10 hover:border-orange-500/50 transition cursor-pointer" phx-click="duplicate_tree" phx-value-id={@selected_node.id}>
+                        <div class="font-bold mb-1 text-white">📋 Duplicar Estrutura</div>
+                        <div class="text-xs text-white/60">Copiar "<%= @selected_node.name %>" e todos seus filhos como nova raiz</div>
                       </div>
                    </div>
                  <% end %>
@@ -221,11 +222,11 @@ defmodule StarTicketsWeb.Admin.TotemMenusLive do
       <div class={"group flex items-center gap-2 py-1.5 px-3 rounded-lg transition-all duration-200 " <> if(@selected_node && @selected_node.id == @menu.id, do: "bg-blue-500/10 border border-blue-500/20 text-blue-200 shadow-lg shadow-blue-500/5 backdrop-blur", else: "text-white/70 hover:bg-white/5 hover:text-white")}>
         <!-- Row Content (Clickable) -->
         <div class="flex-1 flex items-center gap-2 cursor-pointer" phx-click="edit_node" phx-value-id={@menu.id}>
-          <div class={"w-2 h-2 rounded-full " <> if(@menu.type == :tag, do: "bg-green-500", else: "bg-orange-500")}></div>
+          <div class="w-2 h-2 rounded-full bg-orange-500"></div>
           <span class="text-sm font-medium"><%= @menu.name %></span>
-          <span class="text-[10px] uppercase opacity-50 border border-white/10 px-1 rounded ml-2">
-            <%= @menu.type %>
-          </span>
+          <%= if @menu.is_taggable do %>
+            <span class="text-[10px] bg-orange-500/20 text-orange-300 px-1.5 py-0.5 rounded" title="Filtro">🏷️</span>
+          <% end %>
         </div>
 
         <!-- Reorder Controls (Only visible on hover or selected) -->
@@ -360,6 +361,22 @@ defmodule StarTicketsWeb.Admin.TotemMenusLive do
 
       _ ->
         {:noreply, socket}
+    end
+  end
+
+  def handle_event("duplicate_tree", %{"id" => id}, socket) do
+    case Accounts.duplicate_totem_menu_tree(id, nil) do
+      {:ok, _new_menu} ->
+        menus = Accounts.list_totem_menus(socket.assigns.establishment.id)
+
+        {:noreply,
+         socket
+         |> assign(:menus, menus)
+         |> assign(:selected_node, nil)
+         |> put_flash(:info, "Estrutura duplicada com sucesso!")}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Erro ao duplicar estrutura.")}
     end
   end
 
