@@ -6,6 +6,7 @@ defmodule StarTickets.Tickets.Ticket do
     field(:display_code, :string)
     field(:status, :string, default: "pending")
     field(:token, Ecto.UUID)
+    field(:customer_name, :string)
 
     belongs_to(:establishment, StarTickets.Accounts.Establishment)
     belongs_to(:user, StarTickets.Accounts.User)
@@ -21,7 +22,7 @@ defmodule StarTickets.Tickets.Ticket do
   @doc false
   def changeset(ticket, attrs) do
     ticket
-    |> cast(attrs, [:display_code, :status, :token, :establishment_id, :user_id])
+    |> cast(attrs, [:display_code, :status, :token, :establishment_id, :user_id, :customer_name])
     |> validate_required([:display_code, :establishment_id, :token])
     |> unique_constraint(:token)
   end

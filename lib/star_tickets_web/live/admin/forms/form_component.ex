@@ -1,6 +1,7 @@
 defmodule StarTicketsWeb.Admin.Forms.FormComponent do
   use StarTicketsWeb, :live_component
 
+  alias StarTickets.Accounts
   alias StarTickets.Forms
 
   @impl true
@@ -31,7 +32,35 @@ defmodule StarTicketsWeb.Admin.Forms.FormComponent do
       >
         <div class="space-y-4">
           <.input field={@form[:name]} type="text" label="Nome do Formulário" placeholder="Ex: Anamnese Facial" required />
-          <.input field={@form[:description]} type="textarea" label="Descrição" placeholder="Instruções ou objetivo deste formulário" />
+          <.input field={@form[:description]} type="textarea" label="Descrição (aparecerá na página de WebCheckin)" placeholder="Instruções ou objetivo deste formulário" />
+
+          <div class="space-y-2">
+            <label class="block text-sm font-semibold text-white">Serviços Vinculados</label>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-60 overflow-y-auto p-4 bg-black/20 rounded-xl border border-white/10">
+              <%= if @services == [] do %>
+                <p class="text-gray-400 text-sm col-span-2 text-center py-2">Nenhum serviço disponível.</p>
+              <% end %>
+
+              <%= for service <- @services do %>
+                <label class="flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 cursor-pointer bg-white/5 border border-white/5 transition-colors">
+                  <input
+                     type="checkbox"
+                     name="form_template[service_ids][]"
+                     value={service.id}
+                     checked={service.id in @selected_service_ids}
+                     class="checkbox checkbox-primary checkbox-sm border-white/30"
+                  />
+                  <div class="flex flex-col">
+                    <span class="text-white font-medium text-sm"><%= service.name %></span>
+                    <%= if service.duration do %>
+                      <span class="text-xs text-gray-400"><%= service.duration %> min</span>
+                    <% end %>
+                  </div>
+                </label>
+              <% end %>
+            </div>
+            <p class="text-xs text-gray-400">Selecione os serviços que utilizarão este formulário.</p>
+          </div>
 
           <input type="hidden" name="form_template[client_id]" value={@client_id} />
         </div>
@@ -62,21 +91,42 @@ defmodule StarTicketsWeb.Admin.Forms.FormComponent do
       (assigns[:current_user_scope] && assigns[:current_user_scope].user.client_id) ||
         form_template.client_id
 
+    services = Accounts.list_services_with_establishment(client_id)
+
+    selected_service_ids =
+      case form_template.services do
+        %Ecto.Association.NotLoaded{} -> []
+        services when is_list(services) -> Enum.map(services, & &1.id)
+        _ -> []
+      end
+
     {:ok,
      socket
      |> assign(assigns)
      |> assign(:client_id, client_id)
+     |> assign(:services, services)
+     |> assign(:selected_service_ids, selected_service_ids)
      |> assign_form(changeset)}
   end
 
   @impl true
   def handle_event("validate", %{"form_template" => params}, socket) do
+    ids = params["service_ids"] || []
+
+    selected_service_ids =
+      Enum.map(ids, fn id ->
+        if is_integer(id), do: id, else: String.to_integer(id)
+      end)
+
     changeset =
       socket.assigns.form_template
       |> Forms.change_template(params)
       |> Map.put(:action, :validate)
 
-    {:noreply, assign_form(socket, changeset)}
+    {:noreply,
+     socket
+     |> assign(:selected_service_ids, selected_service_ids)
+     |> assign_form(changeset)}
   end
 
   @impl true

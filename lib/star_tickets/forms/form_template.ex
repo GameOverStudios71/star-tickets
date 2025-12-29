@@ -7,7 +7,8 @@ defmodule StarTickets.Forms.FormTemplate do
     field(:description, :string)
     belongs_to(:client, StarTickets.Accounts.Client)
     has_many(:form_fields, StarTickets.Forms.FormField, on_delete: :delete_all)
-    has_many(:services, StarTickets.Accounts.Service)
+    has_many(:form_sections, StarTickets.Forms.FormSection, on_delete: :delete_all)
+    has_many(:services, StarTickets.Accounts.Service, on_replace: :nilify)
 
     timestamps()
   end

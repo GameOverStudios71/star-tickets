@@ -4,6 +4,7 @@ defmodule StarTicketsWeb.TotemLive do
   alias StarTickets.Accounts
   alias StarTickets.Tickets
   alias StarTicketsWeb.ImpersonationHelpers
+  alias EQRCode
 
   @doc """
   Totem Kiosk Interface
@@ -97,7 +98,12 @@ defmodule StarTicketsWeb.TotemLive do
             <.confirmation_screen selected_services={@selected_services} />
 
           <% :ticket -> %>
-            <.ticket_screen ticket={@ticket} />
+            <.ticket_screen
+              ticket={@ticket}
+              qr_code={@qr_code}
+              url={@url}
+              has_forms={@has_forms}
+            />
         <% end %>
       </div>
     </div>
@@ -340,41 +346,44 @@ defmodule StarTicketsWeb.TotemLive do
           Senha Gerada com Sucesso!
         </h2>
 
-        <!-- Ticket Code -->
-        <div class="mb-8">
-          <div class="text-8xl font-bold text-white mb-4 font-mono">
-            <%= @ticket.display_code %>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10 items-center">
+          <!-- Left: Ticket Code -->
+          <div class="flex flex-col items-center justify-center p-8 rounded-3xl bg-white/5 border border-white/10 h-full">
+            <div class="text-8xl font-bold text-white mb-2 font-mono tracking-wider">
+              <%= @ticket.display_code %>
+            </div>
+            <p class="text-xl text-white/70">
+              Sua senha
+            </p>
+            <div class="mt-8 flex items-center gap-3 text-white/50 text-sm bg-white/5 px-4 py-2 rounded-lg">
+               <div class="text-xl">🔔</div>
+               <span>Aguarde o chamado no painel</span>
+            </div>
           </div>
-          <p class="text-xl text-white/70">
-            Aguarde ser chamado no painel
-          </p>
-        </div>
 
-        <!-- Info Grid -->
-        <div class="grid grid-cols-2 gap-6 mb-10">
-          <div class="p-6 rounded-2xl bg-white/5 border border-white/10 flex flex-col items-center justify-center">
+          <!-- Right: QR Code -->
+          <div class="flex flex-col items-center justify-center p-8 rounded-3xl bg-white/5 border border-white/10 h-full">
             <%= if assigns[:qr_code] do %>
-              <div class="bg-white p-2 rounded-lg mb-2">
+              <div class="bg-white p-3 rounded-xl mb-4 shadow-lg transform hover:scale-105 transition-transform duration-300">
                 <%= raw(@qr_code) %>
               </div>
-              <p class="text-sm text-white/70 text-center">
-                <strong><%= if @has_forms, do: "Faça WebCheckin!", else: "Acompanhe pelo celular" %></strong><br>
-                Escaneie o QR Code
+              <p class="text-lg text-white font-semibold text-center mb-1">
+                <%= if @has_forms, do: "Faça WebCheckin!", else: "Acompanhe pelo celular" %>
               </p>
+              <p class="text-sm text-white/50 text-center">
+                Escaneie o QR Code acima
+              </p>
+
+              <%= if assigns[:url] do %>
+                <a href={@url} target="_blank" class="mt-4 px-4 py-2 rounded-lg bg-blue-500/20 text-blue-200 text-xs hover:bg-blue-500/30 border border-blue-500/30 transition-colors flex items-center gap-2">
+                  <span>🔗</span> (Modo Dev: Abrir Link)
+                </a>
+              <% end %>
             <% else %>
-              <div class="text-2xl mb-2">📱</div>
-              <p class="text-sm text-white/70">
-                <strong>Acompanhe pelo celular!</strong><br>
-                Escaneie o QR Code na impressão
-              </p>
+               <div class="text-6xl mb-4 opacity-50">📱</div>
+               <p class="text-lg text-white font-semibold">Sem QR Code</p>
+               <p class="text-sm text-white/50">Veja na impressão</p>
             <% end %>
-          </div>
-          <div class="p-6 rounded-2xl bg-white/5 border border-white/10 flex flex-col items-center justify-center">
-            <div class="text-4xl mb-2">🔔</div>
-            <p class="text-sm text-white/70 text-center">
-              <strong>Fique atento!</strong><br>
-              Sua senha será chamada em breve
-            </p>
           </div>
         </div>
 
@@ -588,6 +597,7 @@ defmodule StarTicketsWeb.TotemLive do
            current_step: :ticket,
            ticket: ticket,
            qr_code: qr_code,
+           url: url,
            has_forms: has_forms
          )}
 

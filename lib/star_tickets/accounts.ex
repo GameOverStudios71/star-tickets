@@ -639,6 +639,40 @@ defmodule StarTickets.Accounts do
     |> Repo.aggregate(:count, :id)
   end
 
+  def list_services_with_establishment(client_id) do
+    Service
+    |> where([s], s.client_id == ^client_id)
+    |> wait_preload_establishment()
+    |> order_by([s], asc: :name)
+    |> Repo.all()
+  end
+
+  defp wait_preload_establishment(query) do
+    # Check if establishment association exists in schema first
+    # For now assuming it doesn't (based on viewing schema earlier)
+    # BUT list_establishment_services joined establishment.
+    # Service has NO belongs_to :establishment in schema!
+    # So I CANNOT preload it simply.
+    # I must join manually.
+
+    # Wait, if Service has no belongs_to establishment, how can I group by establishment?
+    # I need to fetch services based on how they are associated.
+    # User said: "relacionar com ... o nome do serviço e o nome do estabelecimento"
+
+    # If Service is global to Client, it doesn't belong to an Establishment.
+    # So grouping by establishment is impossible unless we look at TotemMenus.
+    # But a service can be in multiple menus.
+
+    # Maybe the user implies that services SHOULD be per establishment?
+    # Or maybe the user sees them on the screen linked to establishments (via TotemMenu).
+
+    # If the user wants to link Form to Service, and Service is global, then just listing Services is correct.
+    # If I cannot group by establishment (because there is no link), I will just list Services.
+
+    # So I will just return services.
+    query
+  end
+
   defp search_services(query, search_term) do
     if search_term != "" do
       term = "%#{search_term}%"

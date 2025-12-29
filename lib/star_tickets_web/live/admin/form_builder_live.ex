@@ -72,7 +72,7 @@ defmodule StarTicketsWeb.Admin.FormBuilderLive do
                   <% end %>
 
                   <%= for field <- @fields do %>
-                    <div class="bg-black/20 p-4 rounded border border-white/5 hover:border-blue-500/50 transition-colors group relative">
+                    <div class="bg-black/20 p-4 rounded border border-white/5 hover:border-orange-500/50 transition-colors group relative">
                        <div class="flex justify-between items-start mb-2">
                           <label class="text-white font-medium flex items-center gap-2">
                              {field.label}
@@ -88,11 +88,11 @@ defmodule StarTicketsWeb.Admin.FormBuilderLive do
                        </div>
 
                        <!-- Field Preview -->
-                       <div class="opacity-80 pointer-events-none">
+                       <div class="pointer-events-none">
                          <%= case field.type do %>
-                           <% "text" -> %> <input type="text" class="input input-sm w-full bg-white/5" placeholder={field.placeholder || "Texto curto..."} disabled />
-                           <% "number" -> %> <input type="number" class="input input-sm w-full bg-white/5" placeholder={field.placeholder || "123..."} disabled />
-                           <% "textarea" -> %> <textarea class="textarea textarea-sm w-full bg-white/5" placeholder={field.placeholder || "Texto longo..."} disabled></textarea>
+                           <% "text" -> %> <input type="text" class="input input-sm w-full bg-white/5 text-white placeholder-white/50 font-medium" placeholder={field.placeholder || "Texto curto..."} />
+                           <% "number" -> %> <input type="number" class="input input-sm w-full bg-white/5 text-white placeholder-white/50 font-medium" placeholder={field.placeholder || "123..."} />
+                           <% "textarea" -> %> <textarea class="textarea textarea-sm w-full bg-white/5 text-white placeholder-white/50 font-medium" placeholder={field.placeholder || "Texto longo..."}></textarea>
                            <% "checkbox" -> %>
                               <%= if field.options["items"] && field.options["items"] != [] do %>
                                 <div class="grid grid-cols-2 gap-2">

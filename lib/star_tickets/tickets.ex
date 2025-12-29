@@ -20,6 +20,12 @@ defmodule StarTickets.Tickets do
       {:error, %Ecto.Changeset{}}
 
   """
+  def update_ticket(%Ticket{} = ticket, attrs) do
+    ticket
+    |> Ticket.changeset(attrs)
+    |> Repo.update()
+  end
+
   def create_ticket(attrs \\ %{}) do
     services = attrs[:services] || []
 

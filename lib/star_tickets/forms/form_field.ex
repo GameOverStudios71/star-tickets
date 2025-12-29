@@ -11,6 +11,8 @@ defmodule StarTickets.Forms.FormField do
     field(:position, :integer, default: 0)
 
     belongs_to(:form_template, StarTickets.Forms.FormTemplate)
+    belongs_to(:form_section, StarTickets.Forms.FormSection)
+    has_many(:form_responses, StarTickets.Forms.FormResponse)
 
     timestamps()
   end
@@ -25,7 +27,9 @@ defmodule StarTickets.Forms.FormField do
       :options,
       :required,
       :position,
-      :form_template_id
+      :position,
+      :form_template_id,
+      :form_section_id
     ])
     |> validate_required([:label, :type, :form_template_id])
     |> validate_inclusion(:type, [

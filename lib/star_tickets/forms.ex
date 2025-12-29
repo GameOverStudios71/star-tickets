@@ -4,11 +4,13 @@ defmodule StarTickets.Forms do
   """
 
   import Ecto.Query, warn: false
+  import Ecto.Changeset
   import StarTickets.QueryHelpers
   alias StarTickets.Repo
 
   alias StarTickets.Forms.FormTemplate
   alias StarTickets.Forms.FormField
+  alias StarTickets.Accounts.Service
 
   ## Form Templates
 
@@ -21,7 +23,7 @@ defmodule StarTickets.Forms do
     |> search_templates(search_term)
     |> order_by(desc: :inserted_at)
     |> paginate(params)
-    |> preload(:form_fields)
+    |> preload([:form_fields, :services])
     |> Repo.all()
   end
 
@@ -55,18 +57,42 @@ defmodule StarTickets.Forms do
     )
   end
 
-  def get_template!(id), do: Repo.get!(FormTemplate, id) |> Repo.preload(:form_fields)
+  def get_template!(id) do
+    fields_query = from(f in FormField, order_by: [asc: f.position])
+
+    sections_query =
+      from(s in StarTickets.Forms.FormSection,
+        order_by: [asc: s.position],
+        preload: [form_fields: ^fields_query]
+      )
+
+    Repo.get!(FormTemplate, id)
+    |> Repo.preload([:services, form_fields: fields_query, form_sections: sections_query])
+  end
 
   def create_template(attrs \\ %{}) do
     %FormTemplate{}
     |> FormTemplate.changeset(attrs)
+    |> put_services(attrs)
     |> Repo.insert()
   end
 
   def update_template(%FormTemplate{} = template, attrs) do
     template
     |> FormTemplate.changeset(attrs)
+    |> put_services(attrs)
     |> Repo.update()
+  end
+
+  defp put_services(changeset, attrs) do
+    if ids = attrs["service_ids"] do
+      # Ensure ids are integers
+      ids = Enum.map(ids, &String.to_integer(to_string(&1)))
+      services = Repo.all(from(s in Service, where: s.id in ^ids))
+      put_assoc(changeset, :services, services)
+    else
+      changeset
+    end
   end
 
   def delete_template(%FormTemplate{} = template) do
@@ -122,5 +148,13 @@ defmodule StarTickets.Forms do
     else
       {:error, :no_move_possible}
     end
+  end
+
+  alias StarTickets.Forms.FormResponse
+
+  def create_form_response(attrs \\ %{}) do
+    %FormResponse{}
+    |> FormResponse.changeset(attrs)
+    |> Repo.insert()
   end
 end

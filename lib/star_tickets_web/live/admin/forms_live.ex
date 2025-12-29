@@ -167,11 +167,23 @@ defmodule StarTicketsWeb.Admin.FormsLive do
 
           <.admin_table id="forms" rows={@templates}>
             <:col :let={template} label="Nome">{template.name}</:col>
-            <:col :let={template} label="Descrição">{template.description || "-"}</:col>
             <:col :let={template} label="Campos">
               <span class="st-badge bg-blue-500/20 text-blue-200 border border-blue-500/50">
                 {length(template.form_fields || [])} campos
               </span>
+            </:col>
+            <:col :let={template} label="Serviços">
+               <div class="flex flex-wrap gap-1 max-w-xs">
+                 <%= if template.services == [] or template.services == nil do %>
+                   <span class="text-xs text-gray-500">-</span>
+                 <% else %>
+                   <%= for service <- template.services do %>
+                     <span class="st-badge bg-yellow-500/20 text-yellow-200 border border-yellow-500/50 text-xs">
+                       {service.name}
+                     </span>
+                   <% end %>
+                 <% end %>
+               </div>
             </:col>
 
             <:action :let={template}>
