@@ -11,6 +11,8 @@ defmodule StarTickets.Accounts.Establishment do
 
     belongs_to(:client, StarTickets.Accounts.Client)
     has_many(:users, StarTickets.Accounts.User)
+    has_many(:services, StarTickets.Accounts.Service, on_delete: :delete_all)
+    has_many(:reception_desks, StarTickets.Reception.ReceptionDesk, on_delete: :delete_all)
 
     timestamps(type: :utc_datetime)
   end

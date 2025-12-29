@@ -79,53 +79,53 @@ defmodule StarTicketsWeb.Components.AppLayout do
         <% end %>
       </div>
 
-      <div class="st-header-right">
+      <div class="st-header-right flex items-center gap-4">
         <%= if @right != [] do %>
           <%= render_slot(@right) %>
-        <% else %>
-          <%= if @current_scope && @current_scope.user do %>
-            <div class="st-user-profile flex items-center gap-3">
-              <%!-- Show dropdown for users if available, otherwise show name --%>
-              <%= if length(@users) > 0 do %>
-                <form action="/impersonate" method="post" id="impersonation-form">
-                  <input type="hidden" name="_csrf_token" value={Phoenix.Controller.get_csrf_token()} />
-                  <select
-                    name="user_id"
-                    onchange="this.form.submit()"
-                    class="bg-white/10 text-white text-sm py-1 px-3 rounded cursor-pointer border-none outline-none [&>option]:bg-neutral-900 [&>option]:text-white"
-                  >
-                    <option value="">-- Navegar como --</option>
-                    <%= for user <- @users do %>
-                      <option value={user.id} selected={to_string(user.id) == to_string(@selected_user_id)}>
-                        <%= user.name %> (<%= user.role %>)
-                      </option>
-                    <% end %>
-                  </select>
-                </form>
-              <% else %>
-                <span class="st-user-name text-white font-medium"><%= @current_scope.user.name || @current_scope.user.email %></span>
-              <% end %>
-              <span class={"text-xs px-2 py-0.5 rounded-full " <> role_badge_class(@current_scope.user.role)}>
-                <%= format_role(@current_scope.user.role) %>
-              </span>
-              <%= if @impersonating do %>
-                <form action="/impersonate" method="post" style="display: inline;">
-                  <input type="hidden" name="_csrf_token" value={Phoenix.Controller.get_csrf_token()} />
-                  <input type="hidden" name="_method" value="delete" />
-                  <button type="submit" class="text-xs text-yellow-300 hover:text-yellow-100">
-                    ⚠️ Sair
-                  </button>
-                </form>
-              <% end %>
-            </div>
-            <form action="/users/log-out" method="post" style="display: inline;">
-              <input type="hidden" name="_method" value="delete" />
-              <input type="hidden" name="_csrf_token" value={Phoenix.Controller.get_csrf_token()} />
-              <button type="submit" class="st-btn st-btn-acrylic st-btn-small">
-                Sair
-              </button>
-            </form>
-          <% end %>
+        <% end %>
+
+        <%= if @current_scope && @current_scope.user do %>
+          <div class="st-user-profile flex items-center gap-3">
+            <%!-- Show dropdown for users if available, otherwise show name --%>
+            <%= if length(@users) > 0 do %>
+              <form action="/impersonate" method="post" id="impersonation-form">
+                <input type="hidden" name="_csrf_token" value={Phoenix.Controller.get_csrf_token()} />
+                <select
+                  name="user_id"
+                  onchange="this.form.submit()"
+                  class="bg-white/10 text-white text-sm py-1 px-3 rounded cursor-pointer border-none outline-none [&>option]:bg-neutral-900 [&>option]:text-white"
+                >
+                  <option value="">-- Navegar como --</option>
+                  <%= for user <- @users do %>
+                    <option value={user.id} selected={to_string(user.id) == to_string(@selected_user_id)}>
+                      <%= user.name %> (<%= user.role %>)
+                    </option>
+                  <% end %>
+                </select>
+              </form>
+            <% else %>
+              <span class="st-user-name text-white font-medium"><%= @current_scope.user.name || @current_scope.user.email %></span>
+            <% end %>
+            <span class={"text-xs px-2 py-0.5 rounded-full " <> role_badge_class(@current_scope.user.role)}>
+              <%= format_role(@current_scope.user.role) %>
+            </span>
+            <%= if @impersonating do %>
+              <form action="/impersonate" method="post" style="display: inline;">
+                <input type="hidden" name="_csrf_token" value={Phoenix.Controller.get_csrf_token()} />
+                <input type="hidden" name="_method" value="delete" />
+                <button type="submit" class="text-xs text-yellow-300 hover:text-yellow-100">
+                  ⚠️ Sair
+                </button>
+              </form>
+            <% end %>
+          </div>
+          <form action="/users/log-out" method="post" style="display: inline;">
+            <input type="hidden" name="_method" value="delete" />
+            <input type="hidden" name="_csrf_token" value={Phoenix.Controller.get_csrf_token()} />
+            <button type="submit" class="st-btn st-btn-acrylic st-btn-small">
+              Sair
+            </button>
+          </form>
         <% end %>
       </div>
     </header>

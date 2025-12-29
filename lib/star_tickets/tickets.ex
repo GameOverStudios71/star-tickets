@@ -7,6 +7,20 @@ defmodule StarTickets.Tickets do
   alias StarTickets.Repo
   alias StarTickets.Tickets.Ticket
   alias StarTickets.Accounts.Service
+  alias Phoenix.PubSub
+
+  @topic "tickets"
+
+  def subscribe do
+    PubSub.subscribe(StarTickets.PubSub, @topic)
+  end
+
+  defp broadcast({:ok, ticket}, event) do
+    PubSub.broadcast(StarTickets.PubSub, @topic, {event, ticket})
+    {:ok, ticket}
+  end
+
+  defp broadcast({:error, _} = error, _event), do: error
 
   @doc """
   Creates a ticket.
@@ -24,6 +38,7 @@ defmodule StarTickets.Tickets do
     ticket
     |> Ticket.changeset(attrs)
     |> Repo.update()
+    |> broadcast(:ticket_updated)
   end
 
   def create_ticket(attrs \\ %{}) do
@@ -37,6 +52,45 @@ defmodule StarTickets.Tickets do
     |> Ticket.changeset(attrs)
     |> Ecto.Changeset.put_assoc(:services, services)
     |> Repo.insert()
+    |> broadcast(:ticket_created)
+  end
+
+  def list_reception_tickets(establishment_id) do
+    today = Date.utc_today() |> DateTime.new!(~T[00:00:00])
+
+    Ticket
+    |> where([t], t.establishment_id == ^establishment_id)
+    |> where([t], t.inserted_at >= ^today)
+    |> preload([:services, :reception_desk])
+    |> order_by([t], desc: t.is_priority, asc: t.inserted_at)
+    |> Repo.all()
+  end
+
+  def assign_ticket_to_desk(%Ticket{} = ticket, desk_id) do
+    update_ticket(ticket, %{reception_desk_id: desk_id})
+  end
+
+  def update_ticket_status(%Ticket{} = ticket, status) do
+    update_ticket(ticket, %{status: status})
+  end
+
+  def count_waiting_tickets(establishment_id) do
+    today = Date.utc_today() |> DateTime.new!(~T[00:00:00])
+
+    Ticket
+    |> where([t], t.establishment_id == ^establishment_id)
+    |> where([t], t.inserted_at >= ^today)
+    |> where([t], t.status == "WAITING_RECEPTION")
+    |> Repo.aggregate(:count, :id)
+  end
+
+  def load_full_data(%Ticket{} = ticket) do
+    Repo.preload(ticket, [
+      :services,
+      :establishment,
+      form_responses: [:form_field]
+      # :webcheckin_files
+    ])
   end
 
   @doc """

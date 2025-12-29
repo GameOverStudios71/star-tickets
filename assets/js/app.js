@@ -119,10 +119,46 @@ const TotemSounds = {
   }
 }
 
+const DeskPreference = {
+  mounted() {
+    // 1. Try to restore from cookie on mount
+    const deskId = this.getCookie("reception_desk_id");
+    if (deskId) {
+      this.pushEvent("restore_desk_preference", { id: deskId });
+    }
+
+    // 2. Listen for save requests from server
+    this.handleEvent("save_desk_preference", ({ id }) => {
+      this.setCookie("reception_desk_id", id, 365); // Save for 1 year
+    });
+  },
+
+  setCookie(name, value, days) {
+    let expires = "";
+    if (days) {
+      const date = new Date();
+      date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+      expires = "; expires=" + date.toUTCString();
+    }
+    document.cookie = name + "=" + (value || "") + expires + "; path=/";
+  },
+
+  getCookie(name) {
+    const nameEQ = name + "=";
+    const ca = document.cookie.split(';');
+    for (let i = 0; i < ca.length; i++) {
+      let c = ca[i];
+      while (c.charAt(0) == ' ') c = c.substring(1, c.length);
+      if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
+    }
+    return null;
+  }
+}
+
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: { _csrf_token: csrfToken },
-  hooks: { ...colocatedHooks, PhoneMask, AutoClearFlash, TotemSounds },
+  hooks: { ...colocatedHooks, PhoneMask, AutoClearFlash, TotemSounds, DeskPreference },
 })
 
 // Show progress bar on live navigation and form submits
