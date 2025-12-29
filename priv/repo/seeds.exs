@@ -518,15 +518,7 @@ defmodule ClinicalFormSeeder do
   alias StarTickets.Accounts.{Service, Client}
 
   def run(client_id) do
-    # 1. Find or Create "Medicina do Trabalho" service
-    # (Service should already exist from previous steps)
-    service = Repo.get_by(Service, name: "Medicina do Trabalho", client_id: client_id)
-
-    if service do
-      create_for_client(client_id)
-    else
-      IO.puts("⚠️ Service 'Medicina do Trabalho' not found. Skipping form creation.")
-    end
+    create_for_client(client_id)
   end
 
   defp create_for_client(client_id) do
@@ -552,13 +544,25 @@ defmodule ClinicalFormSeeder do
           t
       end
 
-    # Link services to this template
+    # Link occupational services to this template
+    occupational_services = [
+      "Admissional",
+      "Demissional",
+      "Periódico",
+      "Retorno ao Trabalho",
+      "Mudanças de Função",
+      "Medicina do Trabalho"
+    ]
+
     services =
       Repo.all(
         from(s in Service,
-          where: s.client_id == ^client_id and ilike(s.name, "%Medicina do Trabalho%")
+          where: s.client_id == ^client_id and s.name in ^occupational_services
         )
       )
+
+    count = length(services)
+    IO.puts("   🔗 Linking form to #{count} occupational services...")
 
     for service <- services do
       service
