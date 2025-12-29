@@ -33,9 +33,9 @@ defmodule StarTicketsWeb.Router do
     pipe_through([:browser, :redirect_if_user_is_authenticated])
 
     live_session :redirect_if_user_is_authenticated,
-      on_mount: [{StarTicketsWeb.UserAuth, :mount_current_user}] do
+      on_mount: [{StarTicketsWeb.UserAuth, :mount_current_scope}] do
       live("/users/register", UserRegistrationLive, :new)
-      live("/users/log-in", UserLoginLive, :new)
+      live("/users/log-in", UserLive.Login, :new)
       live("/users/reset_password", UserForgotPasswordLive, :new)
       live("/users/reset_password/:token", UserResetPasswordLive, :edit)
     end

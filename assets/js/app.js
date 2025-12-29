@@ -155,10 +155,24 @@ const DeskPreference = {
   }
 }
 
+const AutoFocus = {
+  mounted() {
+    this.el.focus();
+    this.el.select();
+  },
+
+  updated() {
+    // Re-focus on update if still the same element
+    if (document.activeElement !== this.el) {
+      this.el.focus();
+    }
+  }
+}
+
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: { _csrf_token: csrfToken },
-  hooks: { ...colocatedHooks, PhoneMask, AutoClearFlash, TotemSounds, DeskPreference },
+  hooks: { ...colocatedHooks, PhoneMask, AutoClearFlash, TotemSounds, DeskPreference, AutoFocus },
 })
 
 // Show progress bar on live navigation and form submits

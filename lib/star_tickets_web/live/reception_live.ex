@@ -23,16 +23,28 @@ defmodule StarTicketsWeb.ReceptionLive do
       |> assign(:selected_ticket, nil)
       # New state for modal
       |> assign(:reviewing_ticket, nil)
-      # ["insurance", "private", "priority"]
-      |> assign(:filter_type, [])
-      # [service_id, ...]
-      |> assign(:filter_services, [])
+      # Tag filters state (names, not IDs, for grouping)
+      |> assign(:taggable_menus, [])
+      |> assign(:selected_tag_names, [])
+      # Service filters (checkbox, list of service IDs)
+      |> assign(:selected_service_ids, [])
+      # Date filter: "today", "12h", "24h", "48h", "all"
+      |> assign(:date_filter, "today")
+      # Service management state (during IN_RECEPTION)
+      |> assign(:editing_services, [])
+      |> assign(:available_services, [])
+      |> assign(:customer_name_input, "")
+      # Track the ticket currently being attended by this receptionist
+      |> assign(:attending_ticket_id, nil)
+      |> load_taggable_menus()
+      |> load_available_services()
       |> load_desks()
       |> load_tickets()
-      |> load_tickets()
+      |> restore_attending_ticket()
 
     if connected?(socket) do
       Tickets.subscribe()
+      Reception.subscribe()
     end
 
     {:ok, socket}
@@ -44,7 +56,7 @@ defmodule StarTicketsWeb.ReceptionLive do
     # Simple strategy: prepend to all_tickets and re-filter
 
     # Needs preloads (services, desk) for proper display
-    ticket = Repo.preload(ticket, [:services, :reception_desk])
+    ticket = Repo.preload(ticket, [:services, :reception_desk, :tags])
 
     all_tickets = [ticket | socket.assigns.all_tickets]
 
@@ -59,7 +71,7 @@ defmodule StarTicketsWeb.ReceptionLive do
 
   def handle_info({:ticket_updated, ticket}, socket) do
     # Needs preloads
-    ticket = Repo.preload(ticket, [:services, :reception_desk])
+    ticket = Repo.preload(ticket, [:services, :reception_desk, :tags])
 
     all_tickets =
       Enum.map(socket.assigns.all_tickets, fn t ->
@@ -98,13 +110,38 @@ defmodule StarTicketsWeb.ReceptionLive do
     end
   end
 
+  defp load_taggable_menus(socket) do
+    if socket.assigns.selected_establishment_id do
+      menus = Accounts.list_taggable_menus(socket.assigns.selected_establishment_id)
+      assign(socket, :taggable_menus, menus)
+    else
+      assign(socket, :taggable_menus, [])
+    end
+  end
+
+  defp load_available_services(socket) do
+    if socket.assigns.selected_establishment_id do
+      services = Accounts.list_establishment_services(socket.assigns.selected_establishment_id)
+      assign(socket, :available_services, services)
+    else
+      assign(socket, :available_services, [])
+    end
+  end
+
   defp load_tickets(socket) do
     if socket.assigns.selected_establishment_id do
       all_tickets = Tickets.list_reception_tickets(socket.assigns.selected_establishment_id)
 
       # Filter and assign
       filtered_tickets =
-        filter_tickets(all_tickets, socket.assigns.active_tab, socket.assigns.filter_type)
+        filter_tickets(
+          all_tickets,
+          socket.assigns.active_tab,
+          socket.assigns.selected_tag_names,
+          socket.assigns.taggable_menus,
+          socket.assigns.selected_service_ids,
+          socket.assigns.date_filter
+        )
 
       socket
       # Keep raw list for updates
@@ -118,6 +155,24 @@ defmodule StarTicketsWeb.ReceptionLive do
     end
   end
 
+  # Restore attending ticket state on page reload
+  defp restore_attending_ticket(socket) do
+    # Find any ticket that is IN_RECEPTION in the current establishment
+    in_reception_ticket =
+      socket.assigns.all_tickets
+      |> Enum.find(&(&1.status == "IN_RECEPTION"))
+
+    if in_reception_ticket do
+      socket
+      |> assign(:attending_ticket_id, in_reception_ticket.id)
+      |> assign(:selected_ticket, in_reception_ticket)
+      |> assign(:editing_services, in_reception_ticket.services)
+      |> assign(:customer_name_input, in_reception_ticket.customer_name || "")
+    else
+      socket
+    end
+  end
+
   defp update_selected_ticket(socket, all_tickets) do
     if socket.assigns.selected_ticket do
       # Refresh selected ticket data
@@ -128,51 +183,173 @@ defmodule StarTicketsWeb.ReceptionLive do
     end
   end
 
-  defp filter_tickets(tickets, tab, _filters) do
-    # 1. Filter by Tab
+  defp filter_tickets(
+         tickets,
+         tab,
+         selected_tag_names,
+         taggable_menus,
+         selected_service_ids,
+         date_filter
+       ) do
+    # 1. Filter by Date
     filtered =
-      case tab do
-        "active" ->
-          Enum.filter(
-            tickets,
-            &(&1.status in ["WAITING_RECEPTION", "CALLED_RECEPTION", "IN_RECEPTION"])
-          )
+      case date_filter do
+        "12h" ->
+          cutoff = DateTime.utc_now() |> DateTime.add(-12, :hour)
+          Enum.filter(tickets, &(DateTime.compare(&1.inserted_at, cutoff) == :gt))
 
-        "finished" ->
-          Enum.filter(
-            tickets,
-            &(&1.status not in ["WAITING_RECEPTION", "CALLED_RECEPTION", "IN_RECEPTION"])
-          )
+        "24h" ->
+          cutoff = DateTime.utc_now() |> DateTime.add(-24, :hour)
+          Enum.filter(tickets, &(DateTime.compare(&1.inserted_at, cutoff) == :gt))
+
+        "48h" ->
+          cutoff = DateTime.utc_now() |> DateTime.add(-48, :hour)
+          Enum.filter(tickets, &(DateTime.compare(&1.inserted_at, cutoff) == :gt))
+
+        "today" ->
+          today = Date.utc_today()
+          Enum.filter(tickets, &(Date.compare(DateTime.to_date(&1.inserted_at), today) == :eq))
 
         _ ->
           tickets
       end
 
-    # 2. Advanced filters (TODO: Implement type filters)
-    filtered
+    # 2. Filter by Tab
+    filtered =
+      case tab do
+        "active" ->
+          Enum.filter(
+            filtered,
+            &(&1.status in ["pending", "WAITING_RECEPTION", "CALLED_RECEPTION", "IN_RECEPTION"])
+          )
+
+        "finished" ->
+          Enum.filter(
+            filtered,
+            &(&1.status not in [
+                "pending",
+                "WAITING_RECEPTION",
+                "CALLED_RECEPTION",
+                "IN_RECEPTION"
+              ])
+          )
+
+        _ ->
+          filtered
+      end
+
+    # 3. Filter by Tags (if any selected)
+    filtered =
+      if Enum.empty?(selected_tag_names) do
+        filtered
+      else
+        # Get all IDs for selected tag names (grouped)
+        selected_ids =
+          taggable_menus
+          |> Enum.filter(&(&1.name in selected_tag_names))
+          |> Enum.flat_map(& &1.ids)
+
+        Enum.filter(filtered, fn ticket ->
+          ticket_tag_ids = Enum.map(ticket.tags, & &1.id)
+          # Show if ticket has ANY of the selected tag IDs
+          Enum.any?(selected_ids, &(&1 in ticket_tag_ids))
+        end)
+      end
+
+    # 4. Filter by Services (if any selected)
+    filtered =
+      if Enum.empty?(selected_service_ids) do
+        filtered
+      else
+        Enum.filter(filtered, fn ticket ->
+          ticket_service_ids = Enum.map(ticket.services, & &1.id)
+          # Show if ticket has ANY of the selected services
+          Enum.any?(selected_service_ids, &(&1 in ticket_service_ids))
+        end)
+      end
+
+    # 5. Sort: Priority tickets first, then by inserted_at
+    Enum.sort_by(filtered, fn ticket ->
+      is_preferencial = Enum.any?(ticket.tags, &String.contains?(&1.name, "Preferencial"))
+      priority_score = if ticket.is_priority || is_preferencial, do: 0, else: 1
+      {priority_score, ticket.inserted_at}
+    end)
   end
+
+  def handle_info({:desk_updated, _desk}, socket) do
+    {:noreply, load_desks(socket)}
+  end
+
+  def handle_info({:desk_created, _desk}, socket) do
+    {:noreply, load_desks(socket)}
+  end
+
+  def handle_info(_, socket), do: {:noreply, socket}
 
   @impl true
   def handle_event("select_desk", %{"desk_id" => desk_id}, socket) do
     id = if desk_id == "", do: nil, else: String.to_integer(desk_id)
 
-    socket =
-      socket
-      |> assign(:selected_desk_id, id)
-      |> push_event("save_desk_preference", %{id: id})
+    if id do
+      case Reception.get_desk!(id) do
+        desk ->
+          # Check if occupied by someone else (safety check)
+          if desk.occupied_by_user_id &&
+               desk.occupied_by_user_id != socket.assigns.current_user.id do
+            {:noreply, put_flash(socket, :error, "Esta mesa já está ocupada.")}
+          else
+            {:ok, _desk} = Reception.occupy_desk(desk, socket.assigns.current_user.id)
 
-    {:noreply, socket}
+            socket =
+              socket
+              |> assign(:selected_desk_id, id)
+              |> push_event("save_desk_preference", %{id: id})
+
+            {:noreply, socket}
+          end
+      end
+    else
+      # Deselecting?
+      if socket.assigns.selected_desk_id do
+        old_desk = Reception.get_desk!(socket.assigns.selected_desk_id)
+
+        if old_desk.occupied_by_user_id == socket.assigns.current_user.id do
+          Reception.release_desk(old_desk)
+        end
+      end
+
+      socket =
+        socket
+        |> assign(:selected_desk_id, nil)
+        |> push_event("save_desk_preference", %{id: nil})
+
+      {:noreply, socket}
+    end
   end
 
   def handle_event("restore_desk_preference", %{"id" => id}, socket) do
     id = String.to_integer(id)
 
     # Verify if desk exists in current list (security check)
-    valid_id? = Enum.any?(socket.assigns.desks, &(&1.id == id))
+    # Find the desk object
+    desk = Enum.find(socket.assigns.desks, &(&1.id == id))
 
     socket =
-      if valid_id? do
-        assign(socket, :selected_desk_id, id)
+      if desk do
+        cond do
+          # Occupied by me -> Just select it
+          desk.occupied_by_user_id == socket.assigns.current_user.id ->
+            assign(socket, :selected_desk_id, id)
+
+          # Free -> Occupy it and select it
+          is_nil(desk.occupied_by_user_id) ->
+            {:ok, _desk} = Reception.occupy_desk(desk, socket.assigns.current_user.id)
+            assign(socket, :selected_desk_id, id)
+
+          # Occupied by someone else -> Ignore preference
+          true ->
+            socket
+        end
       else
         socket
       end
@@ -187,6 +364,44 @@ defmodule StarTicketsWeb.ReceptionLive do
       # Clear selection on tab switch
       |> assign(:selected_ticket, nil)
       |> refresh_tickets_view()
+
+    {:noreply, socket}
+  end
+
+  def handle_event("toggle_service_filter", %{"id" => id}, socket) do
+    service_id = String.to_integer(id)
+    current = socket.assigns.selected_service_ids
+
+    new_selected =
+      if service_id in current do
+        List.delete(current, service_id)
+      else
+        [service_id | current]
+      end
+
+    socket =
+      socket
+      |> assign(:selected_service_ids, new_selected)
+      |> refresh_tickets_view()
+
+    {:noreply, socket}
+  end
+
+  def handle_event("set_date_filter", %{"value" => value}, socket) do
+    socket =
+      socket
+      |> assign(:date_filter, value)
+      |> refresh_tickets_view()
+
+    {:noreply, socket}
+  end
+
+  def handle_event("change_ticket_status", %{"id" => id, "status" => new_status}, socket) do
+    ticket = Tickets.get_ticket!(id)
+    {:ok, _updated} = Tickets.update_ticket_status(ticket, new_status)
+
+    # Refresh the list
+    socket = load_tickets(socket)
 
     {:noreply, socket}
   end
@@ -219,16 +434,177 @@ defmodule StarTicketsWeb.ReceptionLive do
   end
 
   def handle_event("start_attendance", %{"id" => id}, socket) do
-    ticket = Tickets.get_ticket!(id)
-    {:ok, _} = Tickets.update_ticket_status(ticket, "IN_RECEPTION")
-    {:noreply, load_tickets(socket)}
+    # Check if receptionist already has an open ticket
+    current_attending = socket.assigns[:attending_ticket_id]
+
+    if current_attending && current_attending != String.to_integer(id) do
+      # Block: already has an open ticket
+      socket =
+        socket
+        |> put_flash(
+          :error,
+          "⚠️ Você já tem um atendimento em andamento. Finalize o ticket atual antes de iniciar outro."
+        )
+
+      {:noreply, socket}
+    else
+      ticket = Tickets.get_ticket!(id)
+      # Use start_attendance to assign current user
+      {:ok, updated_ticket} = Tickets.start_attendance(ticket, socket.assigns.current_user.id)
+
+      # Populate editing state and track attending ticket
+      socket =
+        socket
+        |> assign(:attending_ticket_id, updated_ticket.id)
+        |> assign(:selected_ticket, updated_ticket)
+        |> assign(:editing_services, updated_ticket.services)
+        |> assign(:customer_name_input, updated_ticket.customer_name || "")
+        |> load_tickets()
+
+      {:noreply, socket}
+    end
+  end
+
+  def handle_event("update_customer_name", %{"value" => value}, socket) do
+    {:noreply, assign(socket, :customer_name_input, value)}
+  end
+
+  def handle_event("update_customer_name", %{"key" => "Enter", "value" => value}, socket) do
+    # Also save on Enter
+    save_customer_name_to_ticket(socket, value)
+  end
+
+  def handle_event("save_customer_name", %{"value" => value}, socket) do
+    save_customer_name_to_ticket(socket, value)
+  end
+
+  defp save_customer_name_to_ticket(socket, value) do
+    customer_name = String.trim(value)
+
+    if socket.assigns.selected_ticket && customer_name != "" do
+      ticket = socket.assigns.selected_ticket
+
+      # Update just the customer name
+      Tickets.update_ticket(ticket, %{customer_name: customer_name})
+
+      socket =
+        socket
+        |> assign(:customer_name_input, customer_name)
+        |> load_tickets()
+
+      {:noreply, socket}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  def handle_event("move_service_up", %{"index" => index_str}, socket) do
+    index = String.to_integer(index_str)
+    services = socket.assigns.editing_services
+
+    if index > 0 do
+      new_services = swap_at(services, index, index - 1)
+      {:noreply, assign(socket, :editing_services, new_services)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  def handle_event("move_service_down", %{"index" => index_str}, socket) do
+    index = String.to_integer(index_str)
+    services = socket.assigns.editing_services
+
+    if index < length(services) - 1 do
+      new_services = swap_at(services, index, index + 1)
+      {:noreply, assign(socket, :editing_services, new_services)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  def handle_event("add_service", %{"service_id" => ""}, socket), do: {:noreply, socket}
+
+  def handle_event("add_service", %{"service_id" => service_id_str}, socket) do
+    service_id = String.to_integer(service_id_str)
+    service = Enum.find(socket.assigns.available_services, &(&1.id == service_id))
+
+    if service && not Enum.any?(socket.assigns.editing_services, &(&1.id == service_id)) do
+      new_services = socket.assigns.editing_services ++ [service]
+      {:noreply, assign(socket, :editing_services, new_services)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  def handle_event("remove_service", %{"index" => index_str}, socket) do
+    index = String.to_integer(index_str)
+    new_services = List.delete_at(socket.assigns.editing_services, index)
+    {:noreply, assign(socket, :editing_services, new_services)}
+  end
+
+  def handle_event("save_attendance", %{"id" => id}, socket) do
+    customer_name = String.trim(socket.assigns.customer_name_input)
+
+    if customer_name == "" do
+      {:noreply, put_flash(socket, :error, "Nome do cliente é obrigatório!")}
+    else
+      ticket = Tickets.get_ticket!(id)
+
+      # Update ticket with customer name and services
+      {:ok, _} =
+        Tickets.update_ticket_with_services(
+          ticket,
+          %{customer_name: customer_name},
+          socket.assigns.editing_services
+        )
+
+      # Clear editing state
+      socket =
+        socket
+        |> assign(:editing_services, [])
+        |> assign(:customer_name_input, "")
+        |> put_flash(:info, "Dados salvos com sucesso!")
+        |> load_tickets()
+
+      {:noreply, socket}
+    end
   end
 
   def handle_event("finish_ticket", %{"id" => id}, socket) do
-    ticket = Tickets.get_ticket!(id)
-    # Default "Finish" behavior
-    {:ok, _} = Tickets.update_ticket_status(ticket, "WAITING_PROFESSIONAL")
-    {:noreply, load_tickets(socket)}
+    customer_name = String.trim(socket.assigns.customer_name_input)
+
+    if customer_name == "" do
+      {:noreply, put_flash(socket, :error, "Nome do cliente é obrigatório para finalizar!")}
+    else
+      ticket = Tickets.get_ticket!(id)
+
+      # Save and finish
+      {:ok, _} =
+        Tickets.update_ticket_with_services(
+          ticket,
+          %{customer_name: customer_name, status: "WAITING_PROFESSIONAL"},
+          socket.assigns.editing_services
+        )
+
+      # Clear editing state
+      socket =
+        socket
+        |> assign(:editing_services, [])
+        |> assign(:customer_name_input, "")
+        |> put_flash(:info, "Atendimento finalizado!")
+        |> load_tickets()
+
+      {:noreply, socket}
+    end
+  end
+
+  defp swap_at(list, idx1, idx2) do
+    a = Enum.at(list, idx1)
+    b = Enum.at(list, idx2)
+
+    list
+    |> List.replace_at(idx1, b)
+    |> List.replace_at(idx2, a)
   end
 
   def handle_event("open_review", %{"id" => id}, socket) do
@@ -252,12 +628,33 @@ defmodule StarTicketsWeb.ReceptionLive do
      |> load_tickets()}
   end
 
+  def handle_event("toggle_tag_filter", %{"name" => name}, socket) do
+    current = socket.assigns.selected_tag_names
+
+    new_selected =
+      if name in current do
+        List.delete(current, name)
+      else
+        [name | current]
+      end
+
+    socket =
+      socket
+      |> assign(:selected_tag_names, new_selected)
+      |> refresh_tickets_view()
+
+    {:noreply, socket}
+  end
+
   defp refresh_tickets_view(socket) do
     filtered =
       filter_tickets(
         socket.assigns.all_tickets,
         socket.assigns.active_tab,
-        socket.assigns.filter_type
+        socket.assigns.selected_tag_names,
+        socket.assigns.taggable_menus,
+        socket.assigns.selected_service_ids,
+        socket.assigns.date_filter
       )
 
     assign(socket, :tickets, filtered)
@@ -344,9 +741,15 @@ defmodule StarTicketsWeb.ReceptionLive do
                 <form phx-change="select_desk" class="m-0">
                   <select name="desk_id" class={"bg-black/20 text-white border-none rounded focus:ring-2 focus:ring-emerald-400 cursor-pointer min-w-[150px] transition-all " <> if(@selected_desk_id, do: "font-bold text-emerald-100", else: "")}>
                     <option value="">Selecione...</option>
-                    <%= for desk <- @desks do %>
-                      <option value={desk.id} selected={@selected_desk_id == desk.id}><%= desk.name %></option>
-                    <% end %>
+                     <%= for desk <- @desks do %>
+                       <%
+                         is_occupied = desk.occupied_by_user_id && desk.occupied_by_user_id != @current_user.id
+                         occupier_name = if is_occupied && desk.occupied_by_user, do: " (#{desk.occupied_by_user.name})", else: ""
+                       %>
+                       <option value={desk.id} selected={@selected_desk_id == desk.id} disabled={is_occupied} class={if is_occupied, do: "text-red-400 bg-black", else: ""}>
+                         <%= desk.name %><%= occupier_name %>
+                       </option>
+                     <% end %>
                   </select>
                 </form>
             </div>
@@ -364,18 +767,49 @@ defmodule StarTicketsWeb.ReceptionLive do
               </div>
             <% end %>
 
-            <%!-- Filters --%>
-            <div class={"bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-md transition-all " <> if(!@selected_desk_id, do: "opacity-30 blur-[2px]", else: "")}>
-               <h3 class="text-white font-medium mb-3 flex items-center justify-between cursor-pointer group">
-                  <span>🔎 Filtros</span>
-                  <span class="text-xs bg-white/10 px-2 py-1 rounded text-white/70 group-hover:bg-white/20">Expandir</span>
-               </h3>
-               <%!-- Basic Checks --%>
-               <div class="grid grid-cols-2 gap-2 text-sm text-white/80">
-                  <label class="flex items-center gap-2 cursor-pointer hover:text-white"><input type="checkbox" class="rounded bg-white/10 border-white/20 text-emerald-500 focus:ring-0"> Convênio</label>
-                  <label class="flex items-center gap-2 cursor-pointer hover:text-white"><input type="checkbox" class="rounded bg-white/10 border-white/20 text-emerald-500 focus:ring-0"> Particular</label>
-                  <label class="flex items-center gap-2 cursor-pointer hover:text-white"><input type="checkbox" class="rounded bg-white/10 border-white/20 text-emerald-500 focus:ring-0"> Preferencial</label>
-               </div>
+            <%!-- Compact Filters Row --%>
+            <div class={"flex flex-wrap gap-2 items-center p-3 bg-white/5 border border-white/10 rounded-xl backdrop-blur-md transition-all " <> if(!@selected_desk_id, do: "opacity-30 blur-[2px]", else: "")}>
+               <%!-- Date Filter Buttons --%>
+               <%= for {label, value} <- [{"Hoje", "today"}, {"12h", "12h"}, {"24h", "24h"}, {"48h", "48h"}] do %>
+                  <button
+                     phx-click="set_date_filter"
+                     phx-value-value={value}
+                     class={"px-2 py-1 rounded text-xs transition-all select-none " <>
+                        if(@date_filter == value,
+                           do: "bg-emerald-500/30 text-emerald-200 border border-emerald-400/50",
+                           else: "bg-white/5 text-white/50 border border-white/10 hover:bg-white/10")}
+                  >📅 <%= label %></button>
+               <% end %>
+
+               <span class="text-white/20">|</span>
+
+               <%!-- Tag Filter Buttons --%>
+               <%= for tag <- @taggable_menus do %>
+                  <button
+                     phx-click="toggle_tag_filter"
+                     phx-value-name={tag.name}
+                     class={"px-2 py-1 rounded text-xs transition-all select-none " <>
+                        if(tag.name in @selected_tag_names,
+                           do: "bg-emerald-500/30 text-emerald-200 border border-emerald-400/50",
+                           else: "bg-white/5 text-white/50 border border-white/10 hover:bg-white/10")}
+                  ><%= tag.name %></button>
+               <% end %>
+
+               <%= if not Enum.empty?(@taggable_menus) and not Enum.empty?(@available_services) do %>
+                  <span class="text-white/20">|</span>
+               <% end %>
+
+               <%!-- Service Filter Buttons --%>
+               <%= for service <- @available_services do %>
+                  <button
+                     phx-click="toggle_service_filter"
+                     phx-value-id={service.id}
+                     class={"px-2 py-1 rounded text-xs transition-all select-none " <>
+                        if(service.id in @selected_service_ids,
+                           do: "bg-blue-500/30 text-blue-200 border border-blue-400/50",
+                           else: "bg-white/5 text-white/50 border border-white/10 hover:bg-white/10")}
+                  ><%= service.name %></button>
+               <% end %>
             </div>
 
             <%!-- Ticket List With Tabs --%>
@@ -397,17 +831,58 @@ defmodule StarTicketsWeb.ReceptionLive do
                     </div>
                   <% else %>
                      <%= for ticket <- @tickets do %>
-                        <div class={"bg-white/5 border border-white/10 p-3 rounded-xl hover:bg-white/10 cursor-pointer transition-all group active:scale-[0.98] " <> if(@selected_ticket && @selected_ticket.id == ticket.id, do: "bg-emerald-500/10 border-emerald-500/50 ring-1 ring-emerald-500/30", else: "")} phx-click="select_ticket" phx-value-id={ticket.id}>
+                        <%
+                          # Determine ticket styling based on status and selection
+                          is_selected = @selected_ticket && @selected_ticket.id == ticket.id
+                          is_in_reception = ticket.status == "IN_RECEPTION"
+                          is_mine = ticket.user_id == @current_user.id
+
+                          base_class = "p-3 rounded-xl cursor-pointer transition-all group active:scale-[0.98] "
+
+                          ticket_class = cond do
+                            is_in_reception && is_mine ->
+                              # Premium green acrylic for MY attendance
+                              base_class <> "bg-gradient-to-br from-emerald-500/30 to-emerald-700/20 border-2 border-emerald-400/60 shadow-lg shadow-emerald-500/20 backdrop-blur-md ring-2 ring-emerald-400/40"
+                            is_in_reception && !is_mine ->
+                              # Red acrylic for OTHER attendance
+                              base_class <> "bg-gradient-to-br from-red-500/30 to-red-700/20 border-2 border-red-400/60 shadow-lg shadow-red-500/20 backdrop-blur-md opacity-70 grayscale-[0.3]"
+                            is_selected ->
+                              base_class <> "bg-emerald-500/10 border border-emerald-500/50 ring-1 ring-emerald-500/30"
+                            true ->
+                              base_class <> "bg-white/5 border border-white/10 hover:bg-white/10"
+                          end
+                        %>
+                        <div class={ticket_class} phx-click="select_ticket" phx-value-id={ticket.id}>
                            <div class="flex justify-between items-start mb-1">
-                              <span class="text-xl font-bold text-white"><%= ticket.display_code %></span>
-                              <span class={"text-xs font-bold px-2 py-0.5 rounded border " <>
-                                 case ticket.status do
-                                    "WAITING_RECEPTION" -> "bg-amber-500/20 text-amber-300 border-amber-500/30"
-                                    "CALLED_RECEPTION" -> "bg-blue-500/20 text-blue-300 border-blue-500/30"
-                                    "IN_RECEPTION" -> "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
-                                    _ -> "bg-slate-500/20 text-slate-300 border-slate-500/30"
-                                 end
-                              }><%= ticket.status %></span>
+                              <div>
+                                 <span class="text-xl font-bold text-white"><%= ticket.display_code %></span>
+                                 <%= if ticket.customer_name do %>
+                                    <span class="text-sm text-emerald-400 ml-2">👤 <%= ticket.customer_name %></span>
+                                 <% end %>
+                              </div>
+                              <%= if @active_tab == "finished" do %>
+                                 <%!-- Dropdown to change status in finished tab --%>
+                                 <form phx-change="change_ticket_status" phx-value-id={ticket.id}>
+                                    <select name="status" class="text-xs bg-slate-800 border border-white/20 rounded px-2 py-1 text-white cursor-pointer focus:ring-2 focus:ring-emerald-500 outline-none">
+                                       <option value="WAITING_RECEPTION" selected={ticket.status == "WAITING_RECEPTION"}>⏳ WAITING_RECEPTION</option>
+                                       <option value="CALLED_RECEPTION" selected={ticket.status == "CALLED_RECEPTION"}>📢 CALLED_RECEPTION</option>
+                                       <option value="IN_RECEPTION" selected={ticket.status == "IN_RECEPTION"}>🏢 IN_RECEPTION</option>
+                                       <option value="WAITING_PROFESSIONAL" selected={ticket.status == "WAITING_PROFESSIONAL"}>⏱️ WAITING_PROFESSIONAL</option>
+                                       <option value="IN_SERVICE" selected={ticket.status == "IN_SERVICE"}>🩺 IN_SERVICE</option>
+                                       <option value="COMPLETED" selected={ticket.status == "COMPLETED"}>✅ COMPLETED</option>
+                                       <option value="CANCELLED" selected={ticket.status == "CANCELLED"}>❌ CANCELLED</option>
+                                    </select>
+                                 </form>
+                              <% else %>
+                                 <span class={"text-xs font-bold px-2 py-0.5 rounded border " <>
+                                    case ticket.status do
+                                       "WAITING_RECEPTION" -> "bg-amber-500/20 text-amber-300 border-amber-500/30"
+                                       "CALLED_RECEPTION" -> "bg-blue-500/20 text-blue-300 border-blue-500/30"
+                                       "IN_RECEPTION" -> "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+                                       _ -> "bg-slate-500/20 text-slate-300 border-slate-500/30"
+                                    end
+                                 }><%= ticket.status %></span>
+                              <% end %>
                            </div>
                            <div class="flex items-center gap-2 mb-2">
                               <%= if ticket.is_priority do %>
@@ -451,7 +926,7 @@ defmodule StarTicketsWeb.ReceptionLive do
                    </div>
                    <div class="text-right">
                       <div class="text-2xl font-bold text-yellow-400"><%= @selected_ticket.status %></div>
-                      <div class="text-white/40 text-sm mt-1">🕒 Chegada: <%= Calendar.strftime(@selected_ticket.created_at, "%H:%M") %></div>
+                      <div class="text-white/40 text-sm mt-1">🕒 Chegada: <%= Calendar.strftime(@selected_ticket.inserted_at, "%H:%M") %></div>
                    </div>
                 </div>
 
@@ -478,30 +953,95 @@ defmodule StarTicketsWeb.ReceptionLive do
                    <% end %>
                 </div>
 
-                <%!-- Customer Identification --%>
-                <div class="bg-white/5 border border-white/10 rounded-xl p-6 mb-6">
-                   <h3 class="text-white mb-4 flex items-center gap-2 font-medium">
-                      <span>👤 Identificação do Cliente</span>
-                   </h3>
-                   <div class="flex gap-4">
-                      <input type="text" placeholder="Digite o nome do cliente..." value={@selected_ticket.customer_name} class="flex-1 bg-black/20 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all" />
-                      <button class="px-6 bg-white/10 hover:bg-white/20 text-white rounded-lg border border-white/20 transition-all">Salvar</button>
-                   </div>
-                </div>
-
-                <%!-- Web Checkin Preview --%>
-                <div class="bg-gradient-to-br from-emerald-900/40 to-blue-900/40 border border-emerald-500/30 rounded-xl p-6">
-                   <div class="flex justify-between items-center mb-4">
-                      <h3 class="text-emerald-400 font-bold flex items-center gap-2">
-                         📋 Web Check-in
-                         <span class="text-xs bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30">
-                            <%= @selected_ticket.webcheckin_status || "Não iniciado" %>
-                         </span>
+                <%!-- Customer Identification & Services (only during IN_RECEPTION) --%>
+                <%= if @selected_ticket.status == "IN_RECEPTION" do %>
+                   <div class="bg-white/5 border border-white/10 rounded-xl p-6 mb-6">
+                      <h3 class="text-white mb-4 flex items-center gap-2 font-medium">
+                         <span>👤 Identificação do Cliente</span>
+                         <span class="text-red-400 text-xs">(Obrigatório)</span>
                       </h3>
-                      <button class="text-xs bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded transition-all" phx-click="open_review" phx-value-id={@selected_ticket.id}>Ver Detalhes</button>
+                      <input
+                         id="customer-name-input"
+                         phx-hook="AutoFocus"
+                         type="text"
+                         placeholder="Digite o nome do cliente e pressione Enter..."
+                         value={@customer_name_input}
+                         phx-keyup="update_customer_name"
+                         phx-blur="save_customer_name"
+                         phx-key="Enter"
+                         phx-debounce="100"
+                         class="w-full bg-black/20 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
+                      />
                    </div>
-                   <p class="text-white/60 text-sm">O cliente iniciou o processo de check-in online. Clique para revisar os documentos e dados.</p>
-                </div>
+
+                   <%!-- Editable Services List --%>
+                   <div class="bg-white/5 border border-white/10 rounded-xl p-6 mb-6">
+                      <h3 class="text-white mb-4 flex items-center justify-between font-medium">
+                         <span>🏥 Serviços Selecionados</span>
+                         <span class="text-xs text-white/50"><%= length(@editing_services) %> serviço(s)</span>
+                      </h3>
+
+                      <%!-- Service List --%>
+                      <div class="space-y-2 mb-4">
+                         <%= for {service, index} <- Enum.with_index(@editing_services) do %>
+                            <div class="flex items-center gap-2 bg-black/20 rounded-lg px-3 py-2 border border-white/10">
+                               <span class="flex-1 text-white text-sm"><%= service.name %></span>
+                               <button
+                                  phx-click="move_service_up"
+                                  phx-value-index={index}
+                                  class={"text-white/50 hover:text-white p-1 transition-colors " <> if(index == 0, do: "opacity-30 cursor-not-allowed", else: "")}
+                                  disabled={index == 0}
+                               >⬆️</button>
+                               <button
+                                  phx-click="move_service_down"
+                                  phx-value-index={index}
+                                  class={"text-white/50 hover:text-white p-1 transition-colors " <> if(index == length(@editing_services) - 1, do: "opacity-30 cursor-not-allowed", else: "")}
+                                  disabled={index == length(@editing_services) - 1}
+                               >⬇️</button>
+                               <button
+                                  phx-click="remove_service"
+                                  phx-value-index={index}
+                                  class="text-red-400 hover:text-red-300 p-1 transition-colors"
+                               >🗑️</button>
+                            </div>
+                         <% end %>
+                         <%= if Enum.empty?(@editing_services) do %>
+                            <div class="text-white/30 text-center py-4 border border-dashed border-white/10 rounded-lg">
+                               Nenhum serviço selecionado
+                            </div>
+                         <% end %>
+                      </div>
+
+                      <%!-- Add Service Dropdown --%>
+                      <form phx-change="add_service" class="flex gap-2">
+                         <select name="service_id" class="flex-1 bg-black/20 border border-white/20 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-emerald-500 outline-none">
+                            <option value="">+ Adicionar serviço...</option>
+                            <%= for service <- @available_services do %>
+                               <%= unless Enum.any?(@editing_services, &(&1.id == service.id)) do %>
+                                  <option value={service.id}><%= service.name %></option>
+                               <% end %>
+                            <% end %>
+                         </select>
+                      </form>
+                   </div>
+
+                <% end %>
+
+                <%!-- Web Checkin Preview (only show if webcheckin_status exists) --%>
+                <%= if @selected_ticket.webcheckin_status do %>
+                   <div class="bg-gradient-to-br from-emerald-900/40 to-blue-900/40 border border-emerald-500/30 rounded-xl p-6">
+                      <div class="flex justify-between items-center mb-4">
+                         <h3 class="text-emerald-400 font-bold flex items-center gap-2">
+                            📋 Web Check-in
+                            <span class="text-xs bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30">
+                               <%= @selected_ticket.webcheckin_status %>
+                            </span>
+                         </h3>
+                         <button class="text-xs bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded transition-all" phx-click="open_review" phx-value-id={@selected_ticket.id}>Ver Detalhes</button>
+                      </div>
+                      <p class="text-white/60 text-sm">O cliente iniciou o processo de check-in online. Clique para revisar os documentos e dados.</p>
+                   </div>
+                <% end %>
 
              <% else %>
                 <div class="h-full flex flex-col items-center justify-center text-white/30 select-none">

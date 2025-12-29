@@ -919,6 +919,27 @@ defmodule StarTickets.Accounts do
   end
 
   @doc """
+  Lists all taggable menus for an establishment (is_taggable = true).
+  Groups menus with the same name, returning a list of IDs per group.
+  Used as filter tags in the Reception interface.
+  """
+  def list_taggable_menus(establishment_id) do
+    TotemMenu
+    |> where([m], m.establishment_id == ^establishment_id and m.is_taggable == true)
+    |> order_by([m], asc: m.position, asc: m.inserted_at)
+    |> select([m], %{id: m.id, name: m.name, icon_class: m.icon_class})
+    |> Repo.all()
+    |> Enum.group_by(& &1.name)
+    |> Enum.map(fn {name, menus} ->
+      %{
+        name: name,
+        icon_class: List.first(menus).icon_class,
+        ids: Enum.map(menus, & &1.id)
+      }
+    end)
+  end
+
+  @doc """
   Lists root totem menus (parent_id is nil) for an establishment.
   Used by the totem kiosk interface.
   """

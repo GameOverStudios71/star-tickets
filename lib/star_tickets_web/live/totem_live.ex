@@ -577,7 +577,8 @@ defmodule StarTicketsWeb.TotemLive do
     ticket_params = %{
       display_code: generate_ticket_code(),
       establishment_id: socket.assigns.establishment_id,
-      services: socket.assigns.selected_services
+      services: socket.assigns.selected_services,
+      tags: socket.assigns.selected_tags
     }
 
     case Tickets.create_ticket(ticket_params) do

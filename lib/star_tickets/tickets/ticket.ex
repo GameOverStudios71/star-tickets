@@ -4,7 +4,7 @@ defmodule StarTickets.Tickets.Ticket do
 
   schema "tickets" do
     field(:display_code, :string)
-    field(:status, :string, default: "pending")
+    field(:status, :string, default: "WAITING_RECEPTION")
     field(:token, Ecto.UUID)
     field(:customer_name, :string)
 
@@ -28,6 +28,11 @@ defmodule StarTickets.Tickets.Ticket do
     )
 
     has_many(:form_responses, StarTickets.Forms.FormResponse)
+
+    many_to_many(:tags, StarTickets.Accounts.TotemMenu,
+      join_through: "tickets_tags",
+      on_replace: :delete
+    )
 
     # has_many :webcheckin_files, StarTickets.Forms.WebCheckinFile # Schema needs to be created or checked
 

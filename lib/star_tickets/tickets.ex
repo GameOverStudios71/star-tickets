@@ -41,8 +41,20 @@ defmodule StarTickets.Tickets do
     |> broadcast(:ticket_updated)
   end
 
+  @doc """
+  Updates a ticket with new attributes and replaces its services.
+  """
+  def update_ticket_with_services(%Ticket{} = ticket, attrs, services) do
+    ticket
+    |> Ticket.changeset(attrs)
+    |> Ecto.Changeset.put_assoc(:services, services)
+    |> Repo.update()
+    |> broadcast(:ticket_updated)
+  end
+
   def create_ticket(attrs \\ %{}) do
     services = attrs[:services] || []
+    tags = attrs[:tags] || []
 
     # Generate UUID token if not provided
     token = Ecto.UUID.generate()
@@ -51,6 +63,7 @@ defmodule StarTickets.Tickets do
     %Ticket{}
     |> Ticket.changeset(attrs)
     |> Ecto.Changeset.put_assoc(:services, services)
+    |> Ecto.Changeset.put_assoc(:tags, tags)
     |> Repo.insert()
     |> broadcast(:ticket_created)
   end
@@ -61,7 +74,7 @@ defmodule StarTickets.Tickets do
     Ticket
     |> where([t], t.establishment_id == ^establishment_id)
     |> where([t], t.inserted_at >= ^today)
-    |> preload([:services, :reception_desk])
+    |> preload([:services, :reception_desk, :tags])
     |> order_by([t], desc: t.is_priority, asc: t.inserted_at)
     |> Repo.all()
   end
@@ -71,7 +84,25 @@ defmodule StarTickets.Tickets do
   end
 
   def update_ticket_status(%Ticket{} = ticket, status) do
-    update_ticket(ticket, %{status: status})
+    attrs = %{status: status}
+
+    # If returning to waiting, maybe clear user assignment?
+    # For now, let's keep it simple. If status is "WAITING_RECEPTION", clear user.
+    attrs =
+      if status == "WAITING_RECEPTION" do
+        Map.put(attrs, :user_id, nil)
+      else
+        attrs
+      end
+
+    update_ticket(ticket, attrs)
+  end
+
+  def start_attendance(%Ticket{} = ticket, user_id) do
+    update_ticket(ticket, %{
+      status: "IN_RECEPTION",
+      user_id: user_id
+    })
   end
 
   def count_waiting_tickets(establishment_id) do
@@ -116,7 +147,8 @@ defmodule StarTickets.Tickets do
 
   Raises `Ecto.NoResultsError` if the Ticket does not exist.
   """
-  def get_ticket!(id), do: Repo.get!(Ticket, id) |> Repo.preload([:services, :establishment])
+  def get_ticket!(id),
+    do: Repo.get!(Ticket, id) |> Repo.preload([:services, :establishment, :tags])
 
   @doc """
   Checks if any of the ticket services has a form template.
