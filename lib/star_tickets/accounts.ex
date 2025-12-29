@@ -884,6 +884,29 @@ defmodule StarTickets.Accounts do
     |> Repo.preload(totem_menu_services: :service)
   end
 
+  @doc """
+  Lists root totem menus (parent_id is nil) for an establishment.
+  Used by the totem kiosk interface.
+  """
+  def list_root_totem_menus(establishment_id) do
+    TotemMenu
+    |> where([m], m.establishment_id == ^establishment_id and is_nil(m.parent_id))
+    |> order_by([m], asc: m.position, asc: m.inserted_at)
+    |> Repo.all()
+    |> Repo.preload([:children, totem_menu_services: :service])
+  end
+
+  @doc """
+  Gets children of a totem menu for navigation.
+  """
+  def get_totem_menu_children(menu_id) do
+    TotemMenu
+    |> where([m], m.parent_id == ^menu_id)
+    |> order_by([m], asc: m.position, asc: m.inserted_at)
+    |> Repo.all()
+    |> Repo.preload([:children, totem_menu_services: :service])
+  end
+
   def get_totem_menu!(id),
     do: Repo.get!(TotemMenu, id) |> Repo.preload([:children, totem_menu_services: :service])
 

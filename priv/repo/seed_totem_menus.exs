@@ -31,40 +31,64 @@ Repo.delete_all(Service)
 IO.puts("🗑️  Clearing establishments...")
 Repo.delete_all(Establishment)
 
-# Services from init.js
+# Services from init.js with descriptions
 services_data = [
-  %{name: "Ultrassom", duration: 15},
-  %{name: "Mamo / Dens / Raio - X", duration: 20},
-  %{name: "Endoscopia / Colono", duration: 30},
-  %{name: "Tomografia", duration: 20},
-  %{name: "Exames Cardiológicos", duration: 20},
-  %{name: "Retirada de Exames", duration: 5},
-  %{name: "Triagem Completa", duration: 30},
-  %{name: "Endoscopia(Gastros)", duration: 25},
-  %{name: "Cardiológicos", duration: 20},
-  %{name: "Ecocardiograma / Eco Fetal", duration: 25},
-  %{name: "Recepção", duration: 10},
-  %{name: "Ecodopplercardiograma", duration: 25},
-  %{name: "Endoscopia / Colonoscopia", duration: 30},
-  %{name: "Teste Ergométrico", duration: 20},
-  %{name: "Eletroneuro", duration: 25},
-  %{name: "Colonoscopia / Vulvoscopia", duration: 30},
-  %{name: "Raio X", duration: 10},
-  %{name: "Mamografia", duration: 15},
-  %{name: "Exames de Imagem", duration: 20},
-  %{name: "Cedusp / Cadi", duration: 15},
-  %{name: "Resultado de Exames", duration: 5},
-  %{name: "Exames de Sangue", duration: 10},
-  %{name: "Colpo / Vulvo", duration: 20},
-  %{name: "Mamografia / Raio - X", duration: 20},
-  %{name: "Eletroneuro / Doppler", duration: 25},
-  %{name: "Ecodoppler / Teste Ergométrico", duration: 25},
-  %{name: "Mamo / Densi / Raio - X", duration: 20},
-  %{name: "Demissional", duration: 15},
-  %{name: "Admissional", duration: 20},
-  %{name: "Retorno ao Trabalho", duration: 15},
-  %{name: "Mudanças de Função", duration: 15},
-  %{name: "Periódico", duration: 15}
+  %{name: "Ultrassom", duration: 15, description: "Exame de ultrassonografia geral"},
+  %{
+    name: "Mamo / Dens / Raio - X",
+    duration: 20,
+    description: "Mamografia, Densitometria e Raio-X"
+  },
+  %{
+    name: "Endoscopia / Colono",
+    duration: 30,
+    description: "Endoscopia digestiva e Colonoscopia"
+  },
+  %{name: "Tomografia", duration: 20, description: "Tomografia computadorizada"},
+  %{
+    name: "Exames Cardiológicos",
+    duration: 20,
+    description: "Eletrocardiograma e exames do coração"
+  },
+  %{name: "Retirada de Exames", duration: 5, description: "Retirada de resultados de exames"},
+  %{name: "Triagem Completa", duration: 30, description: "Triagem médica completa"},
+  %{name: "Endoscopia(Gastros)", duration: 25, description: "Endoscopia gástrica"},
+  %{name: "Cardiológicos", duration: 20, description: "Exames cardiológicos gerais"},
+  %{name: "Ecocardiograma / Eco Fetal", duration: 25, description: "Ecocardiograma e Eco Fetal"},
+  %{name: "Recepção", duration: 10, description: "Atendimento na recepção"},
+  %{name: "Ecodopplercardiograma", duration: 25, description: "Ecodopplercardiograma colorido"},
+  %{
+    name: "Endoscopia / Colonoscopia",
+    duration: 30,
+    description: "Endoscopia e Colonoscopia completa"
+  },
+  %{name: "Teste Ergométrico", duration: 20, description: "Teste de esforço em esteira"},
+  %{name: "Eletroneuro", duration: 25, description: "Eletroneuromiografia"},
+  %{name: "Colonoscopia / Vulvoscopia", duration: 30, description: "Colonoscopia e Vulvoscopia"},
+  %{name: "Raio X", duration: 10, description: "Radiografia simples"},
+  %{name: "Mamografia", duration: 15, description: "Mamografia digital"},
+  %{name: "Exames de Imagem", duration: 20, description: "Exames de diagnóstico por imagem"},
+  %{name: "Cedusp / Cadi", duration: 15, description: "Centro de diagnóstico"},
+  %{name: "Resultado de Exames", duration: 5, description: "Entrega de resultados"},
+  %{name: "Exames de Sangue", duration: 10, description: "Coleta de sangue laboratorial"},
+  %{name: "Colpo / Vulvo", duration: 20, description: "Colposcopia e Vulvoscopia"},
+  %{name: "Mamografia / Raio - X", duration: 20, description: "Mamografia e Raio-X"},
+  %{name: "Eletroneuro / Doppler", duration: 25, description: "Eletroneuromiografia e Doppler"},
+  %{
+    name: "Ecodoppler / Teste Ergométrico",
+    duration: 25,
+    description: "Ecodoppler e Teste de Esforço"
+  },
+  %{
+    name: "Mamo / Densi / Raio - X",
+    duration: 20,
+    description: "Mamografia, Densitometria e Raio-X"
+  },
+  %{name: "Demissional", duration: 15, description: "Exame médico de demissão"},
+  %{name: "Admissional", duration: 20, description: "Exame médico de admissão"},
+  %{name: "Retorno ao Trabalho", duration: 15, description: "Exame de retorno ao trabalho"},
+  %{name: "Mudanças de Função", duration: 15, description: "Exame para mudança de função"},
+  %{name: "Periódico", duration: 15, description: "Exame médico periódico"}
 ]
 
 IO.puts("💉 Creating #{length(services_data)} services...")
@@ -163,6 +187,42 @@ medicina_trabalho_services = [
   "Periódico"
 ]
 
+# Service icons map (emoji icons)
+service_icons = %{
+  "Ultrassom" => "🔊",
+  "Mamo / Dens / Raio - X" => "📷",
+  "Endoscopia / Colono" => "🔬",
+  "Tomografia" => "🖥️",
+  "Exames Cardiológicos" => "❤️",
+  "Retirada de Exames" => "📋",
+  "Triagem Completa" => "📝",
+  "Endoscopia(Gastros)" => "🔬",
+  "Cardiológicos" => "❤️",
+  "Ecocardiograma / Eco Fetal" => "💓",
+  "Recepção" => "🏢",
+  "Ecodopplercardiograma" => "💓",
+  "Endoscopia / Colonoscopia" => "🔬",
+  "Teste Ergométrico" => "🏃",
+  "Eletroneuro" => "⚡",
+  "Colonoscopia / Vulvoscopia" => "🔬",
+  "Raio X" => "📷",
+  "Mamografia" => "🎀",
+  "Exames de Imagem" => "📷",
+  "Cedusp / Cadi" => "🏥",
+  "Resultado de Exames" => "📄",
+  "Exames de Sangue" => "🩸",
+  "Colpo / Vulvo" => "🔬",
+  "Mamografia / Raio - X" => "📷",
+  "Eletroneuro / Doppler" => "⚡",
+  "Ecodoppler / Teste Ergométrico" => "💓",
+  "Mamo / Densi / Raio - X" => "📷",
+  "Demissional" => "👋",
+  "Admissional" => "🤝",
+  "Retorno ao Trabalho" => "🔙",
+  "Mudanças de Função" => "🔄",
+  "Periódico" => "📅"
+}
+
 # Helper to create menu with optional services and is_taggable
 create_menu = fn est_id, name, icon_class, parent_id, position, service_names, is_taggable ->
   attrs = %{
@@ -186,7 +246,8 @@ create_menu = fn est_id, name, icon_class, parent_id, position, service_names, i
       |> Enum.filter(fn {name, _} -> Map.has_key?(service_map, name) end)
       |> Enum.map(fn {name, _idx} ->
         svc = Map.get(service_map, name)
-        %{service_id: svc.id, description: nil, icon_class: nil}
+        icon = Map.get(service_icons, name, "📋")
+        %{service_id: svc.id, description: nil, icon_class: icon}
       end)
 
     if length(services_data) > 0 do

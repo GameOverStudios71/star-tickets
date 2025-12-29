@@ -4,6 +4,7 @@ defmodule StarTickets.Accounts.Service do
 
   schema "services" do
     field(:name, :string)
+    field(:description, :string)
     # minutes
     field(:duration, :integer)
 
@@ -16,7 +17,7 @@ defmodule StarTickets.Accounts.Service do
   @doc false
   def changeset(service, attrs) do
     service
-    |> cast(attrs, [:name, :duration, :client_id, :form_template_id])
+    |> cast(attrs, [:name, :description, :duration, :client_id, :form_template_id])
     |> validate_required([:name, :duration, :client_id])
     |> validate_number(:duration, greater_than: 0, message: "deve ser maior que zero")
     |> foreign_key_constraint(:client_id)

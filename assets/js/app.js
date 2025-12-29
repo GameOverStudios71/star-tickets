@@ -47,10 +47,82 @@ const AutoClearFlash = {
   }
 }
 
+// Totem sound effects hook
+const TotemSounds = {
+  mounted() {
+    // Create audio context for generating sounds
+    this.audioContext = null;
+
+    // Handle custom sound events from LiveView
+    this.handleEvent("play_sound", ({ sound }) => {
+      this.playSound(sound);
+    });
+  },
+
+  playSound(type) {
+    // Lazy init audio context (needs user interaction first)
+    if (!this.audioContext) {
+      this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    const ctx = this.audioContext;
+    const now = ctx.currentTime;
+
+    switch (type) {
+      case "click":
+        // Short click sound
+        this.playTone(ctx, 800, 0.05, "sine", 0.3);
+        break;
+      case "select":
+        // Selection toggle sound
+        this.playTone(ctx, 600, 0.08, "sine", 0.3);
+        setTimeout(() => this.playTone(ctx, 900, 0.08, "sine", 0.3), 50);
+        break;
+      case "success":
+        // Success chime (ascending)
+        this.playTone(ctx, 523, 0.1, "sine", 0.4);
+        setTimeout(() => this.playTone(ctx, 659, 0.1, "sine", 0.4), 100);
+        setTimeout(() => this.playTone(ctx, 784, 0.15, "sine", 0.4), 200);
+        break;
+      case "back":
+        // Back/cancel sound (descending)
+        this.playTone(ctx, 400, 0.08, "sine", 0.3);
+        break;
+      case "clear":
+        // Clear all sound
+        this.playTone(ctx, 300, 0.1, "triangle", 0.3);
+        break;
+      case "confirm":
+        // Confirmation sound
+        this.playTone(ctx, 440, 0.1, "sine", 0.4);
+        setTimeout(() => this.playTone(ctx, 660, 0.1, "sine", 0.4), 80);
+        setTimeout(() => this.playTone(ctx, 880, 0.2, "sine", 0.4), 160);
+        break;
+    }
+  },
+
+  playTone(ctx, frequency, duration, type, volume) {
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(ctx.destination);
+
+    oscillator.type = type;
+    oscillator.frequency.value = frequency;
+
+    gainNode.gain.setValueAtTime(volume, ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+
+    oscillator.start(ctx.currentTime);
+    oscillator.stop(ctx.currentTime + duration);
+  }
+}
+
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: { _csrf_token: csrfToken },
-  hooks: { ...colocatedHooks, PhoneMask, AutoClearFlash },
+  hooks: { ...colocatedHooks, PhoneMask, AutoClearFlash, TotemSounds },
 })
 
 // Show progress bar on live navigation and form submits

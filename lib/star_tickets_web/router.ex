@@ -20,7 +20,7 @@ defmodule StarTicketsWeb.Router do
   scope "/", StarTicketsWeb do
     pipe_through(:browser)
 
-    get("/", PageController, :home)
+    live("/", LandingLive, :index)
   end
 
   ## Authentication routes
@@ -56,6 +56,8 @@ defmodule StarTicketsWeb.Router do
       live("/reception", ReceptionLive)
       live("/professional", ProfessionalLive)
       live("/manager", ManagerLive)
+      live("/totem", TotemLive)
+      live("/tv", TVLive)
     end
 
     # Admin / Manager Area (Scoped)

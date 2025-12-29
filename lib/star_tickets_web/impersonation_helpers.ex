@@ -51,13 +51,20 @@ defmodule StarTicketsWeb.ImpersonationHelpers do
           nil
       end
 
-    # Load establishment info
+    # Load establishment info (handle case where establishment was deleted)
     establishment =
       if establishment_for_users do
-        Accounts.get_establishment!(establishment_for_users)
+        try do
+          Accounts.get_establishment!(establishment_for_users)
+        rescue
+          Ecto.NoResultsError -> nil
+        end
       else
         nil
       end
+
+    # If establishment was invalid, reset to nil
+    establishment_for_users = if establishment, do: establishment_for_users, else: nil
 
     # Load users for the selected establishment
     users =
