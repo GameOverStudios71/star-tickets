@@ -2,6 +2,7 @@ defmodule StarTicketsWeb.TotemLive do
   use StarTicketsWeb, :live_view
 
   alias StarTickets.Accounts
+  alias StarTickets.Tickets
   alias StarTicketsWeb.ImpersonationHelpers
 
   @doc """
@@ -229,13 +230,13 @@ defmodule StarTicketsWeb.TotemLive do
             <% end %>
 
             <!-- Service Name -->
-            <div class={"text-xl font-bold mb-2 " <> if(is_selected, do: "text-white", else: "text-white/90")}>
+            <div class={"text-2xl font-bold mb-2 " <> if(is_selected, do: "text-white", else: "text-white/90")}>
               <%= service.name %>
             </div>
 
             <!-- Description from Service -->
             <%= if service.description do %>
-              <div class="text-sm text-white/60 mb-2">
+              <div class="text-base text-white/60 mb-2">
                 <%= service.description %>
               </div>
             <% end %>
@@ -351,16 +352,26 @@ defmodule StarTicketsWeb.TotemLive do
 
         <!-- Info Grid -->
         <div class="grid grid-cols-2 gap-6 mb-10">
-          <div class="p-6 rounded-2xl bg-white/5 border border-white/10">
-            <div class="text-2xl mb-2">📱</div>
-            <p class="text-sm text-white/70">
-              <strong>Acompanhe pelo celular!</strong><br>
-              Escaneie o QR Code na impressão
-            </p>
+          <div class="p-6 rounded-2xl bg-white/5 border border-white/10 flex flex-col items-center justify-center">
+            <%= if assigns[:qr_code] do %>
+              <div class="bg-white p-2 rounded-lg mb-2">
+                <%= raw(@qr_code) %>
+              </div>
+              <p class="text-sm text-white/70 text-center">
+                <strong><%= if @has_forms, do: "Faça WebCheckin!", else: "Acompanhe pelo celular" %></strong><br>
+                Escaneie o QR Code
+              </p>
+            <% else %>
+              <div class="text-2xl mb-2">📱</div>
+              <p class="text-sm text-white/70">
+                <strong>Acompanhe pelo celular!</strong><br>
+                Escaneie o QR Code na impressão
+              </p>
+            <% end %>
           </div>
-          <div class="p-6 rounded-2xl bg-white/5 border border-white/10">
-            <div class="text-2xl mb-2">🔔</div>
-            <p class="text-sm text-white/70">
+          <div class="p-6 rounded-2xl bg-white/5 border border-white/10 flex flex-col items-center justify-center">
+            <div class="text-4xl mb-2">🔔</div>
+            <p class="text-sm text-white/70 text-center">
               <strong>Fique atento!</strong><br>
               Sua senha será chamada em breve
             </p>
@@ -553,19 +564,37 @@ defmodule StarTicketsWeb.TotemLive do
   end
 
   def handle_event("generate_ticket", _params, socket) do
-    # For now, generate a mock ticket
-    # TODO: Implement actual ticket creation via Tickets context
-    ticket = %{
+    # Create real ticket
+    ticket_params = %{
       display_code: generate_ticket_code(),
-      services: socket.assigns.selected_services,
-      tags: socket.assigns.selected_tags,
-      created_at: DateTime.utc_now()
+      establishment_id: socket.assigns.establishment_id,
+      services: socket.assigns.selected_services
     }
 
-    {:noreply,
-     socket
-     |> push_event("play_sound", %{sound: "success"})
-     |> assign(current_step: :ticket, ticket: ticket)}
+    case Tickets.create_ticket(ticket_params) do
+      {:ok, ticket} ->
+        # Determine URL based on forms
+        has_forms = Tickets.ticket_has_forms?(ticket)
+        path = if has_forms, do: "webcheckin", else: "ticket"
+        url = "#{StarTicketsWeb.Endpoint.url()}/#{path}/#{ticket.token}"
+
+        # Generate QR Code
+        qr_code = url |> EQRCode.encode() |> EQRCode.svg(width: 200)
+
+        {:noreply,
+         socket
+         |> push_event("play_sound", %{sound: "success"})
+         |> assign(
+           current_step: :ticket,
+           ticket: ticket,
+           qr_code: qr_code,
+           has_forms: has_forms
+         )}
+
+      {:error, _changeset} ->
+        # Fallback error handling (maybe show toast)
+        {:noreply, socket}
+    end
   end
 
   def handle_event("reset", _params, socket) do

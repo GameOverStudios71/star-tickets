@@ -21,6 +21,10 @@ defmodule StarTicketsWeb.Router do
     pipe_through(:browser)
 
     live("/", LandingLive, :index)
+
+    # Public Ticket Routes
+    live("/ticket/:token", Public.TicketStatusLive, :index)
+    live("/webcheckin/:token", Public.WebCheckinLive, :index)
   end
 
   ## Authentication routes
