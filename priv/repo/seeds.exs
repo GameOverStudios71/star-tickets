@@ -415,9 +415,8 @@ IO.puts("")
 # ============================================
 IO.puts("👤 Creating users...")
 
-# Get first establishment for reception user
-first_est =
-  Repo.one(from(e in Establishment, where: e.client_id == ^client.id, order_by: e.id, limit: 1))
+# Get Freguesia establishment for all users
+freguesia = Repo.get_by(Establishment, name: "Freguesia", client_id: client.id)
 
 # Admin user
 admin =
@@ -429,6 +428,7 @@ admin =
     username: "admin",
     role: "admin",
     client_id: client.id,
+    establishment_id: freguesia && freguesia.id,
     confirmed_at: DateTime.utc_now() |> DateTime.truncate(:second)
   })
   |> Repo.insert!()
@@ -444,7 +444,7 @@ reception_user =
     name: "Recepcionista",
     username: "recepcao",
     role: "reception",
-    establishment_id: first_est.id,
+    establishment_id: freguesia && freguesia.id,
     client_id: client.id,
     confirmed_at: DateTime.utc_now() |> DateTime.truncate(:second)
   })
