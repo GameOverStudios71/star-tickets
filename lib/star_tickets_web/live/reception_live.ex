@@ -726,6 +726,7 @@ defmodule StarTicketsWeb.ReceptionLive do
          show_home={true}
          home_path={~p"/dashboard"}
          current_scope={@current_scope}
+         {assigns}
       >
          <:right>
             <%!-- Desk Selector with Hook and Green Acrylic Style --%>

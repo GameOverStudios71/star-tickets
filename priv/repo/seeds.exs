@@ -451,6 +451,76 @@ reception_user =
   |> Repo.insert!()
 
 IO.puts("   ✅ Recepção: recepcao@proocupacional.com.br (senha: minhasenha123)")
+
+# Add specific users for Freguesia
+freguesia = Repo.get_by(Establishment, name: "Freguesia", client_id: client.id)
+
+if freguesia do
+  # 1. Second Receptionist
+  %User{}
+  |> Ecto.Changeset.change(%{
+    email: "recepcao.freguesia2@proocupacional.com.br",
+    hashed_password: Bcrypt.hash_pwd_salt("minhasenha123"),
+    name: "Recepcionista Freguesia 2",
+    username: "recep_freg2",
+    role: "reception",
+    establishment_id: freguesia.id,
+    client_id: client.id,
+    confirmed_at: DateTime.utc_now() |> DateTime.truncate(:second)
+  })
+  |> Repo.insert!()
+
+  IO.puts("   ✅ Recepção 2 (Freguesia): recepcao.freguesia2@proocupacional.com.br")
+
+  # 2. Manager
+  %User{}
+  |> Ecto.Changeset.change(%{
+    email: "gerente.freguesia@proocupacional.com.br",
+    hashed_password: Bcrypt.hash_pwd_salt("minhasenha123"),
+    name: "Gerente Freguesia",
+    username: "gerente_freg",
+    role: "manager",
+    establishment_id: freguesia.id,
+    client_id: client.id,
+    confirmed_at: DateTime.utc_now() |> DateTime.truncate(:second)
+  })
+  |> Repo.insert!()
+
+  IO.puts("   ✅ Gerente (Freguesia): gerente.freguesia@proocupacional.com.br")
+
+  # 3. Professional 1
+  %User{}
+  |> Ecto.Changeset.change(%{
+    email: "medico1.freguesia@proocupacional.com.br",
+    hashed_password: Bcrypt.hash_pwd_salt("minhasenha123"),
+    name: "Dr. Silva (Médico)",
+    username: "medico1",
+    role: "professional",
+    establishment_id: freguesia.id,
+    client_id: client.id,
+    confirmed_at: DateTime.utc_now() |> DateTime.truncate(:second)
+  })
+  |> Repo.insert!()
+
+  IO.puts("   ✅ Profissional 1 (Freguesia): medico1.freguesia@proocupacional.com.br")
+
+  # 4. Professional 2
+  %User{}
+  |> Ecto.Changeset.change(%{
+    email: "medico2.freguesia@proocupacional.com.br",
+    hashed_password: Bcrypt.hash_pwd_salt("minhasenha123"),
+    name: "Dra. Santos (Médica)",
+    username: "medico2",
+    role: "professional",
+    establishment_id: freguesia.id,
+    client_id: client.id,
+    confirmed_at: DateTime.utc_now() |> DateTime.truncate(:second)
+  })
+  |> Repo.insert!()
+
+  IO.puts("   ✅ Profissional 2 (Freguesia): medico2.freguesia@proocupacional.com.br")
+end
+
 IO.puts("")
 
 # ============================================
