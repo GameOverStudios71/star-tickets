@@ -415,7 +415,13 @@ defmodule StarTicketsWeb.ReceptionLive do
   def handle_event("call_ticket", %{"id" => id}, socket) do
     ticket = Tickets.get_ticket!(id)
 
-    case Tickets.update_ticket_status(ticket, "CALLED_RECEPTION") do
+    # Set status AND assign to current user to lock it
+    attrs = %{
+      status: "CALLED_RECEPTION",
+      user_id: socket.assigns.current_user.id
+    }
+
+    case Tickets.update_ticket(ticket, attrs) do
       {:ok, updated_ticket} ->
         # Also assign to desk if not set?
         if socket.assigns.selected_desk_id do
@@ -835,18 +841,21 @@ defmodule StarTicketsWeb.ReceptionLive do
                         <%
                           # Determine ticket styling based on status and selection
                           is_selected = @selected_ticket && @selected_ticket.id == ticket.id
-                          is_in_reception = ticket.status == "IN_RECEPTION"
+                          # Consider actively locked if IN_RECEPTION OR (CALLED_RECEPTION and has user assigned)
+                          is_locked_status = ticket.status in ["IN_RECEPTION", "CALLED_RECEPTION"] # and ticket.user_id != nil (implied by next check)
                           is_mine = ticket.user_id == @current_user.id
+                          is_locked_by_other = is_locked_status && ticket.user_id && !is_mine
+                          is_active_for_me = is_locked_status && is_mine
 
                           base_class = "p-3 rounded-xl cursor-pointer transition-all group active:scale-[0.98] "
 
                           ticket_class = cond do
-                            is_in_reception && is_mine ->
-                              # Premium green acrylic for MY attendance
+                            is_active_for_me ->
+                              # Premium green acrylic for MY attendance (or my call)
                               base_class <> "bg-gradient-to-br from-emerald-500/30 to-emerald-700/20 border-2 border-emerald-400/60 shadow-lg shadow-emerald-500/20 backdrop-blur-md ring-2 ring-emerald-400/40"
-                            is_in_reception && !is_mine ->
-                              # Red acrylic for OTHER attendance
-                              base_class <> "bg-gradient-to-br from-red-500/30 to-red-700/20 border-2 border-red-400/60 shadow-lg shadow-red-500/20 backdrop-blur-md opacity-70 grayscale-[0.3]"
+                            is_locked_by_other ->
+                              # Red acrylic for OTHER attendance (or call) - LOCKED
+                              base_class <> "bg-gradient-to-br from-red-500/30 to-red-700/20 border-2 border-red-400/60 shadow-lg shadow-red-500/20 backdrop-blur-md opacity-70 grayscale-[0.3] pointer-events-none"
                             is_selected ->
                               base_class <> "bg-emerald-500/10 border border-emerald-500/50 ring-1 ring-emerald-500/30"
                             true ->
