@@ -904,6 +904,13 @@ defmodule StarTicketsWeb.ReceptionLive do
                               <%= if ticket.health_insurance_name do %>
                                  <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">CONVÊNIO</span>
                               <% end %>
+                              <%= case ticket.webcheckin_status do %>
+                                <% "IN_PROGRESS" -> %>
+                                  <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 animate-pulse">📱 CHECK-IN</span>
+                                <% "COMPLETED" -> %>
+                                  <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-green-500/20 text-green-300 border border-green-500/30">✅ CHECK-IN</span>
+                                <% _ -> %>
+                              <% end %>
                            </div>
                            <p class="text-xs text-white/50 line-clamp-1">
                               <%= Enum.map(ticket.services, & &1.name) |> Enum.join(", ") %>

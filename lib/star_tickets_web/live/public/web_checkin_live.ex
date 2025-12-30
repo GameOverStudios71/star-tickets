@@ -81,7 +81,13 @@ defmodule StarTicketsWeb.Public.WebCheckinLive do
     if String.trim(name) == "" do
       {:noreply, put_flash(socket, :error, "Por favor, informe seu nome.")}
     else
-      {:ok, updated_ticket} = Tickets.update_ticket(socket.assigns.ticket, %{customer_name: name})
+      {:ok, updated_ticket} =
+        Tickets.update_ticket(socket.assigns.ticket, %{
+          customer_name: name,
+          webcheckin_status: "IN_PROGRESS",
+          webcheckin_started_at: DateTime.utc_now()
+        })
+
       {:noreply, socket |> assign(ticket: updated_ticket, current_step: :forms)}
     end
   end
@@ -169,6 +175,14 @@ defmodule StarTicketsWeb.Public.WebCheckinLive do
       end)
 
     Enum.each(responses, &Forms.create_form_response/1)
+
+    # Mark as completed
+    {:ok, _} =
+      Tickets.update_ticket(ticket, %{
+        webcheckin_status: "COMPLETED",
+        webcheckin_completed_at: DateTime.utc_now()
+      })
+
     {:noreply, push_navigate(socket, to: ~p"/ticket/#{ticket.token}")}
   end
 
