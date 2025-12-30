@@ -471,12 +471,15 @@ defmodule StarTicketsWeb.ReceptionLive do
     end
   end
 
+  def handle_event("update_customer_name", %{"customer_name" => value}, socket) do
+    {:noreply, assign(socket, :customer_name_input, value)}
+  end
+
   def handle_event("update_customer_name", %{"value" => value}, socket) do
     {:noreply, assign(socket, :customer_name_input, value)}
   end
 
-  def handle_event("update_customer_name", %{"key" => "Enter", "value" => value}, socket) do
-    # Also save on Enter
+  def handle_event("save_customer_name", %{"customer_name" => value}, socket) do
     save_customer_name_to_ticket(socket, value)
   end
 
@@ -970,18 +973,20 @@ defmodule StarTicketsWeb.ReceptionLive do
                          <span>👤 Identificação do Cliente</span>
                          <span class="text-red-400 text-xs">(Obrigatório)</span>
                       </h3>
-                      <input
-                         id="customer-name-input"
-                         phx-hook="AutoFocus"
-                         type="text"
-                         placeholder="Digite o nome do cliente e pressione Enter..."
-                         value={@customer_name_input}
-                         phx-keyup="update_customer_name"
-                         phx-blur="save_customer_name"
-                         phx-key="Enter"
-                         phx-debounce="100"
-                         class="w-full bg-black/20 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
-                      />
+                       <form phx-submit="save_customer_name" phx-change="update_customer_name">
+                          <input
+                             name="customer_name"
+                             id="customer-name-input"
+                             phx-hook="AutoFocus"
+                             type="text"
+                             placeholder="Digite o nome do cliente e pressione Enter..."
+                             value={@customer_name_input}
+                             phx-blur="save_customer_name"
+                             phx-debounce="100"
+                             autocomplete="off"
+                             class="w-full bg-black/20 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
+                          />
+                       </form>
                    </div>
 
                    <%!-- Editable Services List --%>
