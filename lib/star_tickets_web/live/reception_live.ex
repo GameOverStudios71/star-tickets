@@ -390,9 +390,13 @@ defmodule StarTicketsWeb.ReceptionLive do
   end
 
   def handle_event("set_date_filter", %{"value" => value}, socket) do
+    # Ensure value is clean
+    clean_value = String.trim(value)
+    IO.inspect(clean_value, label: "DATE FILTER SELECTED")
+
     socket =
       socket
-      |> assign(:date_filter, value)
+      |> assign(:date_filter, clean_value)
       |> refresh_tickets_view()
 
     {:noreply, socket}
@@ -789,9 +793,8 @@ defmodule StarTicketsWeb.ReceptionLive do
             <%!-- Collapsible Filter Sections --%>
             <div class={"flex flex-col gap-2 transition-all " <> if(!@selected_desk_id, do: "opacity-30 blur-[2px] pointer-events-none", else: "")}>
 
-               <%!-- 1. DATE FILTER --%>
                <div class="group bg-white/5 border border-white/10 rounded-xl backdrop-blur-md overflow-hidden">
-                  <button phx-click="toggle_section" phx-value-section="date" class="w-full flex items-center justify-between p-3 cursor-pointer select-none hover:bg-white/5 transition-colors outline-none">
+                  <button type="button" phx-click="toggle_section" phx-value-section="date" class="w-full flex items-center justify-between p-3 cursor-pointer select-none hover:bg-white/5 transition-colors outline-none">
                      <span class="text-white font-medium text-sm flex items-center gap-2">📅 Período</span>
                      <span class={"text-white/40 transition-transform text-xs " <> if(@section_states.date, do: "rotate-180", else: "")}>▼</span>
                   </button>
@@ -799,6 +802,7 @@ defmodule StarTicketsWeb.ReceptionLive do
                     <div class="p-3 pt-0 flex flex-wrap gap-2 border-t border-white/5 mt-2 pt-3">
                        <%= for {label, value} <- [{"Hoje", "today"}, {"12h", "12h"}, {"24h", "24h"}, {"48h", "48h"}, {"Todos", "all"}] do %>
                           <button
+                             type="button"
                              phx-click="set_date_filter"
                              phx-value-value={value}
                              class={"px-2 py-1.5 rounded text-xs transition-all select-none flex-1 text-center " <>
