@@ -151,6 +151,76 @@ defmodule StarTickets.Tickets do
     do: Repo.get!(Ticket, id) |> Repo.preload([:services, :establishment, :tags])
 
   @doc """
+  List tickets waiting for professional attention (first time or returning).
+  Ideally filters by tickets that possess services the `room_id` can perform.
+  """
+  def list_professional_tickets(establishment_id, room_services) do
+    today = Date.utc_today() |> DateTime.new!(~T[00:00:00])
+    room_service_ids = Enum.map(room_services, & &1.id)
+
+    Ticket
+    |> where([t], t.establishment_id == ^establishment_id)
+    |> where([t], t.inserted_at >= ^today)
+    |> where([t], t.status in ["WAITING_PROFESSIONAL", "WAITING_NEXT_SERVICE"])
+    |> preload([:services, :reception_desk, :tags, :room, :user])
+    |> order_by([t], desc: t.is_priority, asc: t.inserted_at)
+    |> Repo.all()
+    |> Enum.filter(fn ticket ->
+      # Only show if ticket needs a service this room provides
+      Enum.any?(ticket.services, fn s -> s.id in room_service_ids end)
+    end)
+  end
+
+  def call_ticket_to_room(%Ticket{} = ticket, user_id, room_id) do
+    update_ticket(ticket, %{
+      status: "CALLED_PROFESSIONAL",
+      user_id: user_id,
+      room_id: room_id
+    })
+  end
+
+  def start_professional_attendance(%Ticket{} = ticket) do
+    update_ticket(ticket, %{status: "IN_ATTENDANCE"})
+  end
+
+  @doc """
+  Finishes attendance. Debits (removes) services performed by this room.
+  If services remain, returns to queue. Else finishes.
+  """
+  def finish_attendance_and_route(%Ticket{} = ticket, room_services) do
+    ticket = Repo.preload(ticket, :services, force: true)
+
+    # identify performed services (intersection)
+    room_service_ids = Enum.map(room_services, & &1.id)
+    executed_services = Enum.filter(ticket.services, fn s -> s.id in room_service_ids end)
+
+    # Debit services (remove from association)
+    # We use put_assoc with the remaining list (subtraction)
+    remaining_services = Enum.reject(ticket.services, fn s -> s.id in room_service_ids end)
+
+    # We need to use specific Changeset to remove the association explicitly, or just set the new list
+    changeset =
+      ticket
+      |> Ticket.changeset(%{})
+      |> Ecto.Changeset.put_assoc(:services, remaining_services)
+
+    Repo.update!(changeset)
+
+    # Decide next status
+    if Enum.empty?(remaining_services) do
+      # All done
+      update_ticket(ticket, %{status: "FINISHED"})
+    else
+      # Back to queue
+      update_ticket(ticket, %{
+        status: "WAITING_NEXT_SERVICE",
+        user_id: nil,
+        room_id: nil
+      })
+    end
+  end
+
+  @doc """
   Checks if any of the ticket services has a form template.
   """
   def ticket_has_forms?(ticket) do

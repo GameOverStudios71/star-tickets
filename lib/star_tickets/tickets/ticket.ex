@@ -21,6 +21,7 @@ defmodule StarTickets.Tickets.Ticket do
     belongs_to(:establishment, StarTickets.Accounts.Establishment)
     belongs_to(:user, StarTickets.Accounts.User)
     belongs_to(:reception_desk, StarTickets.Reception.ReceptionDesk)
+    belongs_to(:room, StarTickets.Accounts.Room)
 
     many_to_many(:services, StarTickets.Accounts.Service,
       join_through: "tickets_services",
@@ -50,6 +51,7 @@ defmodule StarTickets.Tickets.Ticket do
       :user_id,
       :customer_name,
       :reception_desk_id,
+      :room_id,
       :is_priority,
       :health_insurance_name,
       :webcheckin_status,
