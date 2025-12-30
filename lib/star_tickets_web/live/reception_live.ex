@@ -777,49 +777,83 @@ defmodule StarTicketsWeb.ReceptionLive do
               </div>
             <% end %>
 
-            <%!-- Compact Filters Row --%>
-            <div class={"flex flex-wrap gap-2 items-center p-3 bg-white/5 border border-white/10 rounded-xl backdrop-blur-md transition-all " <> if(!@selected_desk_id, do: "opacity-30 blur-[2px]", else: "")}>
-               <%!-- Date Filter Buttons --%>
-               <%= for {label, value} <- [{"Hoje", "today"}, {"12h", "12h"}, {"24h", "24h"}, {"48h", "48h"}] do %>
-                  <button
-                     phx-click="set_date_filter"
-                     phx-value-value={value}
-                     class={"px-2 py-1 rounded text-xs transition-all select-none " <>
-                        if(@date_filter == value,
-                           do: "bg-emerald-500/30 text-emerald-200 border border-emerald-400/50",
-                           else: "bg-white/5 text-white/50 border border-white/10 hover:bg-white/10")}
-                  >📅 <%= label %></button>
+            <%!-- Collapsible Filter Sections --%>
+            <div class={"flex flex-col gap-2 transition-all " <> if(!@selected_desk_id, do: "opacity-30 blur-[2px] pointer-events-none", else: "")}>
+
+               <%!-- 1. DATE FILTER --%>
+               <details class="group bg-white/5 border border-white/10 rounded-xl backdrop-blur-md overflow-hidden" open>
+                  <summary class="flex items-center justify-between p-3 cursor-pointer select-none hover:bg-white/5 transition-colors list-none">
+                     <span class="text-white font-medium text-sm flex items-center gap-2">📅 Período</span>
+                     <span class="text-white/40 group-open:rotate-180 transition-transform text-xs">▼</span>
+                  </summary>
+                  <div class="p-3 pt-0 flex flex-wrap gap-2 border-t border-white/5 mt-2 pt-3">
+                     <%= for {label, value} <- [{"Hoje", "today"}, {"12h", "12h"}, {"24h", "24h"}, {"48h", "48h"}, {"Todos", "all"}] do %>
+                        <button
+                           phx-click="set_date_filter"
+                           phx-value-value={value}
+                           class={"px-2 py-1.5 rounded text-xs transition-all select-none flex-1 text-center " <>
+                              if(@date_filter == value,
+                                 do: "bg-emerald-500/30 text-emerald-200 border border-emerald-400/50",
+                                 else: "bg-white/5 text-white/50 border border-white/10 hover:bg-white/10")}
+                        ><%= label %></button>
+                     <% end %>
+                  </div>
+               </details>
+
+               <%!-- 2. TAGS FILTER --%>
+               <%= if not Enum.empty?(@taggable_menus) do %>
+                 <details class="group bg-white/5 border border-white/10 rounded-xl backdrop-blur-md overflow-hidden">
+                    <summary class="flex items-center justify-between p-3 cursor-pointer select-none hover:bg-white/5 transition-colors list-none">
+                       <span class="text-white font-medium text-sm flex items-center gap-2">
+                          🏷️ Etiquetas
+                          <%= if length(@selected_tag_names) > 0 do %>
+                             <span class="bg-emerald-500 text-white text-[10px] px-1.5 rounded-full"><%= length(@selected_tag_names) %></span>
+                          <% end %>
+                       </span>
+                       <span class="text-white/40 group-open:rotate-180 transition-transform text-xs">▼</span>
+                    </summary>
+                    <div class="p-3 pt-0 flex flex-wrap gap-2 border-t border-white/5 mt-2 pt-3">
+                       <%= for tag <- @taggable_menus do %>
+                          <button
+                             phx-click="toggle_tag_filter"
+                             phx-value-name={tag.name}
+                             class={"px-2 py-1.5 rounded text-xs transition-all select-none " <>
+                                if(tag.name in @selected_tag_names,
+                                   do: "bg-emerald-500/30 text-emerald-200 border border-emerald-400/50",
+                                   else: "bg-white/5 text-white/50 border border-white/10 hover:bg-white/10")}
+                          ><%= tag.name %></button>
+                       <% end %>
+                    </div>
+                 </details>
                <% end %>
 
-               <span class="text-white/20">|</span>
-
-               <%!-- Tag Filter Buttons --%>
-               <%= for tag <- @taggable_menus do %>
-                  <button
-                     phx-click="toggle_tag_filter"
-                     phx-value-name={tag.name}
-                     class={"px-2 py-1 rounded text-xs transition-all select-none " <>
-                        if(tag.name in @selected_tag_names,
-                           do: "bg-emerald-500/30 text-emerald-200 border border-emerald-400/50",
-                           else: "bg-white/5 text-white/50 border border-white/10 hover:bg-white/10")}
-                  ><%= tag.name %></button>
+               <%!-- 3. SERVICES FILTER --%>
+               <%= if not Enum.empty?(@available_services) do %>
+                 <details class="group bg-white/5 border border-white/10 rounded-xl backdrop-blur-md overflow-hidden">
+                    <summary class="flex items-center justify-between p-3 cursor-pointer select-none hover:bg-white/5 transition-colors list-none">
+                       <span class="text-white font-medium text-sm flex items-center gap-2">
+                          🏥 Serviços
+                          <%= if length(@selected_service_ids) > 0 do %>
+                             <span class="bg-blue-500 text-white text-[10px] px-1.5 rounded-full"><%= length(@selected_service_ids) %></span>
+                          <% end %>
+                       </span>
+                       <span class="text-white/40 group-open:rotate-180 transition-transform text-xs">▼</span>
+                    </summary>
+                    <div class="p-3 pt-0 flex flex-wrap gap-2 border-t border-white/5 mt-2 pt-3 max-h-40 overflow-y-auto custom-scrollbar">
+                       <%= for service <- @available_services do %>
+                          <button
+                             phx-click="toggle_service_filter"
+                             phx-value-id={service.id}
+                             class={"px-2 py-1 rounded text-xs transition-all select-none text-left truncate max-w-full " <>
+                                if(service.id in @selected_service_ids,
+                                   do: "bg-blue-500/30 text-blue-200 border border-blue-400/50",
+                                   else: "bg-white/5 text-white/50 border border-white/10 hover:bg-white/10")}
+                          ><%= service.name %></button>
+                       <% end %>
+                    </div>
+                 </details>
                <% end %>
 
-               <%= if not Enum.empty?(@taggable_menus) and not Enum.empty?(@available_services) do %>
-                  <span class="text-white/20">|</span>
-               <% end %>
-
-               <%!-- Service Filter Buttons --%>
-               <%= for service <- @available_services do %>
-                  <button
-                     phx-click="toggle_service_filter"
-                     phx-value-id={service.id}
-                     class={"px-2 py-1 rounded text-xs transition-all select-none " <>
-                        if(service.id in @selected_service_ids,
-                           do: "bg-blue-500/30 text-blue-200 border border-blue-400/50",
-                           else: "bg-white/5 text-white/50 border border-white/10 hover:bg-white/10")}
-                  ><%= service.name %></button>
-               <% end %>
             </div>
 
             <%!-- Ticket List With Tabs --%>
