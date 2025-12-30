@@ -389,10 +389,9 @@ defmodule StarTicketsWeb.ReceptionLive do
     {:noreply, socket}
   end
 
-  def handle_event("set_date_filter", %{"value" => value}, socket) do
+  def handle_event("set_date_filter", %{"filter_date" => value}, socket) do
     # Ensure value is clean
     clean_value = String.trim(value)
-    IO.inspect(clean_value, label: "DATE FILTER SELECTED")
 
     socket =
       socket
@@ -800,13 +799,13 @@ defmodule StarTicketsWeb.ReceptionLive do
                   </button>
                   <%= if @section_states.date do %>
                     <div class="p-3 pt-0 flex flex-wrap gap-2 border-t border-white/5 mt-2 pt-3">
-                       <%= for {label, value} <- [{"Hoje", "today"}, {"12h", "12h"}, {"24h", "24h"}, {"48h", "48h"}, {"Todos", "all"}] do %>
+                       <%= for {label, filter_val} <- [{"Hoje", "today"}, {"12h", "12h"}, {"24h", "24h"}, {"48h", "48h"}, {"Todos", "all"}] do %>
                           <button
                              type="button"
                              phx-click="set_date_filter"
-                             phx-value-value={value}
+                             phx-value-filter_date={filter_val}
                              class={"px-2 py-1.5 rounded text-xs transition-all select-none flex-1 text-center " <>
-                                if(@date_filter == value,
+                                if(@date_filter == filter_val,
                                    do: "bg-emerald-500/30 text-emerald-200 border border-emerald-400/50",
                                    else: "bg-white/5 text-white/50 border border-white/10 hover:bg-white/10")}
                           ><%= label %></button>
