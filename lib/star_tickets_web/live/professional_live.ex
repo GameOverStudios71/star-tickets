@@ -23,20 +23,77 @@ defmodule StarTicketsWeb.ProfessionalLive do
 
     if connected?(socket) do
       Tickets.subscribe()
+      # Clean up any stale occupations by this user
+      Accounts.vacate_rooms_by_user(socket.assigns.current_scope.user.id)
     end
 
     {:ok, socket}
   end
 
+  def terminate(_reason, socket) do
+    # Vacate room on exit
+    if socket.assigns.current_scope.user do
+      Accounts.vacate_rooms_by_user(socket.assigns.current_scope.user.id)
+    end
+  end
+
   def handle_event("select_room", %{"id" => id}, socket) do
     room_id = String.to_integer(id)
+
+    # 1. Vacate current room if any
+    if socket.assigns.selected_room do
+      Accounts.vacate_room(socket.assigns.selected_room)
+    end
+
+    # 2. Occupy new room
     room = Enum.find(socket.assigns.rooms, &(&1.id == room_id))
 
+    if room &&
+         (!room.occupied_by_user_id ||
+            room.occupied_by_user_id == socket.assigns.current_scope.user.id) do
+      {:ok, updated_room} = Accounts.occupy_room(room, socket.assigns.current_scope.user.id)
+
+      # Refresh rooms list to reflect occupation
+      socket = load_rooms(socket)
+      # Reload with new state
+      room = Enum.find(socket.assigns.rooms, &(&1.id == room_id))
+
+      socket =
+        socket
+        |> assign(:selected_room_id, room_id)
+        |> assign(:selected_room, room)
+        |> load_tickets()
+        |> push_event("save_room_preference", %{id: room_id})
+
+      {:noreply, socket}
+    else
+      {:noreply, put_flash(socket, :error, "Sala indisponível ou ocupada!")}
+    end
+  end
+
+  def handle_event("restore_room_preference", %{"id" => id}, socket) do
+    id_int = String.to_integer(id)
+    # Refresh rooms to get latest state
+    socket = load_rooms(socket)
+    room = Enum.find(socket.assigns.rooms, &(&1.id == id_int))
+
     socket =
-      socket
-      |> assign(:selected_room_id, room_id)
-      |> assign(:selected_room, room)
-      |> load_tickets()
+      if room &&
+           (!room.occupied_by_user_id ||
+              room.occupied_by_user_id == socket.assigns.current_scope.user.id) do
+        # Occupy it
+        Accounts.occupy_room(room, socket.assigns.current_scope.user.id)
+
+        # Reload room with new state
+        room = %{room | occupied_by_user_id: socket.assigns.current_scope.user.id}
+
+        socket
+        |> assign(:selected_room_id, id_int)
+        |> assign(:selected_room, room)
+        |> load_tickets()
+      else
+        socket
+      end
 
     {:noreply, socket}
   end
@@ -97,10 +154,9 @@ defmodule StarTicketsWeb.ProfessionalLive do
 
   defp load_rooms(socket) do
     if socket.assigns.selected_establishment_id do
-      # Need to preload services to know capabilities
-      rooms =
-        Accounts.list_rooms(socket.assigns.selected_establishment_id)
-        |> Repo.preload(:services)
+      # Need to preload services to know capabilities AND occupied_by_user
+      # list_rooms already preloads both now
+      rooms = Accounts.list_rooms(socket.assigns.selected_establishment_id)
 
       assign(socket, :rooms, rooms)
     else
@@ -151,7 +207,7 @@ defmodule StarTicketsWeb.ProfessionalLive do
 
   def render(assigns) do
     ~H"""
-    <div class="st-app has-background min-h-screen flex flex-col pt-20">
+    <div class="st-app has-background min-h-screen flex flex-col">
       <.app_header
         title="Área do Profissional"
         show_home={true}
@@ -159,13 +215,19 @@ defmodule StarTicketsWeb.ProfessionalLive do
         {assigns}
       >
         <:right>
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-3" phx-hook="RoomPreference" id="room-preference">
             <span class="text-white font-medium"><%= if @selected_room, do: "✅ Sala Ativa:", else: "🏥 Selecione sua Sala:" %></span>
             <form phx-change="select_room" class="m-0">
                <select name="id" class="bg-black/30 text-white border border-white/20 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-emerald-500 outline-none backdrop-blur-md">
                  <option value="" selected={is_nil(@selected_room_id)}>Escolher...</option>
                  <%= for room <- @rooms do %>
-                   <option value={room.id} selected={@selected_room_id == room.id}><%= room.name %></option>
+                   <%
+                      is_occupied = room.occupied_by_user_id && room.occupied_by_user_id != @current_scope.user.id
+                      occupier_name = if is_occupied && room.occupied_by_user, do: " (#{room.occupied_by_user.name})", else: ""
+                   %>
+                   <option value={room.id} selected={@selected_room_id == room.id} disabled={is_occupied} class={if is_occupied, do: "text-red-400 bg-black/80", else: "text-white"}>
+                      <%= room.name %><%= occupier_name %>
+                   </option>
                  <% end %>
                </select>
             </form>
@@ -175,7 +237,7 @@ defmodule StarTicketsWeb.ProfessionalLive do
 
       <div class="st-container flex-1 p-6">
         <%= unless @selected_room_id do %>
-          <div class="h-full flex flex-col items-center justify-center text-white/50">
+          <div class="h-full flex flex-col items-center justify-center text-white/50 bg-emerald-950/30 backdrop-blur-md rounded-2xl border border-emerald-500/10">
              <div class="text-6xl mb-4">🏥</div>
              <h2 class="text-2xl font-bold text-white mb-2">Selecione sua Sala</h2>
              <p>Escolha a sala onde você está atendendo no menu superior.</p>
@@ -184,7 +246,7 @@ defmodule StarTicketsWeb.ProfessionalLive do
 
           <div class="grid grid-cols-12 gap-6 h-[calc(100vh-140px)]">
              <%!-- Left: Queue --%>
-             <div class="col-span-4 flex flex-col gap-4 h-full">
+             <div class="col-span-4 flex flex-col gap-4 h-full bg-emerald-950/30 backdrop-blur-md rounded-2xl p-4 border border-emerald-500/10 shadow-xl">
                 <div class="flex items-center justify-between">
                    <h2 class="text-white font-bold text-lg flex items-center gap-2">
                      👥 Aguardando
@@ -226,11 +288,25 @@ defmodule StarTicketsWeb.ProfessionalLive do
              <div class="col-span-8 flex flex-col h-full">
                 <%= if @active_ticket do %>
                    <%!-- Active Patient Card --%>
-                   <div class="bg-gradient-to-br from-emerald-900/40 to-slate-900/80 border border-emerald-500/30 rounded-2xl p-8 shadow-2xl backdrop-blur-xl relative overflow-hidden flex-1 flex flex-col">
+                   <div class="bg-gradient-to-br from-emerald-900/80 to-black/90 border border-emerald-500/40 rounded-2xl p-8 shadow-2xl backdrop-blur-xl relative overflow-hidden flex-1 flex flex-col">
                       <div class="absolute top-0 right-0 p-4">
                          <span class="bg-emerald-500 text-white font-bold px-3 py-1 rounded-full text-sm shadow-lg animate-pulse">
                             <%= if @active_ticket.status == "CALLED_PROFESSIONAL", do: "📢 CHAMANDO...", else: "👨‍⚕️ EM ATENDIMENTO" %>
                          </span>
+                      </div>
+
+                      <div class="grid grid-cols-1 gap-4 mb-8 mt-12">
+                         <%= if @active_ticket.status == "CALLED_PROFESSIONAL" do %>
+                            <button phx-click="start_attendance" phx-value-id={@active_ticket.id}
+                                    class="w-full py-5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-2xl rounded-xl shadow-lg transition-transform hover:scale-[1.01] active:scale-[0.99] border border-white/20">
+                               ▶️ INICIAR CONSULTA
+                            </button>
+                         <% else %>
+                            <button phx-click="finish_attendance" phx-value-id={@active_ticket.id}
+                                    class="w-full py-5 bg-orange-600 hover:bg-orange-500 text-white font-bold text-2xl rounded-xl shadow-lg transition-transform hover:scale-[1.01] active:scale-[0.99] border border-white/20">
+                               ✅ FINALIZAR
+                            </button>
+                         <% end %>
                       </div>
 
                       <div class="mb-8">
@@ -241,7 +317,7 @@ defmodule StarTicketsWeb.ProfessionalLive do
                          <% end %>
                       </div>
 
-                      <div class="grid grid-cols-2 gap-6 mb-8 bg-black/20 p-6 rounded-xl border border-white/5">
+                      <div class="grid grid-cols-2 gap-6 bg-black/20 p-6 rounded-xl border border-white/5">
                          <div>
                             <span class="text-white/40 text-sm block mb-1">Serviços Pendentes Nesta Sala:</span>
                             <div class="flex flex-wrap gap-2">
@@ -263,26 +339,19 @@ defmodule StarTicketsWeb.ProfessionalLive do
                              </div>
                          </div>
                       </div>
-
-                      <div class="mt-auto grid grid-cols-1 gap-4">
-                         <%= if @active_ticket.status == "CALLED_PROFESSIONAL" do %>
-                            <button phx-click="start_attendance" phx-value-id={@active_ticket.id}
-                                    class="w-full py-5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-2xl rounded-xl shadow-lg transition-transform hover:scale-[1.01] active:scale-[0.99] border border-white/20">
-                               ▶️ INICIAR CONSULTA
-                            </button>
-                         <% else %>
-                            <button phx-click="finish_attendance" phx-value-id={@active_ticket.id}
-                                    class="w-full py-5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-2xl rounded-xl shadow-lg transition-transform hover:scale-[1.01] active:scale-[0.99] border border-white/20">
-                               ✅ FINALIZAR
-                            </button>
-                         <% end %>
-                      </div>
                    </div>
 
                 <% else %>
                    <%!-- Selection State --%>
                    <%= if @selected_ticket do %>
-                      <div class="bg-white/5 p-8 rounded-2xl border border-white/10 h-full flex flex-col">
+                      <div class="bg-emerald-950/50 backdrop-blur-xl p-8 rounded-2xl border border-emerald-500/10 h-full flex flex-col shadow-2xl">
+                         <div class="mb-6">
+                            <button phx-click="call_ticket" phx-value-id={@selected_ticket.id}
+                                    class="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xl rounded-xl transition-all border border-white/20 shadow-lg shadow-blue-500/20">
+                               📢 CHAMAR PACIENTE
+                            </button>
+                         </div>
+
                          <h2 class="text-3xl font-bold text-white mb-6">Detalhes da Senha</h2>
 
                          <div class="flex-1">
@@ -290,7 +359,6 @@ defmodule StarTicketsWeb.ProfessionalLive do
                                <div class="text-4xl font-mono font-bold text-white mb-2"><%= @selected_ticket.display_code %></div>
                                <div class="text-xl text-white/80"><%= @selected_ticket.customer_name || "Sem nome" %></div>
                             </div>
-
                             <h3 class="text-white/60 uppercase text-sm font-bold mb-3">Serviços Solicitados</h3>
                             <div class="flex flex-col gap-2">
                                <%= for service <- @selected_ticket.services do %>
@@ -306,16 +374,9 @@ defmodule StarTicketsWeb.ProfessionalLive do
                                <% end %>
                             </div>
                          </div>
-
-                         <div class="mt-auto">
-                            <button phx-click="call_ticket" phx-value-id={@selected_ticket.id}
-                                    class="w-full py-4 bg-white/20 hover:bg-white/30 text-white font-bold text-xl rounded-xl transition-all border border-white/20">
-                               📢 CHAMAR PACIENTE
-                            </button>
-                         </div>
                       </div>
                    <% else %>
-                      <div class="h-full flex flex-col items-center justify-center text-center text-white/30 border-2 border-dashed border-white/5 rounded-2xl">
+                      <div class="bg-emerald-950/30 backdrop-blur-md border border-emerald-500/10 rounded-2xl h-full flex flex-col items-center justify-center text-center text-white/40 shadow-xl">
                          <div class="text-4xl mb-4">👈</div>
                          <p class="text-lg">Selecione um paciente na lista<br/>para visualizar os detalhes.</p>
                       </div>

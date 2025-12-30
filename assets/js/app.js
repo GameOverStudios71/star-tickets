@@ -148,12 +148,46 @@ const DeskPreference = {
     const ca = document.cookie.split(';');
     for (let i = 0; i < ca.length; i++) {
       let c = ca[i];
+      if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
+    }
+    return null;
+  }
+}
+
+const RoomPreference = {
+  mounted() {
+    const roomId = this.getCookie("professional_room_id");
+    if (roomId) {
+      this.pushEvent("restore_room_preference", { id: roomId });
+    }
+
+    this.handleEvent("save_room_preference", ({ id }) => {
+      this.setCookie("professional_room_id", id, 365);
+    });
+  },
+
+  setCookie(name, value, days) {
+    let expires = "";
+    if (days) {
+      const date = new Date();
+      date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+      expires = "; expires=" + date.toUTCString();
+    }
+    document.cookie = name + "=" + (value || "") + expires + "; path=/";
+  },
+
+  getCookie(name) {
+    const nameEQ = name + "=";
+    const ca = document.cookie.split(';');
+    for (let i = 0; i < ca.length; i++) {
+      let c = ca[i];
       while (c.charAt(0) == ' ') c = c.substring(1, c.length);
       if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
     }
     return null;
   }
 }
+
 
 const AutoFocus = {
   mounted() {
@@ -172,7 +206,7 @@ const AutoFocus = {
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: { _csrf_token: csrfToken },
-  hooks: { ...colocatedHooks, PhoneMask, AutoClearFlash, TotemSounds, DeskPreference, AutoFocus },
+  hooks: { ...colocatedHooks, PhoneMask, AutoClearFlash, TotemSounds, DeskPreference, RoomPreference, AutoFocus },
 })
 
 // Show progress bar on live navigation and form submits

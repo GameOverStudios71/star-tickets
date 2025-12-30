@@ -717,8 +717,25 @@ defmodule StarTickets.Accounts do
     Room
     |> where(establishment_id: ^establishment_id)
     |> search_rooms(search_term)
-    |> preload(:services)
+    |> preload([:services, :occupied_by_user])
     |> Repo.all()
+  end
+
+  def occupy_room(%Room{} = room, user_id) do
+    room
+    |> Room.occupation_changeset(%{occupied_by_user_id: user_id})
+    |> Repo.update()
+  end
+
+  def vacate_room(%Room{} = room) do
+    room
+    |> Room.occupation_changeset(%{occupied_by_user_id: nil})
+    |> Repo.update()
+  end
+
+  def vacate_rooms_by_user(user_id) do
+    from(r in Room, where: r.occupied_by_user_id == ^user_id)
+    |> Repo.update_all(set: [occupied_by_user_id: nil])
   end
 
   defp search_rooms(query, ""), do: query

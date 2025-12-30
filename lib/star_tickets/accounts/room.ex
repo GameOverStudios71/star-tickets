@@ -12,6 +12,8 @@ defmodule StarTickets.Accounts.Room do
       on_replace: :delete
     )
 
+    belongs_to(:occupied_by_user, StarTickets.Accounts.User)
+
     timestamps()
   end
 
@@ -19,5 +21,10 @@ defmodule StarTickets.Accounts.Room do
     room
     |> cast(attrs, [:name, :capacity_threshold, :establishment_id])
     |> validate_required([:name, :establishment_id])
+  end
+
+  def occupation_changeset(room, attrs) do
+    room
+    |> cast(attrs, [:occupied_by_user_id])
   end
 end
