@@ -19,7 +19,7 @@ defmodule StarTicketsWeb.ReceptionLive do
       |> assign(:current_user, socket.assigns.current_scope.user)
       # active, finished
       |> assign(:active_tab, "active")
-      |> assign(:selected_desk_id, nil)
+      |> assign(:selected_room_id, nil)
       |> assign(:selected_ticket, nil)
       # New state for modal
       |> assign(:reviewing_ticket, nil)
@@ -40,7 +40,7 @@ defmodule StarTicketsWeb.ReceptionLive do
       |> assign(:section_states, %{date: true, tags: false, services: false})
       |> load_taggable_menus()
       |> load_available_services()
-      |> load_desks()
+      |> load_reception_rooms()
       |> load_tickets()
       |> restore_attending_ticket()
 
@@ -73,7 +73,36 @@ defmodule StarTicketsWeb.ReceptionLive do
 
   def handle_info({:ticket_updated, ticket}, socket) do
     # Needs preloads
-    ticket = Repo.preload(ticket, [:services, :reception_desk, :tags])
+    ticket = Repo.preload(ticket, [:services, :room, :tags])
+
+    all_tickets =
+      Enum.map(socket.assigns.all_tickets, fn t ->
+        if t.id == ticket.id, do: ticket, else: t
+      end)
+
+    # specific logic for own attendance tracker
+    socket =
+      if ticket.status == "IN_RECEPTION" && ticket.user_id == socket.assigns.current_user.id do
+        socket
+        |> assign(:attending_ticket_id, ticket.id)
+        |> assign(:editing_services, ticket.services)
+      else
+        socket
+      end
+
+    socket =
+      socket
+      |> assign(:all_tickets, all_tickets)
+      |> update_selected_ticket(all_tickets)
+      |> update_reviewing_ticket(ticket)
+      |> refresh_tickets_view()
+
+    {:noreply, socket}
+  end
+
+  def handle_info({:ticket_called, ticket}, socket) do
+    # Treat as update, needs preloads
+    ticket = Repo.preload(ticket, [:services, :room, :tags])
 
     all_tickets =
       Enum.map(socket.assigns.all_tickets, fn t ->
@@ -84,7 +113,6 @@ defmodule StarTicketsWeb.ReceptionLive do
       socket
       |> assign(:all_tickets, all_tickets)
       |> update_selected_ticket(all_tickets)
-      |> update_reviewing_ticket(ticket)
       |> refresh_tickets_view()
 
     {:noreply, socket}
@@ -103,12 +131,12 @@ defmodule StarTicketsWeb.ReceptionLive do
     end
   end
 
-  defp load_desks(socket) do
+  defp load_reception_rooms(socket) do
     if socket.assigns.selected_establishment_id do
-      desks = Reception.list_desks(socket.assigns.selected_establishment_id)
-      assign(socket, :desks, desks)
+      desks = Reception.list_reception_rooms(socket.assigns.selected_establishment_id)
+      assign(socket, :rooms, desks)
     else
-      assign(socket, :desks, [])
+      assign(socket, :rooms, [])
     end
   end
 
@@ -159,10 +187,14 @@ defmodule StarTicketsWeb.ReceptionLive do
 
   # Restore attending ticket state on page reload
   defp restore_attending_ticket(socket) do
-    # Find any ticket that is IN_RECEPTION in the current establishment
+    # Find ticket that is IN_RECEPTION and owned by current user
+    current_user_id = socket.assigns.current_user.id
+
     in_reception_ticket =
       socket.assigns.all_tickets
-      |> Enum.find(&(&1.status == "IN_RECEPTION"))
+      |> Enum.find(fn t ->
+        t.status == "IN_RECEPTION" && t.user_id == current_user_id
+      end)
 
     if in_reception_ticket do
       socket
@@ -278,33 +310,33 @@ defmodule StarTicketsWeb.ReceptionLive do
     end)
   end
 
-  def handle_info({:desk_updated, _desk}, socket) do
-    {:noreply, load_desks(socket)}
+  def handle_info({:room_updated, _desk}, socket) do
+    {:noreply, load_reception_rooms(socket)}
   end
 
-  def handle_info({:desk_created, _desk}, socket) do
-    {:noreply, load_desks(socket)}
+  def handle_info({:room_created, _desk}, socket) do
+    {:noreply, load_reception_rooms(socket)}
   end
 
   def handle_info(_, socket), do: {:noreply, socket}
 
   @impl true
-  def handle_event("select_desk", %{"desk_id" => desk_id}, socket) do
-    id = if desk_id == "", do: nil, else: String.to_integer(desk_id)
+  def handle_event("select_desk", %{"room_id" => room_id}, socket) do
+    id = if room_id == "", do: nil, else: String.to_integer(room_id)
 
     if id do
-      case Reception.get_desk!(id) do
-        desk ->
+      case Reception.get_room!(id) do
+        room ->
           # Check if occupied by someone else (safety check)
-          if desk.occupied_by_user_id &&
-               desk.occupied_by_user_id != socket.assigns.current_user.id do
-            {:noreply, put_flash(socket, :error, "Esta mesa já está ocupada.")}
+          if room.occupied_by_user_id &&
+               room.occupied_by_user_id != socket.assigns.current_user.id do
+            {:noreply, put_flash(socket, :error, "Esta posição já está ocupada.")}
           else
-            {:ok, _desk} = Reception.occupy_desk(desk, socket.assigns.current_user.id)
+            {:ok, _room} = Reception.occupy_room(room, socket.assigns.current_user.id)
 
             socket =
               socket
-              |> assign(:selected_desk_id, id)
+              |> assign(:selected_room_id, id)
               |> push_event("save_desk_preference", %{id: id})
 
             {:noreply, socket}
@@ -312,17 +344,17 @@ defmodule StarTicketsWeb.ReceptionLive do
       end
     else
       # Deselecting?
-      if socket.assigns.selected_desk_id do
-        old_desk = Reception.get_desk!(socket.assigns.selected_desk_id)
+      if socket.assigns.selected_room_id do
+        old_room = Reception.get_room!(socket.assigns.selected_room_id)
 
-        if old_desk.occupied_by_user_id == socket.assigns.current_user.id do
-          Reception.release_desk(old_desk)
+        if old_room.occupied_by_user_id == socket.assigns.current_user.id do
+          Reception.release_room(old_room)
         end
       end
 
       socket =
         socket
-        |> assign(:selected_desk_id, nil)
+        |> assign(:selected_room_id, nil)
         |> push_event("save_desk_preference", %{id: nil})
 
       {:noreply, socket}
@@ -332,25 +364,39 @@ defmodule StarTicketsWeb.ReceptionLive do
   def handle_event("restore_desk_preference", %{"id" => id}, socket) do
     id = String.to_integer(id)
 
-    # Verify if desk exists in current list (security check)
-    # Find the desk object
-    desk = Enum.find(socket.assigns.desks, &(&1.id == id))
+    # Reload rooms first to get fresh state
+    socket = load_reception_rooms(socket)
+
+    # Verify if room exists in current list (security check)
+    room = Enum.find(socket.assigns.rooms, &(&1.id == id))
 
     socket =
-      if desk do
+      if room do
         cond do
           # Occupied by me -> Just select it
-          desk.occupied_by_user_id == socket.assigns.current_user.id ->
-            assign(socket, :selected_desk_id, id)
+          room.occupied_by_user_id == socket.assigns.current_user.id ->
+            socket
+            |> assign(:selected_room_id, id)
+            |> load_tickets()
 
           # Free -> Occupy it and select it
-          is_nil(desk.occupied_by_user_id) ->
-            {:ok, _desk} = Reception.occupy_desk(desk, socket.assigns.current_user.id)
-            assign(socket, :selected_desk_id, id)
+          is_nil(room.occupied_by_user_id) ->
+            {:ok, _room} = Reception.occupy_room(room, socket.assigns.current_user.id)
+
+            socket
+            |> assign(:selected_room_id, id)
+            # Reload to show updated occupation
+            |> load_reception_rooms()
+            |> load_tickets()
 
           # Occupied by someone else -> Ignore preference
           true ->
+            # Maybe notify user?
             socket
+            |> put_flash(
+              :error,
+              "Sua mesa anterior (#{room.name}) está ocupada por outra pessoa."
+            )
         end
       else
         socket
@@ -427,27 +473,25 @@ defmodule StarTicketsWeb.ReceptionLive do
   def handle_event("call_ticket", %{"id" => id}, socket) do
     ticket = Tickets.get_ticket!(id)
 
-    # Set status AND assign to current user to lock it
-    attrs = %{
-      status: "CALLED_RECEPTION",
-      user_id: socket.assigns.current_user.id
-    }
+    # Use socket.assigns.selected_room_id if available, otherwise rely on ticket's room if already set?
+    # Usually receptionists MUST select a desk/room before calling.
+    room_id = socket.assigns.selected_room_id
+    user_id = socket.assigns.current_user.id
 
-    case Tickets.update_ticket(ticket, attrs) do
-      {:ok, updated_ticket} ->
-        # Also assign to desk if not set?
-        if socket.assigns.selected_desk_id do
-          Tickets.assign_ticket_to_desk(updated_ticket, socket.assigns.selected_desk_id)
-        end
+    if room_id do
+      case Tickets.call_ticket_reception(ticket, user_id, room_id) do
+        {:ok, _updated_ticket} ->
+          {:noreply,
+           socket
+           |> put_flash(:info, "Senha chamada com sucesso!")
+           |> load_tickets()}
 
-        {:noreply,
-         socket
-         |> put_flash(:info, "Senha chamada com sucesso!")
-         # Reload to reflect changes
-         |> load_tickets()}
-
-      {:error, _} ->
-        {:noreply, put_flash(socket, :error, "Erro ao chamar senha.")}
+        {:error, _} ->
+          {:noreply, put_flash(socket, :error, "Erro ao chamar senha.")}
+      end
+    else
+      {:noreply,
+       put_flash(socket, :error, "Selecione uma posição de atendimento antes de chamar!")}
     end
   end
 
@@ -607,11 +651,13 @@ defmodule StarTicketsWeb.ReceptionLive do
           socket.assigns.editing_services
         )
 
-      # Clear editing state
+      # Clear editing state and attending status
       socket =
         socket
         |> assign(:editing_services, [])
         |> assign(:customer_name_input, "")
+        |> assign(:attending_ticket_id, nil)
+        |> assign(:selected_ticket, nil)
         |> put_flash(:info, "Atendimento finalizado!")
         |> load_tickets()
 
@@ -753,23 +799,23 @@ defmodule StarTicketsWeb.ReceptionLive do
             <%!-- Desk Selector with Hook and Green Acrylic Style --%>
             <div id="desk-selector" phx-hook="DeskPreference"
                  class={"flex items-center gap-3 px-4 py-2 rounded-lg transition-all shadow-lg " <>
-                if(@selected_desk_id,
+                if(@selected_room_id,
                    do: "bg-emerald-600/90 backdrop-blur-md ring-2 ring-emerald-400 border border-emerald-300/50 shadow-emerald-500/30",
                    # Unselected: Dark Green/Black Gradient to be "Green" but inactive
                    else: "bg-gradient-to-br from-emerald-950/80 to-black/80 border border-emerald-500/20 ring-1 ring-emerald-500/10")}>
                 <span class="text-white font-medium">
-                   <%= if @selected_desk_id, do: "✅ Mesa Ativa:", else: "🪑 Minha Mesa:" %>
+                   <%= if @selected_room_id, do: "✅ Posição Ativa:", else: "🪑 Minha Posição:" %>
                 </span>
                 <form phx-change="select_desk" class="m-0">
-                  <select name="desk_id" class={"bg-black/20 text-white border-none rounded focus:ring-2 focus:ring-emerald-400 cursor-pointer min-w-[150px] transition-all " <> if(@selected_desk_id, do: "font-bold text-emerald-100", else: "")}>
+                  <select name="room_id" class={"bg-black/20 text-white border-none rounded focus:ring-2 focus:ring-emerald-400 cursor-pointer min-w-[150px] transition-all " <> if(@selected_room_id, do: "font-bold text-emerald-100", else: "")}>
                     <option value="">Selecione...</option>
-                     <%= for desk <- @desks do %>
+                     <%= for room <- @rooms do %>
                        <%
-                         is_occupied = desk.occupied_by_user_id && desk.occupied_by_user_id != @current_user.id
-                         occupier_name = if is_occupied && desk.occupied_by_user, do: " (#{desk.occupied_by_user.name})", else: ""
+                         is_occupied = room.occupied_by_user_id && room.occupied_by_user_id != @current_user.id
+                         occupier_name = if is_occupied && room.occupied_by_user, do: " (#{room.occupied_by_user.name})", else: ""
                        %>
-                       <option value={desk.id} selected={@selected_desk_id == desk.id} disabled={is_occupied} class={if is_occupied, do: "text-red-400 bg-black", else: ""}>
-                         <%= desk.name %><%= occupier_name %>
+                       <option value={room.id} selected={@selected_room_id == room.id} disabled={is_occupied} class={if is_occupied, do: "text-red-400 bg-black", else: ""}>
+                         <%= room.name %><%= occupier_name %>
                        </option>
                      <% end %>
                   </select>
@@ -781,7 +827,7 @@ defmodule StarTicketsWeb.ReceptionLive do
       <div class="flex-1 grid grid-cols-12 gap-6 p-6 overflow-hidden h-[calc(100vh-80px)]">
          <%!-- Left Column: List & Filters --%>
          <div class="col-span-4 flex flex-col gap-4 relative h-full">
-            <%= unless @selected_desk_id do %>
+            <%= unless @selected_room_id do %>
               <div class="absolute inset-0 z-20 bg-black/60 backdrop-blur-sm rounded-2xl flex flex-col items-center justify-center text-center p-6 border border-white/10 shadow-2xl">
                  <div class="text-4xl mb-4">🪑</div>
                  <h3 class="text-xl font-bold text-white mb-2">Selecione sua mesa</h3>
@@ -790,7 +836,7 @@ defmodule StarTicketsWeb.ReceptionLive do
             <% end %>
 
             <%!-- Collapsible Filter Sections --%>
-            <div class={"flex flex-col gap-2 transition-all " <> if(!@selected_desk_id, do: "opacity-30 blur-[2px] pointer-events-none", else: "")}>
+            <div class={"flex flex-col gap-2 transition-all " <> if(!@selected_room_id, do: "opacity-30 blur-[2px] pointer-events-none", else: "")}>
 
                <div class="group bg-white/5 border border-white/10 rounded-xl backdrop-blur-md overflow-hidden">
                   <button type="button" phx-click="toggle_section" phx-value-section="date" class="w-full flex items-center justify-between p-3 cursor-pointer select-none hover:bg-white/5 transition-colors outline-none">
@@ -875,7 +921,7 @@ defmodule StarTicketsWeb.ReceptionLive do
             </div>
 
             <%!-- Ticket List With Tabs --%>
-            <div class={"flex-1 flex flex-col bg-white/5 border border-white/10 rounded-2xl backdrop-blur-md overflow-hidden transition-all " <> if(!@selected_desk_id, do: "opacity-30 blur-[2px]", else: "")}>
+            <div class={"flex-1 flex flex-col bg-white/5 border border-white/10 rounded-2xl backdrop-blur-md overflow-hidden transition-all " <> if(!@selected_room_id, do: "opacity-30 blur-[2px]", else: "")}>
                <div class="flex border-b border-white/10">
                   <button class={"flex-1 py-3 text-sm font-medium transition-colors hover:bg-white/5 " <> if(@active_tab == "active", do: "text-white bg-white/10 border-b-2 border-emerald-400", else: "text-white/50")} phx-click="set_tab" phx-value-tab="active">
                     ⏳ Aguardando
@@ -976,7 +1022,7 @@ defmodule StarTicketsWeb.ReceptionLive do
 
          <%!-- Right Column: Details --%>
          <div class="col-span-8 flex flex-col h-full bg-white/5 border border-white/10 rounded-2xl backdrop-blur-md p-6 relative transition-all duration-500">
-             <%= unless @selected_desk_id do %>
+             <%= unless @selected_room_id do %>
                <div class="absolute inset-0 z-20 bg-black/60 backdrop-blur-sm rounded-2xl flex flex-col items-center justify-center text-center p-6 grayscale">
                   <%!-- Overlay matches left side --%>
                </div>

@@ -74,13 +74,13 @@ defmodule StarTickets.Tickets do
     Ticket
     |> where([t], t.establishment_id == ^establishment_id)
     |> where([t], t.inserted_at >= ^today)
-    |> preload([:services, :reception_desk, :tags])
+    |> preload([:services, :room, :tags])
     |> order_by([t], desc: t.is_priority, asc: t.inserted_at)
     |> Repo.all()
   end
 
-  def assign_ticket_to_desk(%Ticket{} = ticket, desk_id) do
-    update_ticket(ticket, %{reception_desk_id: desk_id})
+  def assign_ticket_to_room(%Ticket{} = ticket, room_id) do
+    update_ticket(ticket, %{room_id: room_id})
   end
 
   def update_ticket_status(%Ticket{} = ticket, status) do
@@ -96,6 +96,45 @@ defmodule StarTickets.Tickets do
       end
 
     update_ticket(ticket, attrs)
+  end
+
+  @doc """
+  Calls a ticket to a specific room.
+  Updates status to CALLED and broadcasts :ticket_called for TV displays.
+  """
+  def call_ticket(%Ticket{} = ticket, room_id) do
+    result =
+      update_ticket(ticket, %{
+        status: "CALLED",
+        room_id: room_id
+      })
+
+    # Broadcast specific event for TV
+    case result do
+      {:ok, updated_ticket} ->
+        updated_ticket = Repo.preload(updated_ticket, [:room, :services])
+        PubSub.broadcast(StarTickets.PubSub, @topic, {:ticket_called, updated_ticket})
+        {:ok, updated_ticket}
+
+      error ->
+        error
+    end
+  end
+
+  @doc """
+  Lists tickets that are currently called (for TV rotation).
+  Includes both reception and professional calls.
+  """
+  def list_called_tickets(establishment_id) do
+    today = Date.utc_today() |> DateTime.new!(~T[00:00:00])
+
+    Ticket
+    |> where([t], t.establishment_id == ^establishment_id)
+    |> where([t], t.inserted_at >= ^today)
+    |> where([t], t.status in ["CALLED_RECEPTION", "CALLED_PROFESSIONAL"])
+    |> preload([:room, :services])
+    |> order_by([t], asc: t.updated_at)
+    |> Repo.all()
   end
 
   def start_attendance(%Ticket{} = ticket, user_id) do
@@ -162,7 +201,7 @@ defmodule StarTickets.Tickets do
     |> where([t], t.establishment_id == ^establishment_id)
     |> where([t], t.inserted_at >= ^today)
     |> where([t], t.status in ["WAITING_PROFESSIONAL", "WAITING_NEXT_SERVICE"])
-    |> preload([:services, :reception_desk, :tags, :room, :user])
+    |> preload([:services, :tags, :room, :user])
     |> order_by([t], desc: t.is_priority, asc: t.inserted_at)
     |> Repo.all()
     |> Enum.filter(fn ticket ->
@@ -171,12 +210,60 @@ defmodule StarTickets.Tickets do
     end)
   end
 
+  @doc """
+  List tickets finished by a specific professional today.
+  """
+  def list_finished_professional_tickets(establishment_id, user_id) do
+    today = Date.utc_today() |> DateTime.new!(~T[00:00:00])
+
+    Ticket
+    |> where([t], t.establishment_id == ^establishment_id)
+    |> where([t], t.inserted_at >= ^today)
+    |> where([t], t.status == "FINISHED")
+    |> where([t], t.user_id == ^user_id)
+    |> preload([:services, :room, :user])
+    |> order_by([t], desc: t.updated_at)
+    |> Repo.all()
+  end
+
   def call_ticket_to_room(%Ticket{} = ticket, user_id, room_id) do
-    update_ticket(ticket, %{
-      status: "CALLED_PROFESSIONAL",
-      user_id: user_id,
-      room_id: room_id
-    })
+    result =
+      update_ticket(ticket, %{
+        status: "CALLED_PROFESSIONAL",
+        user_id: user_id,
+        room_id: room_id
+      })
+
+    # Broadcast for TV display
+    case result do
+      {:ok, updated_ticket} ->
+        updated_ticket = Repo.preload(updated_ticket, [:room, :services])
+        PubSub.broadcast(StarTickets.PubSub, @topic, {:ticket_called, updated_ticket})
+        {:ok, updated_ticket}
+
+      error ->
+        error
+    end
+  end
+
+  def call_ticket_reception(%Ticket{} = ticket, user_id, room_id) do
+    result =
+      update_ticket(ticket, %{
+        status: "CALLED_RECEPTION",
+        user_id: user_id,
+        room_id: room_id
+      })
+
+    # Broadcast for TV display
+    case result do
+      {:ok, updated_ticket} ->
+        updated_ticket = Repo.preload(updated_ticket, [:room, :services])
+        PubSub.broadcast(StarTickets.PubSub, @topic, {:ticket_called, updated_ticket})
+        {:ok, updated_ticket}
+
+      error ->
+        error
+    end
   end
 
   def start_professional_attendance(%Ticket{} = ticket) do

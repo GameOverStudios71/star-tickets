@@ -168,20 +168,20 @@ defmodule StarTicketsWeb.Admin.TVsLive do
                      <span class="text-xs text-gray-400">Desativado</span>
                   <% end %>
                </:col>
-               <:col :let={tv} label="Serviços Visíveis">
-                  <%= if tv.all_services do %>
+               <:col :let={tv} label="Salas Monitoradas">
+                  <%= if tv.all_rooms do %>
                     <span class="st-badge bg-purple-500/30 text-purple-200 border border-purple-500/50">
-                      Todos os Serviços
+                      Todas as Salas
                     </span>
                   <% else %>
                     <div class="flex flex-wrap gap-1">
-                      <%= for service <- tv.services do %>
-                        <span class="st-badge bg-blue-500/30 text-blue-200 border border-blue-500/50">
-                          <%= service.name %>
+                      <%= for room <- tv.rooms do %>
+                        <span class="st-badge bg-emerald-500/30 text-emerald-200 border border-emerald-500/50">
+                          <%= room.name %>
                         </span>
                       <% end %>
-                      <%= if Enum.empty?(tv.services) do %>
-                        <span class="text-xs italic text-gray-500">Nenhum</span>
+                      <%= if Enum.empty?(tv.rooms) do %>
+                        <span class="text-xs italic text-gray-500">Nenhuma</span>
                       <% end %>
                     </div>
                   <% end %>

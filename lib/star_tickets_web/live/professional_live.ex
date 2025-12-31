@@ -18,6 +18,8 @@ defmodule StarTicketsWeb.ProfessionalLive do
       |> assign(:selected_room_id, nil)
       |> assign(:selected_room, nil)
       |> assign(:selected_ticket, nil)
+      |> assign(:selected_ticket, nil)
+      |> assign(:tab, "active")
       |> assign(:tickets, [])
       |> load_rooms()
 
@@ -37,6 +39,18 @@ defmodule StarTicketsWeb.ProfessionalLive do
     end
   end
 
+  def handle_event("select_room", %{"id" => ""}, socket) do
+    if socket.assigns.selected_room do
+      Accounts.vacate_room(socket.assigns.selected_room)
+    end
+
+    {:noreply,
+     socket
+     |> assign(:selected_room, nil)
+     |> assign(:tickets, [])
+     |> push_event("save_room_preference", %{id: nil})}
+  end
+
   def handle_event("select_room", %{"id" => id}, socket) do
     room_id = String.to_integer(id)
 
@@ -51,11 +65,11 @@ defmodule StarTicketsWeb.ProfessionalLive do
     if room &&
          (!room.occupied_by_user_id ||
             room.occupied_by_user_id == socket.assigns.current_scope.user.id) do
-      {:ok, updated_room} = Accounts.occupy_room(room, socket.assigns.current_scope.user.id)
+      {:ok, _updated_room} = Accounts.occupy_room(room, socket.assigns.current_scope.user.id)
 
       # Refresh rooms list to reflect occupation
       socket = load_rooms(socket)
-      # Reload with new state
+      # Reload with new state (re-find room from fresh list)
       room = Enum.find(socket.assigns.rooms, &(&1.id == room_id))
 
       socket =
@@ -129,8 +143,14 @@ defmodule StarTicketsWeb.ProfessionalLive do
   end
 
   def handle_event("finish_attendance", %{"id" => id}, socket) do
-    ticket = Tickets.get_ticket!(id)
-    room_services = socket.assigns.selected_room.services
+    ticket = Tickets.get_ticket!(id) |> Repo.preload(:services)
+
+    room_services =
+      if socket.assigns.selected_room.all_services do
+        ticket.services
+      else
+        socket.assigns.selected_room.services
+      end
 
     {:ok, updated_ticket} = Tickets.finish_attendance_and_route(ticket, room_services)
 
@@ -148,9 +168,17 @@ defmodule StarTicketsWeb.ProfessionalLive do
      |> assign(:selected_ticket, nil)}
   end
 
+  def handle_event("set_tab", %{"tab" => tab}, socket) do
+    {:noreply,
+     socket
+     |> assign(:tab, tab)
+     |> load_tickets()}
+  end
+
   # PubSub handling
   def handle_info({:ticket_created, _}, socket), do: {:noreply, load_tickets(socket)}
   def handle_info({:ticket_updated, _}, socket), do: {:noreply, load_tickets(socket)}
+  def handle_info({:ticket_called, _}, socket), do: {:noreply, load_tickets(socket)}
 
   defp load_rooms(socket) do
     if socket.assigns.selected_establishment_id do
@@ -166,38 +194,46 @@ defmodule StarTicketsWeb.ProfessionalLive do
 
   defp load_tickets(socket) do
     if socket.assigns.selected_room do
-      tickets =
-        Tickets.list_professional_tickets(
-          socket.assigns.selected_establishment_id,
-          socket.assigns.selected_room.services
-        )
+      if socket.assigns.tab == "finished" do
+        tickets =
+          Tickets.list_finished_professional_tickets(
+            socket.assigns.selected_establishment_id,
+            socket.assigns.current_scope.user.id
+          )
 
-      # Also find if I'm currently attending someone (IN_ATTENDANCE or CALLED_PROFESSIONAL assigned to me)
-      my_user_id = socket.assigns.current_scope.user.id
-      # We could filter the main list or fetch separately. simpler to fetch separately?
-      # Or just filter 'tickets' variable? No, `list_professional_tickets` ONLY returns waiting.
-      # We need to see MY current tickets too.
+        socket
+        |> assign(:tickets, tickets)
+        |> assign(:active_ticket, nil)
+      else
+        # If room is configured for all services, fetch all services from establishment
+        services_to_filter =
+          if socket.assigns.selected_room.all_services do
+            Accounts.list_establishment_services(socket.assigns.selected_establishment_id)
+          else
+            socket.assigns.selected_room.services
+          end
 
-      # Let's check logic: list_professional_tickets filters only WAITING.
-      # We need to fetch ACTIVE tickets for this user/room too.
-      # Quick fix: fetch all for establishment and filter in memory like Reception?
-      # Or simpler:
-      # If we are attending, we should see it.
-      # For now, let's keep it simple: Show Queue.
-      # BUT, if I called someone, they disappear from Queue!
-      # We need a "My Current Patient" section.
+        tickets =
+          Tickets.list_professional_tickets(
+            socket.assigns.selected_establishment_id,
+            services_to_filter
+          )
 
-      # Let's add active_ticket to assigns
-      active_ticket =
-        Tickets.list_reception_tickets(socket.assigns.selected_establishment_id)
-        |> Enum.find(fn t ->
-          t.user_id == my_user_id and t.status in ["CALLED_PROFESSIONAL", "IN_ATTENDANCE"]
-        end)
+        # Also find if I'm currently attending someone (IN_ATTENDANCE or CALLED_PROFESSIONAL assigned to me)
+        my_user_id = socket.assigns.current_scope.user.id
 
-      socket
-      |> assign(:tickets, tickets)
-      |> assign(:active_ticket, active_ticket)
-      |> assign(:selected_ticket, active_ticket || socket.assigns.selected_ticket)
+        # Let's add active_ticket to assigns
+        active_ticket =
+          Tickets.list_reception_tickets(socket.assigns.selected_establishment_id)
+          |> Enum.find(fn t ->
+            t.user_id == my_user_id and t.status in ["CALLED_PROFESSIONAL", "IN_ATTENDANCE"]
+          end)
+
+        socket
+        |> assign(:tickets, tickets)
+        |> assign(:active_ticket, active_ticket)
+        |> assign(:selected_ticket, active_ticket || socket.assigns.selected_ticket)
+      end
     else
       socket
       |> assign(:tickets, [])
@@ -248,10 +284,23 @@ defmodule StarTicketsWeb.ProfessionalLive do
              <%!-- Left: Queue --%>
              <div class="col-span-4 flex flex-col gap-4 h-full bg-emerald-950/30 backdrop-blur-md rounded-2xl p-4 border border-emerald-500/10 shadow-xl">
                 <div class="flex items-center justify-between">
-                   <h2 class="text-white font-bold text-lg flex items-center gap-2">
-                     👥 Aguardando
-                     <span class="bg-white/10 px-2 py-0.5 rounded-full text-xs text-white/70"><%= length(@tickets) %></span>
-                   </h2>
+                   <div class="flex items-center gap-2 w-full">
+                      <button phx-click="set_tab" phx-value-tab="active"
+                              class={"flex-1 py-1.5 px-3 rounded-md text-sm font-bold transition-all " <>
+                                if(@tab == "active",
+                                   do: "bg-emerald-600 text-white shadow-lg",
+                                   else: "text-white/50 hover:text-white hover:bg-white/5")}>
+                        👥 Aguardando
+                        <span class="ml-1 opacity-75 text-xs bg-black/20 px-1.5 rounded-full"><%= length(@tickets) %></span>
+                      </button>
+                      <button phx-click="set_tab" phx-value-tab="finished"
+                              class={"flex-1 py-1.5 px-3 rounded-md text-sm font-bold transition-all " <>
+                                if(@tab == "finished",
+                                   do: "bg-emerald-600 text-white shadow-lg",
+                                   else: "text-white/50 hover:text-white hover:bg-white/5")}>
+                         ✅ Finalizados
+                      </button>
+                   </div>
                 </div>
 
                 <div class="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
@@ -269,10 +318,18 @@ defmodule StarTicketsWeb.ProfessionalLive do
                             <% end %>
                          </div>
                          <div class="text-white/80 font-medium truncate mb-1"><%= ticket.customer_name || "Sem identificação" %></div>
-                         <div class="text-white/40 text-xs flex items-center gap-2">
+                         <div class="text-white/40 text-xs flex items-center gap-2 flex-wrap">
                             <span>🕒 <%= Calendar.strftime(ticket.inserted_at, "%H:%M") %></span>
-                            <span>•</span>
-                            <span><%= if ticket.status == "WAITING_NEXT_SERVICE", do: "🔄 Retorno", else: "🆕 Chegou agora" %></span>
+                            <%= case ticket.status do %>
+                              <% "WAITING_PROFESSIONAL" -> %>
+                                 <span class="bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded text-[10px] border border-emerald-500/30 font-bold">🆕 Aguardando</span>
+                              <% "WAITING_NEXT_SERVICE" -> %>
+                                 <span class="bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded text-[10px] border border-blue-500/30 font-bold">🔄 Retorno</span>
+                              <% "FINISHED" -> %>
+                                 <span class="bg-gray-500/20 text-gray-300 px-1.5 py-0.5 rounded text-[10px] border border-gray-500/30 font-bold">✅ Finalizado</span>
+                              <% other -> %>
+                                 <span class="bg-white/10 text-white/50 px-1.5 py-0.5 rounded text-[10px] border border-white/10"><%= other %></span>
+                            <% end %>
                          </div>
                       </div>
                    <% end %>
@@ -346,10 +403,17 @@ defmodule StarTicketsWeb.ProfessionalLive do
                    <%= if @selected_ticket do %>
                       <div class="bg-emerald-950/50 backdrop-blur-xl p-8 rounded-2xl border border-emerald-500/10 h-full flex flex-col shadow-2xl">
                          <div class="mb-6">
-                            <button phx-click="call_ticket" phx-value-id={@selected_ticket.id}
-                                    class="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xl rounded-xl transition-all border border-white/20 shadow-lg shadow-blue-500/20">
-                               📢 CHAMAR PACIENTE
-                            </button>
+                            <%= if @tab != "finished" do %>
+                               <button phx-click="call_ticket" phx-value-id={@selected_ticket.id}
+                                       class="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xl rounded-xl transition-all border border-white/20 shadow-lg shadow-blue-500/20">
+                                  📢 CHAMAR PACIENTE
+                               </button>
+                            <% else %>
+                               <div class="w-full py-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-center">
+                                  <span class="text-emerald-400 font-bold text-lg">✅ Atendimento Finalizado</span>
+                                  <div class="text-white/40 text-sm mt-1">Concluído em <%= Calendar.strftime(@selected_ticket.updated_at, "%H:%M") %></div>
+                               </div>
+                            <% end %>
                          </div>
 
                          <h2 class="text-3xl font-bold text-white mb-6">Detalhes da Senha</h2>

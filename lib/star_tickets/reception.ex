@@ -1,80 +1,69 @@
 defmodule StarTickets.Reception do
   @moduledoc """
   The Reception context.
+  Now uses Room entity with type="reception" instead of separate ReceptionDesk.
   """
 
   import Ecto.Query, warn: false
   alias StarTickets.Repo
-
-  alias StarTickets.Reception.ReceptionDesk
+  alias StarTickets.Accounts.Room
   alias Phoenix.PubSub
 
-  @topic "reception_desks"
+  @topic "reception_rooms"
 
   def subscribe do
     PubSub.subscribe(StarTickets.PubSub, @topic)
   end
 
-  defp broadcast({:ok, desk}, event) do
-    PubSub.broadcast(StarTickets.PubSub, @topic, {event, desk})
-    {:ok, desk}
+  defp broadcast({:ok, room}, event) do
+    PubSub.broadcast(StarTickets.PubSub, @topic, {event, room})
+    {:ok, room}
   end
 
   defp broadcast({:error, _} = error, _event), do: error
 
-  def list_desks(establishment_id) do
-    ReceptionDesk
-    |> where([d], d.establishment_id == ^establishment_id)
+  @doc """
+  Lists rooms that can be used by reception (type = reception or both).
+  """
+  def list_reception_rooms(establishment_id) do
+    Room
+    |> where([r], r.establishment_id == ^establishment_id)
+    |> where([r], r.type in ["reception", "both"])
+    |> where([r], r.is_active == true)
     |> preload(:occupied_by_user)
     |> Repo.all()
   end
 
-  def get_desk!(id), do: Repo.get!(ReceptionDesk, id)
+  def get_room!(id), do: Repo.get!(Room, id) |> Repo.preload(:occupied_by_user)
 
-  def create_desk(attrs \\ %{}) do
-    %ReceptionDesk{}
-    |> ReceptionDesk.changeset(attrs)
-    |> Repo.insert()
-    |> broadcast(:desk_created)
-  end
+  def occupy_room(%Room{} = room, user_id) do
+    # First, release any other room occupied by this user
+    release_rooms_by_user(user_id)
 
-  def update_desk(%ReceptionDesk{} = desk, attrs) do
-    desk
-    |> ReceptionDesk.changeset(attrs)
+    room
+    |> Room.occupation_changeset(%{occupied_by_user_id: user_id})
     |> Repo.update()
-    |> broadcast(:desk_updated)
+    |> broadcast(:room_updated)
   end
 
-  def occupy_desk(%ReceptionDesk{} = desk, user_id) do
-    # First, release any other desk occupied by this user
-    release_desks_by_user(user_id)
-
-    desk
-    |> ReceptionDesk.occupation_changeset(%{occupied_by_user_id: user_id})
+  def release_room(%Room{} = room) do
+    room
+    |> Room.occupation_changeset(%{occupied_by_user_id: nil})
     |> Repo.update()
-    |> broadcast(:desk_updated)
+    |> broadcast(:room_updated)
   end
 
-  def release_desk(%ReceptionDesk{} = desk) do
-    desk
-    |> ReceptionDesk.occupation_changeset(%{occupied_by_user_id: nil})
-    |> Repo.update()
-    |> broadcast(:desk_updated)
-  end
+  def release_rooms_by_user(user_id) do
+    # Find rooms to clear first (for broadcast)
+    rooms_to_clear = Repo.all(from(r in Room, where: r.occupied_by_user_id == ^user_id))
 
-  def release_desks_by_user(user_id) do
-    from(d in ReceptionDesk, where: d.occupied_by_user_id == ^user_id)
+    # Clear all at once
+    from(r in Room, where: r.occupied_by_user_id == ^user_id)
     |> Repo.update_all(set: [occupied_by_user_id: nil])
 
-    # Since update_all doesn't return structs for broadcast, we might need to manually broadcast
-    # or just let periodic fetch handle it, but for now we rely on the specific occupy call to broadcast the *new* state.
-    # To be safer, we should probably fetch and broadcast, but let's keep it simple.
-    # Actually, if we clear others, we should let clients know.
-    # Use a query to find them first.
-    desks_to_clear = Repo.all(from(d in ReceptionDesk, where: d.occupied_by_user_id == ^user_id))
-
-    Enum.each(desks_to_clear, fn d ->
-      broadcast({:ok, %{d | occupied_by_user_id: nil}}, :desk_updated)
+    # Broadcast updates
+    Enum.each(rooms_to_clear, fn r ->
+      broadcast({:ok, %{r | occupied_by_user_id: nil}}, :room_updated)
     end)
   end
 end

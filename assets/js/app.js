@@ -203,10 +203,88 @@ const AutoFocus = {
   }
 }
 
+// TV Sound and TTS Hook
+const TVSound = {
+  mounted() {
+    // Create audio context lazily
+    this.audioContext = null;
+
+    // Handle sound events
+    this.handleEvent("play_alert", () => {
+      this.playDingDong();
+    });
+
+    // Handle TTS events
+    this.handleEvent("speak", ({ text }) => {
+      this.speak(text);
+    });
+
+    // Resume audio context on any interaction
+    document.addEventListener("click", () => this.resumeAudio(), { once: true });
+    document.addEventListener("keydown", () => this.resumeAudio(), { once: true });
+  },
+
+  resumeAudio() {
+    if (this.audioContext && this.audioContext.state === "suspended") {
+      this.audioContext.resume();
+    }
+  },
+
+  playDingDong() {
+    if (!this.audioContext) {
+      this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    const ctx = this.audioContext;
+    if (ctx.state === "suspended") ctx.resume();
+
+    const now = ctx.currentTime;
+
+    // First note (high)
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.type = "sine";
+    osc1.frequency.setValueAtTime(660, now);
+    gain1.gain.setValueAtTime(0.5, now);
+    gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+    osc1.start(now);
+    osc1.stop(now + 0.4);
+
+    // Second note (low)
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.type = "sine";
+    osc2.frequency.setValueAtTime(440, now + 0.3);
+    gain2.gain.setValueAtTime(0.5, now + 0.3);
+    gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
+    osc2.start(now + 0.3);
+    osc2.stop(now + 0.8);
+  },
+
+  speak(text) {
+    if (!window.speechSynthesis) return;
+
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "pt-BR";
+    utterance.rate = 0.9;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+
+    window.speechSynthesis.speak(utterance);
+  }
+}
+
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: { _csrf_token: csrfToken },
-  hooks: { ...colocatedHooks, PhoneMask, AutoClearFlash, TotemSounds, DeskPreference, RoomPreference, AutoFocus },
+  hooks: { ...colocatedHooks, PhoneMask, AutoClearFlash, TotemSounds, DeskPreference, RoomPreference, AutoFocus, TVSound },
 })
 
 // Show progress bar on live navigation and form submits

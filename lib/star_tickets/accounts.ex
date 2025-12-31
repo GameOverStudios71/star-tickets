@@ -770,20 +770,28 @@ defmodule StarTickets.Accounts do
   end
 
   defp put_room_services(changeset, attrs) do
+    all_services = Ecto.Changeset.get_field(changeset, :all_services, false)
     ids = attrs["service_ids"] || []
 
-    if Enum.empty?(ids) do
-      Ecto.Changeset.add_error(changeset, :services, "Selecione pelo menos um serviço.")
-    else
-      # Convert ids to integers safely
-      ids =
-        Enum.map(ids, fn
-          id when is_binary(id) -> String.to_integer(id)
-          id -> id
-        end)
+    cond do
+      all_services ->
+        # If "All Services" is checked, clear specific associations
+        Ecto.Changeset.put_assoc(changeset, :services, [])
 
-      services = Repo.all(from(s in Service, where: s.id in ^ids))
-      Ecto.Changeset.put_assoc(changeset, :services, services)
+      Enum.empty?(ids) ->
+        # Services are optional when all_services is checked
+        changeset
+
+      true ->
+        # Convert ids to integers safely
+        ids =
+          Enum.map(ids, fn
+            id when is_binary(id) -> String.to_integer(id)
+            id -> id
+          end)
+
+        services = Repo.all(from(s in Service, where: s.id in ^ids))
+        Ecto.Changeset.put_assoc(changeset, :services, services)
     end
   end
 
@@ -795,7 +803,7 @@ defmodule StarTickets.Accounts do
     TV
     |> where(establishment_id: ^establishment_id)
     |> search_tvs(search_term)
-    |> preload([:services, :user])
+    |> preload([:services, :rooms, :user])
     |> Repo.all()
   end
 
@@ -806,47 +814,70 @@ defmodule StarTickets.Accounts do
     where(query, [t], ilike(t.name, ^term))
   end
 
-  def get_tv!(id), do: Repo.get!(TV, id) |> Repo.preload([:services, :user])
+  def get_tv!(id), do: Repo.get!(TV, id) |> Repo.preload([:services, :rooms, :user])
+
+  def get_tv_by_user(user_id) do
+    TV
+    |> where([t], t.user_id == ^user_id)
+    |> Repo.one()
+  end
+
+  def get_establishment(id) when is_nil(id), do: nil
+  def get_establishment(id), do: Repo.get(Establishment, id)
 
   def create_tv(attrs \\ %{}) do
+    # Normalize keys to strings
+    attrs =
+      attrs
+      |> Enum.map(fn {k, v} -> {to_string(k), v} end)
+      |> Enum.into(%{})
+
     Repo.transaction(fn ->
       establishment =
-        get_establishment!(attrs["establishment_id"] || attrs[:establishment_id])
+        get_establishment!(attrs["establishment_id"])
         |> Repo.preload(:client)
 
-      # Generate username: client.estab.tv.slug
-      slug_name =
-        (attrs["name"] || "tv")
-        |> String.normalize(:nfd)
-        |> String.replace(~r/\p{Mn}/u, "")
-        |> String.downcase()
-        |> String.replace(~r/[^a-z0-9]/, "_")
-
-      username =
-        "#{establishment.client.slug}.#{establishment.code}.tv.#{slug_name}" |> String.downcase()
-
-      # Default password if not provided (should be provided in form)
-      password = attrs["password"] || "star123"
-      email = "#{username}@star-tickets.local"
-
-      # Create User
-      user_params = %{
-        "name" => attrs["name"],
-        "username" => username,
-        "email" => email,
-        "password" => password,
-        "role" => "tv",
-        "client_id" => establishment.client_id,
-        "establishment_id" => establishment.id
-      }
+      # Check if user_id is already provided
+      user_id = attrs["user_id"] || attrs[:user_id]
 
       user =
-        %User{}
-        |> User.admin_create_changeset(user_params)
-        |> Repo.insert()
-        |> case do
-          {:ok, user} -> user
-          {:error, changeset} -> Repo.rollback(changeset)
+        if user_id do
+          Repo.get!(User, user_id)
+        else
+          # Generate username: client.estab.tv.slug
+          slug_name =
+            (attrs["name"] || "tv")
+            |> String.normalize(:nfd)
+            |> String.replace(~r/\p{Mn}/u, "")
+            |> String.downcase()
+            |> String.replace(~r/[^a-z0-9]/, "_")
+
+          username =
+            "#{establishment.client.slug}.#{establishment.code}.tv.#{slug_name}"
+            |> String.downcase()
+
+          # Default password if not provided
+          password = attrs["password"] || "startickets123"
+          email = "#{username}@star-tickets.local"
+
+          # Create User
+          user_params = %{
+            "name" => attrs["name"],
+            "username" => username,
+            "email" => email,
+            "password" => password,
+            "role" => "tv",
+            "client_id" => establishment.client_id,
+            "establishment_id" => establishment.id
+          }
+
+          %User{}
+          |> User.admin_create_changeset(user_params)
+          |> Repo.insert()
+          |> case do
+            {:ok, user} -> user
+            {:error, changeset} -> Repo.rollback(changeset)
+          end
         end
 
       # Create TV
@@ -856,6 +887,7 @@ defmodule StarTickets.Accounts do
         %TV{}
         |> TV.changeset(tv_params)
         |> put_tv_services(attrs)
+        |> put_tv_rooms(attrs)
         |> Repo.insert()
 
       case tv do
@@ -869,6 +901,7 @@ defmodule StarTickets.Accounts do
     tv
     |> TV.changeset(attrs)
     |> put_tv_services(attrs)
+    |> put_tv_rooms(attrs)
     |> Repo.update()
   end
 
@@ -903,16 +936,11 @@ defmodule StarTickets.Accounts do
     cond do
       all_services ->
         # If "All Services" is checked, we clear specific associations.
-        # This implies "Dynamic All".
         Ecto.Changeset.put_assoc(changeset, :services, [])
 
       Enum.empty?(ids) ->
-        # If "All Services" is NOT checked, we MUST have specific services.
-        Ecto.Changeset.add_error(
-          changeset,
-          :services,
-          "Selecione pelo menos um serviço ou marque 'Todos'."
-        )
+        # Services are now optional since we're primarily using rooms
+        changeset
 
       true ->
         # Convert ids to integers safely
@@ -924,6 +952,30 @@ defmodule StarTickets.Accounts do
 
         services = Repo.all(from(s in Service, where: s.id in ^ids))
         Ecto.Changeset.put_assoc(changeset, :services, services)
+    end
+  end
+
+  defp put_tv_rooms(changeset, attrs) do
+    all_rooms = Ecto.Changeset.get_field(changeset, :all_rooms, false)
+    ids = attrs["room_ids"] || []
+
+    cond do
+      all_rooms ->
+        Ecto.Changeset.put_assoc(changeset, :rooms, [])
+
+      Enum.empty?(ids) ->
+        # Rooms are optional - no error if empty
+        changeset
+
+      true ->
+        ids =
+          Enum.map(ids, fn
+            id when is_binary(id) -> String.to_integer(id)
+            id -> id
+          end)
+
+        rooms = Repo.all(from(r in Room, where: r.id in ^ids))
+        Ecto.Changeset.put_assoc(changeset, :rooms, rooms)
     end
   end
 

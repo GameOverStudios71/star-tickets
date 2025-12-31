@@ -125,11 +125,11 @@ defmodule StarTicketsWeb.Admin.RoomsLive do
 
       <div class="st-container flex-1 m-4">
           <.page_header
-            title="🚪 Salas"
-            description="Gerencie as salas de atendimento."
+            title="� Posições de Atendimento"
+            description="Gerencie salas, guichês e mesas de recepção."
             breadcrumb_items={[
               %{label: "Administração", href: "/admin"},
-              %{label: "Salas"}
+              %{label: "Posições"}
             ]}
           >
             <hr class="my-6 border-white/500 opacity-40 border-dashed" />
@@ -146,15 +146,30 @@ defmodule StarTicketsWeb.Admin.RoomsLive do
 
                <.admin_table id="rooms" rows={@rooms}>
                  <:col :let={room} label="Nome"><%= room.name %></:col>
-                 <:col :let={room} label="Capacidade (Pessoas)"><%= room.capacity_threshold %></:col>
-                 <:col :let={room} label="Serviços Atendidos">
-                    <div class="flex flex-wrap gap-1">
-                      <%= for service <- room.services do %>
-                        <span class="st-badge bg-blue-500/30 text-blue-200 border border-blue-500/50">
-                          <%= service.name %>
-                        </span>
-                      <% end %>
-                    </div>
+                 <:col :let={room} label="Tipo">
+                    <span class={"st-badge " <> type_badge_class(room.type)}>
+                      <%= type_label(room.type) %>
+                    </span>
+                    <%= unless room.is_active do %>
+                      <span class="st-badge bg-red-500/30 text-red-200 border border-red-500/50 ml-1">Inativa</span>
+                    <% end %>
+                 </:col>
+                 <:col :let={room} label="Capacidade"><%= room.capacity_threshold %></:col>
+                 <:col :let={room} label="Serviços">
+                    <%= if room.all_services do %>
+                      <span class="st-badge bg-purple-500/30 text-purple-200 border border-purple-500/50">Todos</span>
+                    <% else %>
+                      <div class="flex flex-wrap gap-1">
+                        <%= for service <- room.services do %>
+                          <span class="st-badge bg-blue-500/30 text-blue-200 border border-blue-500/50">
+                            <%= service.name %>
+                          </span>
+                        <% end %>
+                        <%= if Enum.empty?(room.services) do %>
+                          <span class="text-xs italic text-gray-500">Nenhum</span>
+                        <% end %>
+                      </div>
+                    <% end %>
                  </:col>
                  <:action :let={room}>
                     <.link patch={~p"/admin/rooms/#{room}/edit"} class="btn btn-sm btn-ghost btn-square" title="Editar">
@@ -220,4 +235,20 @@ defmodule StarTicketsWeb.Admin.RoomsLive do
     </div>
     """
   end
+
+  defp type_label("reception"), do: "Recepção"
+  defp type_label("professional"), do: "Profissional"
+  defp type_label("both"), do: "Ambos"
+  defp type_label(_), do: "Desconhecido"
+
+  defp type_badge_class("reception"),
+    do: "bg-emerald-500/30 text-emerald-200 border border-emerald-500/50"
+
+  defp type_badge_class("professional"),
+    do: "bg-blue-500/30 text-blue-200 border border-blue-500/50"
+
+  defp type_badge_class("both"),
+    do: "bg-purple-500/30 text-purple-200 border border-purple-500/50"
+
+  defp type_badge_class(_), do: "bg-gray-500/30 text-gray-200 border border-gray-500/50"
 end

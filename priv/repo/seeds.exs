@@ -534,42 +534,87 @@ IO.puts("🚪 Creating rooms for each establishment...")
 all_ests = Repo.all(from(e in Establishment, where: e.client_id == ^client.id))
 
 Enum.each(all_ests, fn est ->
-  # Create 4 rooms per establishment
-  Enum.each(1..4, fn n ->
-    %Room{}
-    |> Room.changeset(%{
-      name: "Sala #{n}",
-      establishment_id: est.id,
-      capacity_threshold: 0
-    })
-    |> Repo.insert!()
-  end)
+  # Create 1 room per establishment (Simplification)
+  %Room{}
+  |> Room.changeset(%{
+    name: "Consultório 1",
+    establishment_id: est.id,
+    capacity_threshold: 0,
+    type: "professional",
+    # Enable all services as requested
+    all_services: true
+  })
+  |> Repo.insert!()
 
-  IO.puts("   ✅ #{est.name}: 4 salas criadas")
+  IO.puts("   ✅ #{est.name}: 1 sala (Consultório 1) criada com 'All Services'")
 end)
 
 IO.puts("")
 
 # ============================================
-# 7. CREATE RECEPTION DESKS (Mesas) FOR EACH ESTABLISHMENT
+# 7. CREATE RECEPTION DESKS (Mesas) AS ROOMS FOR EACH ESTABLISHMENT
 # ============================================
-alias StarTickets.Reception.ReceptionDesk
+alias StarTickets.Accounts.Room
 
-IO.puts("🪑 Creating reception desks for each establishment...")
+IO.puts("🪑 Creating reception desks (as Rooms) for each establishment...")
 
 Enum.each(all_ests, fn est ->
-  # Create 4 desks per establishment
-  Enum.each(1..4, fn n ->
-    %ReceptionDesk{}
-    |> ReceptionDesk.changeset(%{
-      name: "Mesa #{n}",
-      establishment_id: est.id,
-      is_active: true
-    })
-    |> Repo.insert!()
-  end)
+  # Create 1 desk per establishment
+  %Room{}
+  |> Room.changeset(%{
+    name: "Recepção 1",
+    establishment_id: est.id,
+    is_active: true,
+    type: "reception",
+    all_services: false
+  })
+  |> Repo.insert!()
 
-  IO.puts("   ✅ #{est.name}: 4 mesas criadas")
+  IO.puts("   ✅ #{est.name}: 1 mesa (Recepção 1) criada")
+end)
+
+IO.puts("")
+
+# ============================================
+# 8. CREATE TV FOR EACH ESTABLISHMENT
+# ============================================
+IO.puts("📺 Creating TV for each establishment...")
+
+Enum.each(all_ests, fn est ->
+  # 1. Create TV User
+  tv_username = "tv.#{est.code |> String.downcase()}"
+
+  tv_user =
+    case StarTickets.Accounts.get_user_by_username(tv_username) do
+      nil ->
+        %StarTickets.Accounts.User{}
+        |> Ecto.Changeset.change(%{
+          email: "#{tv_username}@proocupacional.com.br",
+          hashed_password: Bcrypt.hash_pwd_salt("minhasenha123"),
+          name: "TV #{est.name}",
+          username: tv_username,
+          role: "tv",
+          establishment_id: est.id,
+          client_id: client.id,
+          confirmed_at: DateTime.utc_now() |> DateTime.truncate(:second)
+        })
+        |> Repo.insert!()
+
+      user ->
+        user
+    end
+
+  # 2. Create TV linked to this user
+  {:ok, _tv} =
+    StarTickets.Accounts.create_tv(%{
+      name: "TV Principal",
+      establishment_id: est.id,
+      all_services: true,
+      all_rooms: true,
+      user_id: tv_user.id
+    })
+
+  IO.puts("   ✅ #{est.name}: TV User (#{tv_username}) e TV criados")
 end)
 
 IO.puts("")

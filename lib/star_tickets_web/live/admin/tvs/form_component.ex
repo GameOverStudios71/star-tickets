@@ -54,46 +54,46 @@ defmodule StarTicketsWeb.Admin.TVs.FormComponent do
 
             <div>
               <div class="flex items-center justify-between mb-2">
-                <label class="block text-sm font-medium text-white/80">Serviços Exibidos</label>
+                <label class="block text-sm font-medium text-white/80">Salas Monitoradas</label>
                 <div class="flex items-center gap-2">
                    <label class="flex items-center gap-2 cursor-pointer text-xs bg-blue-500/20 px-2 py-1 rounded border border-blue-500/30 text-blue-200 hover:bg-blue-500/30 transition-colors select-none">
-                    <.input field={@form[:all_services]} type="checkbox" class="checkbox-xs checkbox-primary" />
-                    <span>Exibir Todos (Futuros Inclusive)</span>
+                    <.input field={@form[:all_rooms]} type="checkbox" class="checkbox-xs checkbox-primary" />
+                    <span>Exibir Todas as Salas</span>
                   </label>
                 </div>
               </div>
 
-              <% all_services = Ecto.Changeset.get_field(@form.source, :all_services) %>
+              <% all_rooms = Ecto.Changeset.get_field(@form.source, :all_rooms) %>
 
-              <div class={"bg-black/20 rounded border border-white/5 p-3 h-60 overflow-y-auto space-y-2 relative transition-opacity duration-300 " <> (if all_services, do: "opacity-50 pointer-events-none", else: "")}>
-                <%= for service <- @services do %>
+              <div class={"bg-black/20 rounded border border-white/5 p-3 h-60 overflow-y-auto space-y-2 relative transition-opacity duration-300 " <> (if all_rooms, do: "opacity-50 pointer-events-none", else: "")}>
+                <%= for room <- @rooms do %>
                   <label class="flex items-center gap-3 cursor-pointer group hover:bg-white/5 p-2 rounded transition-colors">
                      <input
                        type="checkbox"
-                       name="tv[service_ids][]"
-                       value={service.id}
-                       checked={service.id in @selected_service_ids}
+                       name="tv[room_ids][]"
+                       value={room.id}
+                       checked={room.id in @selected_room_ids}
                        class="checkbox checkbox-sm checkbox-primary border-white/30"
                      />
-                     <span class="text-white group-hover:text-blue-300"><%= service.name %></span>
+                     <span class="text-white group-hover:text-blue-300"><%= room.name %></span>
                   </label>
                 <% end %>
-                <%= if Enum.empty?(@services) do %>
-                  <p class="text-white/40 text-sm text-center py-4">Nenhum serviço disponível.</p>
+                <%= if Enum.empty?(@rooms) do %>
+                  <p class="text-white/40 text-sm text-center py-4">Nenhuma sala disponível.</p>
                 <% end %>
 
-                <%= if all_services do %>
+                <%= if all_rooms do %>
                     <div class="absolute inset-0 flex items-center justify-center z-10">
                       <span class="bg-black/80 text-white px-3 py-1 rounded text-sm font-semibold backdrop-blur-md border border-white/20 shadow-xl">
-                        Todos os serviços serão exibidos
+                        Todas as salas serão exibidas
                       </span>
                     </div>
                  <% end %>
               </div>
 
-              <.error :for={msg <- @form[:services].errors}><%= translate_error(msg) %></.error>
+              <.error :for={msg <- @form[:rooms].errors}><%= translate_error(msg) %></.error>
 
-              <p class="text-xs text-white/40 mt-1">Selecione quais serviços esta TV deve monitorar.</p>
+              <p class="text-xs text-white/40 mt-1">Selecione quais salas esta TV deve monitorar (chamadas de senhas).</p>
             </div>
           </div>
 
@@ -146,29 +146,28 @@ defmodule StarTicketsWeb.Admin.TVs.FormComponent do
   def update(%{tv: tv} = assigns, socket) do
     # Preload client needed for login preview
     establishment = Accounts.get_establishment!(assigns.establishment_id) |> Repo.preload(:client)
-    services = Accounts.list_services(%{"client_id" => establishment.client_id})
+    rooms = Accounts.list_rooms(assigns.establishment_id)
 
     # Preload if editing
-    tv = Repo.preload(tv, [:services, :user])
+    tv = Repo.preload(tv, [:services, :rooms, :user])
 
-    selected_service_ids = Enum.map(tv.services || [], & &1.id)
+    selected_room_ids = Enum.map(tv.rooms || [], & &1.id)
     changeset = Accounts.change_tv(tv)
 
     {:ok,
      socket
      |> assign(assigns)
-     # Assign establishment for render
      |> assign(:establishment, establishment)
-     |> assign(:services, services)
-     |> assign(:selected_service_ids, selected_service_ids)
+     |> assign(:rooms, rooms)
+     |> assign(:selected_room_ids, selected_room_ids)
      |> assign(:form, to_form(changeset))}
   end
 
   @impl true
   def handle_event("validate", %{"tv" => tv_params}, socket) do
-    # Fix checkbox disappearing issue: update selected_service_ids state from params
+    # Fix checkbox disappearing issue: update selected_room_ids state from params
     selected_ids =
-      (tv_params["service_ids"] || [])
+      (tv_params["room_ids"] || [])
       |> Enum.map(&String.to_integer/1)
 
     changeset =
@@ -178,7 +177,7 @@ defmodule StarTicketsWeb.Admin.TVs.FormComponent do
 
     {:noreply,
      socket
-     |> assign(:selected_service_ids, selected_ids)
+     |> assign(:selected_room_ids, selected_ids)
      |> assign(:form, to_form(changeset))}
   end
 

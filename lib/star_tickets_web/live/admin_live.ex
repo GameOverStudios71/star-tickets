@@ -57,9 +57,9 @@ defmodule StarTicketsWeb.AdminLive do
             </.link>
 
             <.link navigate={~p"/admin/rooms"} class="st-card st-nav-card">
-              <span class="st-icon">🚪</span>
-              <h2>Salas</h2>
-              <p>Salas e guichês de atendimento</p>
+              <span class="st-icon">📍</span>
+              <h2>Posições de Atendimento</h2>
+              <p>Salas, guichês e mesas de recepção</p>
             </.link>
 
             <.link navigate={~p"/admin/totems"} class="st-card st-nav-card">
