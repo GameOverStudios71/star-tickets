@@ -58,7 +58,7 @@ defmodule StarTicketsWeb.ReceptionLive do
     # Simple strategy: prepend to all_tickets and re-filter
 
     # Needs preloads (services, desk) for proper display
-    ticket = Repo.preload(ticket, [:services, :reception_desk, :tags])
+    ticket = Repo.preload(ticket, [:services, :room, :tags])
 
     all_tickets = [ticket | socket.assigns.all_tickets]
 

@@ -3,7 +3,7 @@ import Config
 # Configure your database
 config :star_tickets, StarTickets.Repo,
   username: "postgres",
-  password: "VeryStronGPassWord@1137",
+  password: "postgres",
   hostname: "localhost",
   database: "star_tickets_dev",
   stacktrace: true,
@@ -58,12 +58,12 @@ config :star_tickets, StarTicketsWeb.Endpoint,
     web_console_logger: true,
     patterns: [
       # Static assets, except user uploads
-      ~r"priv/static/(?!uploads/).*\.(js|css|png|jpeg|jpg|gif|svg)$"E,
+      ~r"priv/static/(?!uploads/).*\.(js|css|png|jpeg|jpg|gif|svg)$",
       # Gettext translations
-      ~r"priv/gettext/.*\.po$"E,
+      ~r"priv/gettext/.*\.po$",
       # Router, Controllers, LiveViews and LiveComponents
-      ~r"lib/star_tickets_web/router\.ex$"E,
-      ~r"lib/star_tickets_web/(controllers|live|components)/.*\.(ex|heex)$"E
+      ~r"lib/star_tickets_web/router\.ex$",
+      ~r"lib/star_tickets_web/(controllers|live|components)/.*\.(ex|heex)$"
     ]
   ]
 

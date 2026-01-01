@@ -1,18 +1,482 @@
-# StarTickets
+# 🎫 StarTickets
 
-To start your Phoenix server:
+Sistema completo de gestão de filas e atendimento para clínicas e estabelecimentos de saúde, desenvolvido com **Phoenix 1.8** e **LiveView**.
 
-* Run `mix setup` to install and setup dependencies
-* Start Phoenix endpoint with `mix phx.server` or inside IEx with `iex -S mix phx.server`
+![Elixir](https://img.shields.io/badge/Elixir-1.15+-4B275F?logo=elixir)
+![Phoenix](https://img.shields.io/badge/Phoenix-1.8-FD4F00?logo=phoenixframework)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16+-336791?logo=postgresql)
+![License](https://img.shields.io/badge/License-Proprietary-red)
 
-Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
+---
 
-Ready to run in production? Please [check our deployment guides](https://hexdocs.pm/phoenix/deployment.html).
+## 📋 Índice
 
-## Learn more
+- [Visão Geral](#-visão-geral)
+- [Funcionalidades](#-funcionalidades)
+- [Arquitetura](#-arquitetura)
+- [Instalação](#-instalação)
+- [Configuração](#-configuração)
+- [Uso](#-uso)
+- [API e Eventos](#-api-e-eventos)
+- [Estrutura do Projeto](#-estrutura-do-projeto)
+- [Desenvolvimento](#-desenvolvimento)
 
-* Official website: https://www.phoenixframework.org/
-* Guides: https://hexdocs.pm/phoenix/overview.html
-* Docs: https://hexdocs.pm/phoenix
-* Forum: https://elixirforum.com/c/phoenix-forum
-* Source: https://github.com/phoenixframework/phoenix
+---
+
+## 🎯 Visão Geral
+
+O **StarTickets** é uma solução multi-tenant para gestão de filas de atendimento, projetada especificamente para clínicas médicas e estabelecimentos de saúde ocupacional. O sistema oferece:
+
+- **Totem de autoatendimento** para retirada de senhas
+- **Painéis em tempo real** para recepção, profissionais e TVs de chamada
+- **Web check-in** para pacientes preencherem formulários antes do atendimento
+- **Formulários dinâmicos** para anamnese ocupacional
+- **Gestão completa** de estabelecimentos, usuários, salas e serviços
+
+---
+
+## ✨ Funcionalidades
+
+### 🖥️ Totem de Autoatendimento
+
+| Recurso | Descrição |
+|---------|-----------|
+| **Menu Hierárquico** | Navegação em árvore configurável por estabelecimento |
+| **Seleção de Serviços** | Paciente escolhe múltiplos serviços em uma única senha |
+| **Atendimento Preferencial** | Opção separada com priorização automática |
+| **QR Code** | Geração de QR Code para acompanhamento do status |
+| **Tags Automáticas** | Categorização automática baseada no caminho de navegação |
+| **Sons de Feedback** | Feedback sonoro nas interações |
+
+### 👩‍💼 Painel de Recepção
+
+| Recurso | Descrição |
+|---------|-----------|
+| **Lista de Tickets** | Visualização de todas as senhas aguardando atendimento |
+| **Filtros Avançados** | Filtro por status, tags, serviços e período (12h/24h) |
+| **Chamada de Senhas** | Chamar próxima senha com notificação em tempo real |
+| **Seleção de Mesa** | Recepcionista seleciona em qual mesa está atendendo |
+| **Priorização** | Senhas preferenciais destacadas e priorizadas |
+| **Abas de Status** | Separação entre "Fila", "Em Atendimento" e "Finalizados" |
+| **Web Check-in Status** | Visualização do progresso do web check-in do paciente |
+| **Formulários** | Visualização e revisão de formulários preenchidos |
+
+### 👨‍⚕️ Painel do Profissional
+
+| Recurso | Descrição |
+|---------|-----------|
+| **Seleção de Sala** | Profissional indica em qual consultório está |
+| **Fila Personalizada** | Lista apenas tickets com serviços compatíveis com a sala |
+| **Chamada de Pacientes** | Chamar próximo paciente para atendimento |
+| **Controle de Atendimento** | Iniciar e finalizar atendimentos |
+| **Débito de Serviços** | Ao finalizar, remove serviços realizados; paciente retorna à fila se houver mais |
+| **Histórico** | Visualização de atendimentos finalizados |
+
+### 📺 Painel TV
+
+| Recurso | Descrição |
+|---------|-----------|
+| **Display de Chamadas** | Exibição em tela grande para chamadas |
+| **Text-to-Speech (TTS)** | Anúncio sonoro automático das chamadas |
+| **Histórico Recente** | Lista das últimas chamadas |
+| **Rotação Automática** | Alternância entre chamadas ativas |
+| **Configurável** | Filtro por salas e serviços específicos |
+| **Design Responsivo** | Layout otimizado para TVs e monitores |
+
+### 📱 Web Check-in
+
+| Recurso | Descrição |
+|---------|-----------|
+| **Acesso via QR Code** | Paciente acessa link pelo QR Code do ticket |
+| **Formulários Dinâmicos** | Preenchimento de anamnese antes do atendimento |
+| **Progresso Visual** | Indicador de progresso no preenchimento |
+| **Validação em Tempo Real** | Validações instantâneas dos campos |
+| **Múltiplas Seções** | Formulários divididos em seções navegáveis |
+
+### 🔧 Painel Administrativo
+
+#### Gestão de Usuários
+- Criação, edição e exclusão de usuários
+- Atribuição de roles: `admin`, `manager`, `reception`, `professional`, `totem`, `tv`
+- Vinculação a cliente e estabelecimento
+- Filtros por cliente, estabelecimento e busca
+
+#### Gestão de Estabelecimentos
+- Cadastro de unidades/filiais
+- Código único por estabelecimento
+- Endereço e telefone
+- Status ativo/inativo
+
+#### Gestão de Serviços
+- Cadastro de serviços oferecidos
+- Duração estimada em minutos
+- Descrição detalhada
+- Vinculação a formulários de anamnese
+
+#### Gestão de Salas
+- Tipos: `reception` (mesas), `professional` (consultórios), `both`
+- Vinculação de serviços à sala
+- Opção "Todos os Serviços"
+- Controle de ocupação
+
+#### Gestão de TVs
+- Configuração de painéis de chamada
+- Filtro por salas e serviços
+- Usuário vinculado para autenticação automática
+
+#### Gestão de Menus do Totem
+- Estrutura hierárquica em árvore
+- Ícones e descrições personalizáveis
+- Vinculação de serviços aos itens do menu
+- Configuração de "taggable" para categorização de tickets
+
+#### Gestão de Formulários
+- Criação de templates de formulário
+- Seções organizadas
+- Tipos de campos: texto, radio, checkbox, etc.
+- Builder visual de formulários
+- Vinculação a serviços específicos
+
+### 🔐 Autenticação e Autorização
+
+| Recurso | Descrição |
+|---------|-----------|
+| **Login por Email/Senha** | Autenticação tradicional |
+| **Login por Username** | Suporte a login por nome de usuário |
+| **Magic Links** | Login sem senha via email |
+| **Confirmação de Email** | Fluxo de confirmação de conta |
+| **Reset de Senha** | Recuperação de acesso |
+| **Impersonation** | Administradores podem assumir identidade de outros usuários |
+| **Seleção de Estabelecimento** | Usuários admin podem alternar entre estabelecimentos |
+| **Controle por Roles** | Acesso às funcionalidades baseado em papel do usuário |
+
+### 📊 Recursos Adicionais
+
+- **Multi-tenant**: Isolamento completo de dados por cliente
+- **Real-time**: Atualizações instantâneas via Phoenix PubSub
+- **Responsivo**: Interface adaptável a diferentes dispositivos
+- **Acessível**: Suporte a atendimento preferencial
+
+---
+
+## 🏗️ Arquitetura
+
+### Modelo de Dados
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                           CLIENT                                 │
+│  (Multi-tenant: Pro Ocupacional, etc.)                          │
+└─────────────────────────────────────────────────────────────────┘
+         │
+         ├──────────────────────────────────────┐
+         │                                      │
+         ▼                                      ▼
+┌─────────────────┐                    ┌─────────────────┐
+│  ESTABLISHMENT  │                    │     SERVICE     │
+│  (Freguesia,    │                    │  (Ultrassom,    │
+│   Santana...)   │                    │   Raio-X...)    │
+└─────────────────┘                    └─────────────────┘
+         │                                      │
+         ├───────────────┬──────────────────────┤
+         │               │                      │
+         ▼               ▼                      ▼
+┌─────────────┐  ┌─────────────┐      ┌─────────────────┐
+│    USER     │  │    ROOM     │      │   FORM_TEMPLATE │
+│ (Roles:     │  │ (Salas e    │      │   (Anamnese)    │
+│ admin, etc.)│  │  Mesas)     │      └─────────────────┘
+└─────────────┘  └─────────────┘               │
+                        │                      ▼
+┌───────────────────────┴───────────────────────────┐
+│                      TICKET                        │
+│  (Senha com status, serviços, tags, formulários)  │
+└───────────────────────────────────────────────────┘
+```
+
+### Status do Ticket
+
+```
+WAITING_RECEPTION    →  Aguardando na fila da recepção
+       ↓
+CALLED_RECEPTION     →  Chamado pela recepção
+       ↓
+IN_RECEPTION         →  Em atendimento na recepção
+       ↓
+WAITING_PROFESSIONAL →  Aguardando profissional
+       ↓
+CALLED_PROFESSIONAL  →  Chamado pelo profissional
+       ↓
+IN_ATTENDANCE        →  Em atendimento com profissional
+       ↓
+FINISHED             →  Atendimento concluído
+```
+
+---
+
+## 🚀 Instalação
+
+### Pré-requisitos
+
+- Elixir 1.15+
+- Erlang/OTP 26+
+- PostgreSQL 14+
+- Node.js 18+ (para assets)
+
+### Passos
+
+```bash
+# Clonar o repositório
+git clone https://github.com/seu-usuario/star-tickets.git
+cd star-tickets
+
+# Instalar dependências e configurar banco de dados
+mix setup
+
+# Iniciar o servidor
+mix phx.server
+```
+
+O sistema estará disponível em [http://localhost:4000](http://localhost:4000).
+
+---
+
+## ⚙️ Configuração
+
+### Variáveis de Ambiente (Produção)
+
+```bash
+# Banco de Dados
+DATABASE_URL="ecto://user:pass@host/star_tickets_prod"
+
+# Servidor
+PHX_HOST="seu-dominio.com"
+PHX_PORT="4000"
+SECRET_KEY_BASE="sua-chave-secreta-64-chars"
+
+# Email (Swoosh)
+SMTP_HOST="smtp.exemplo.com"
+SMTP_PORT="587"
+SMTP_USERNAME="usuario"
+SMTP_PASSWORD="senha"
+```
+
+### Desenvolvimento
+
+Configure `config/dev.exs`:
+
+```elixir
+config :star_tickets, StarTickets.Repo,
+  username: "postgres",
+  password: "sua_senha",
+  hostname: "localhost",
+  database: "star_tickets_dev"
+```
+
+---
+
+## 📖 Uso
+
+### Usuários de Teste (Seeds)
+
+Após rodar `mix setup`, os seguintes usuários estarão disponíveis:
+
+| Email | Senha | Role | Descrição |
+|-------|-------|------|-----------|
+| `admin@proocupacional.com.br` | `minhasenha123` | admin | Acesso total |
+| `recepcao@proocupacional.com.br` | `minhasenha123` | reception | Painel da recepção |
+| `gerente.freguesia@proocupacional.com.br` | `minhasenha123` | manager | Gerente de unidade |
+| `medico1.freguesia@proocupacional.com.br` | `minhasenha123` | professional | Médico |
+| `medico2.freguesia@proocupacional.com.br` | `minhasenha123` | professional | Médica |
+| `tv.freguesia@proocupacional.com.br` | `minhasenha123` | tv | Painel TV |
+
+### Fluxo Típico de Uso
+
+1. **Admin** configura estabelecimentos, serviços, salas e menus
+2. **Paciente** usa o Totem (`/totem`) para retirar senha
+3. **Recepcionista** acessa `/reception` para chamar e atender
+4. **Profissional** acessa `/professional` para realizar consultas
+5. **TV** exibe chamadas em `/tv` no painel público
+
+### Rotas Principais
+
+| Rota | Descrição | Acesso |
+|------|-----------|--------|
+| `/` | Landing page | Público |
+| `/users/log-in` | Login | Público |
+| `/totem` | Totem de autoatendimento | Autenticado (totem) |
+| `/reception` | Painel da recepção | Autenticado (reception+) |
+| `/professional` | Painel do profissional | Autenticado |
+| `/tv` | Painel de chamadas TV | Autenticado (tv) |
+| `/dashboard` | Dashboard geral | Autenticado |
+| `/admin/*` | Área administrativa | Admin/Manager |
+| `/ticket/:token` | Status do ticket | Público |
+| `/webcheckin/:token` | Web check-in | Público |
+
+---
+
+## 📡 API e Eventos
+
+### PubSub Topics
+
+O sistema utiliza Phoenix PubSub para comunicação em tempo real:
+
+```elixir
+# Topic principal de tickets
+"tickets"
+
+# Eventos emitidos
+{:ticket_created, ticket}     # Nova senha criada
+{:ticket_updated, ticket}     # Ticket atualizado
+{:ticket_called, ticket}      # Senha chamada (para TV)
+
+# Topic de recepção
+"reception"
+
+# Eventos
+{:room_updated, room}         # Sala/mesa atualizada
+{:room_created, room}         # Nova sala criada
+```
+
+### Subscriptions (Live Views)
+
+```elixir
+# Subscrever a atualizações
+Tickets.subscribe()
+Reception.subscribe()
+```
+
+---
+
+## 📁 Estrutura do Projeto
+
+```
+star-tickets/
+├── assets/                    # Assets JavaScript/CSS
+│   ├── js/
+│   │   └── app.js            # JavaScript principal
+│   └── css/
+│       └── app.css           # Tailwind CSS
+├── config/                    # Configurações
+│   ├── config.exs            # Config geral
+│   ├── dev.exs               # Desenvolvimento
+│   ├── prod.exs              # Produção
+│   └── runtime.exs           # Runtime (env vars)
+├── lib/
+│   ├── star_tickets/         # Contextos de negócio
+│   │   ├── accounts/         # Schemas de contas
+│   │   │   ├── client.ex
+│   │   │   ├── establishment.ex
+│   │   │   ├── user.ex
+│   │   │   ├── service.ex
+│   │   │   ├── room.ex
+│   │   │   ├── tv.ex
+│   │   │   └── totem_menu.ex
+│   │   ├── tickets/          # Schemas de tickets
+│   │   │   └── ticket.ex
+│   │   ├── forms/            # Sistema de formulários
+│   │   │   ├── form_template.ex
+│   │   │   ├── form_section.ex
+│   │   │   ├── form_field.ex
+│   │   │   └── form_response.ex
+│   │   ├── accounts.ex       # Context de contas
+│   │   ├── tickets.ex        # Context de tickets
+│   │   ├── forms.ex          # Context de formulários
+│   │   └── reception.ex      # Context de recepção
+│   └── star_tickets_web/     # Camada Web
+│       ├── components/       # Componentes reutilizáveis
+│       │   ├── core_components.ex
+│       │   └── layouts.ex
+│       ├── controllers/      # Controllers tradicionais
+│       │   └── user_session_controller.ex
+│       ├── live/             # LiveViews
+│       │   ├── admin/        # Área administrativa
+│       │   │   ├── users_live.ex
+│       │   │   ├── establishments_live.ex
+│       │   │   ├── services_live.ex
+│       │   │   ├── rooms_live.ex
+│       │   │   ├── tvs_live.ex
+│       │   │   ├── totem_menus_live.ex
+│       │   │   ├── forms_live.ex
+│       │   │   └── form_builder_live.ex
+│       │   ├── public/       # Área pública
+│       │   │   ├── ticket_status_live.ex
+│       │   │   └── web_checkin_live.ex
+│       │   ├── reception_live.ex
+│       │   ├── professional_live.ex
+│       │   ├── totem_live.ex
+│       │   ├── tv_live.ex
+│       │   └── dashboard_live.ex
+│       ├── router.ex         # Rotas
+│       └── user_auth.ex      # Autenticação
+├── priv/
+│   ├── repo/
+│   │   ├── migrations/       # Migrações do banco
+│   │   └── seeds.exs         # Seeds iniciais
+│   └── static/               # Arquivos estáticos
+├── test/                     # Testes
+├── mix.exs                   # Dependências
+└── AGENTS.md                 # Guia para agentes de IA
+```
+
+---
+
+## 🛠️ Desenvolvimento
+
+### Comandos Úteis
+
+```bash
+# Setup completo
+mix setup
+
+# Iniciar servidor de desenvolvimento
+mix phx.server
+
+# Iniciar com IEx
+iex -S mix phx.server
+
+# Rodar testes
+mix test
+
+# Rodar testes com coverage
+mix test --cover
+
+# Antes de commit (compila, formata, testa)
+mix precommit
+
+# Resetar banco de dados
+mix ecto.reset
+
+# Criar migração
+mix ecto.gen.migration nome_da_migracao
+
+# Rodar migrações
+mix ecto.migrate
+```
+
+### Stack Tecnológica
+
+| Tecnologia | Versão | Uso |
+|------------|--------|-----|
+| **Elixir** | ~> 1.15 | Linguagem principal |
+| **Phoenix** | ~> 1.8.3 | Framework web |
+| **Phoenix LiveView** | ~> 1.1.0 | Interfaces reativas |
+| **Ecto** | ~> 3.13 | ORM/Query builder |
+| **PostgreSQL** | 14+ | Banco de dados |
+| **Tailwind CSS** | v4 | Estilização |
+| **esbuild** | ~> 0.10 | Bundler JavaScript |
+| **Bcrypt** | ~> 3.0 | Hash de senhas |
+| **Swoosh** | ~> 1.16 | Envio de emails |
+| **Req** | ~> 0.5 | Cliente HTTP |
+| **EQRCode** | ~> 0.1.10 | Geração de QR Codes |
+
+---
+
+## 📄 Licença
+
+Proprietary - Todos os direitos reservados.
+
+---
+
+## 🤝 Suporte
+
+Para suporte técnico, entre em contato com a equipe de desenvolvimento.
