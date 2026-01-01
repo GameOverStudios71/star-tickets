@@ -186,7 +186,14 @@ defmodule StarTicketsWeb.ProfessionalLive do
       # list_rooms already preloads both now
       rooms = Accounts.list_rooms(socket.assigns.selected_establishment_id)
 
-      assign(socket, :rooms, rooms)
+      # Filter only professional rooms (type = "professional" or "both")
+      # Reception desks (type = "reception") should not appear here
+      professional_rooms =
+        Enum.filter(rooms, fn room ->
+          room.type in ["professional"]
+        end)
+
+      assign(socket, :rooms, professional_rooms)
     else
       assign(socket, :rooms, [])
     end

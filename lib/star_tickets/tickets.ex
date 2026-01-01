@@ -99,29 +99,6 @@ defmodule StarTickets.Tickets do
   end
 
   @doc """
-  Calls a ticket to a specific room.
-  Updates status to CALLED and broadcasts :ticket_called for TV displays.
-  """
-  def call_ticket(%Ticket{} = ticket, room_id) do
-    result =
-      update_ticket(ticket, %{
-        status: "CALLED",
-        room_id: room_id
-      })
-
-    # Broadcast specific event for TV
-    case result do
-      {:ok, updated_ticket} ->
-        updated_ticket = Repo.preload(updated_ticket, [:room, :services])
-        PubSub.broadcast(StarTickets.PubSub, @topic, {:ticket_called, updated_ticket})
-        {:ok, updated_ticket}
-
-      error ->
-        error
-    end
-  end
-
-  @doc """
   Lists tickets that are currently called (for TV rotation).
   Includes both reception and professional calls.
   """
