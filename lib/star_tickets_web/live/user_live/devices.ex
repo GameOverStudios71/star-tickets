@@ -64,6 +64,16 @@ defmodule StarTicketsWeb.UserLive.Devices do
       />
 
       <div class="st-container flex-1 p-6">
+        <%!-- Breadcrumb --%>
+        <div class="mb-6 max-w-4xl mx-auto">
+          <div class="st-card st-acrylic px-4 py-2 inline-block rounded-full">
+            <.breadcrumb items={[
+              %{label: "Meus Dados", href: ~p"/users/settings"},
+              %{label: "Dispositivos Conectados"}
+            ]} />
+          </div>
+        </div>
+
         <div class="max-w-4xl mx-auto">
           <%!-- Header Section --%>
           <div class="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10 mb-6">
@@ -116,16 +126,37 @@ defmodule StarTicketsWeb.UserLive.Devices do
                       </div>
 
                       <div class="text-white/60 text-sm mt-1 space-y-1">
-                        <div class="flex items-center gap-4">
+                        <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
                           <%= if device.browser do %>
                             <span><i class="fa-solid fa-globe mr-1"></i>{device.browser}</span>
                           <% end %>
                           <%= if device.os do %>
-                            <span><i class="fa-solid fa-microchip mr-1"></i>{device.os}</span>
+                            <span><i class="fa-solid fa-desktop mr-1"></i>{device.os}</span>
+                          <% end %>
+                          <%= if device.screen_resolution do %>
+                            <span>
+                              <i class="fa-solid fa-display mr-1"></i>{device.screen_resolution}
+                            </span>
                           <% end %>
                         </div>
 
-                        <div class="flex items-center gap-4 text-white/40">
+                        <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-white/50">
+                          <%= if device.cpu_cores do %>
+                            <span>
+                              <i class="fa-solid fa-microchip mr-1"></i>{device.cpu_cores} cores
+                            </span>
+                          <% end %>
+                          <%= if device.memory_gb do %>
+                            <span><i class="fa-solid fa-memory mr-1"></i>{device.memory_gb} GB</span>
+                          <% end %>
+                          <%= if device.timezone do %>
+                            <span>
+                              <i class="fa-solid fa-earth-americas mr-1"></i>{device.timezone}
+                            </span>
+                          <% end %>
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-white/40">
                           <%= if device.ip_address do %>
                             <span>
                               <i class="fa-solid fa-network-wired mr-1"></i>{device.ip_address}

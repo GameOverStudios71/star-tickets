@@ -83,7 +83,11 @@ defmodule StarTicketsWeb.CoreComponents do
           <p :if={@title} class="font-bold text-lg mb-1">{@title}</p>
           <p class="font-medium">{msg}</p>
         </div>
-        <button type="button" class="group self-start cursor-pointer ml-auto" aria-label={gettext("close")}>
+        <button
+          type="button"
+          class="group self-start cursor-pointer ml-auto"
+          aria-label={gettext("close")}
+        >
           <.icon name="hero-x-mark" class="size-5 opacity-60 group-hover:opacity-100" />
         </button>
       </div>
@@ -118,7 +122,11 @@ defmodule StarTicketsWeb.CoreComponents do
       data-cancel={JS.exec(@on_cancel, "phx-remove")}
       class="relative z-50 hidden"
     >
-      <div id={"#{@id}-bg"} class="fixed inset-0 bg-base-content/20 transition-opacity" aria-hidden="true" />
+      <div
+        id={"#{@id}-bg"}
+        class="fixed inset-0 bg-base-content/20 transition-opacity"
+        aria-hidden="true"
+      />
       <div
         class="fixed inset-0 overflow-y-auto"
         aria-labelledby={"#{@id}-title"}
@@ -130,7 +138,10 @@ defmodule StarTicketsWeb.CoreComponents do
         <div class="flex min-h-full items-center justify-center p-4">
           <div class={[
             "w-full max-w-3xl overflow-hidden rounded-2xl transition-all",
-            if(@transparent, do: "bg-transparent", else: "bg-base-100 p-6 shadow-xl ring-1 ring-base-content/5")
+            if(@transparent,
+              do: "bg-transparent",
+              else: "bg-base-100 p-6 shadow-xl ring-1 ring-base-content/5"
+            )
           ]}>
             <div class="absolute right-5 top-5">
               <button

@@ -12,7 +12,7 @@ defmodule StarTicketsWeb.AdminLive do
 
   def render(assigns) do
     ~H"""
-    <div class="st-app has-background min-h-screen flex flex-col" style="padding-top: 80px;">
+    <div class="st-app has-background min-h-screen flex flex-col pt-20">
       <.app_header
         title="Administração"
         show_home={true}
@@ -26,7 +26,7 @@ defmodule StarTicketsWeb.AdminLive do
         impersonating={@impersonating}
       />
 
-      <div class="st-container m-4">
+      <div class="st-container m-4" style="margin-top: 0;">
         <.page_header
           title="⚙️ Painel de Administração"
           description="Gerencie todas as configurações do sistema."
@@ -34,7 +34,6 @@ defmodule StarTicketsWeb.AdminLive do
             %{label: "Administração"}
           ]}
         >
-
           <hr class="my-6 border-white/500 opacity-40 border-dashed" />
 
           <div class="st-grid mt-6">
@@ -58,7 +57,7 @@ defmodule StarTicketsWeb.AdminLive do
 
             <.link navigate={~p"/admin/rooms"} class="st-card st-nav-card">
               <span class="st-icon">📍</span>
-              <h2>Posições de Atendimento</h2>
+              <h2>Atendimento</h2>
               <p>Salas, guichês e mesas de recepção</p>
             </.link>
 
@@ -82,7 +81,6 @@ defmodule StarTicketsWeb.AdminLive do
           </div>
         </.page_header>
       </div>
-
     </div>
     """
   end

@@ -130,7 +130,7 @@ defmodule StarTicketsWeb.Admin.ServicesLive do
 
   def render(assigns) do
     ~H"""
-    <div class="st-app has-background min-h-screen flex flex-col" style="padding-top: 80px;">
+    <div class="st-app has-background min-h-screen flex flex-col pt-20">
       <.flash kind={:info} title="Informação" flash={@flash} />
       <.flash kind={:success} title="Sucesso" flash={@flash} />
       <.flash kind={:warning} title="Atenção" flash={@flash} />
@@ -150,7 +150,7 @@ defmodule StarTicketsWeb.Admin.ServicesLive do
         impersonating={@impersonating}
       />
 
-      <div class="st-container flex-1 m-4">
+      <div class="st-container flex-1 m-4" style="margin-top: 0;">
         <.page_header
           title="🔧 Serviços"
           description="Gerencie os serviços oferecidos."
@@ -159,39 +159,42 @@ defmodule StarTicketsWeb.Admin.ServicesLive do
             %{label: "Serviços"}
           ]}
         >
-        <hr class="my-6 border-white/500 opacity-40 border-dashed" />
+          <hr class="my-6 border-white/500 opacity-40 border-dashed" />
 
-        <.action_header title="Lista de Serviços">
+          <.action_header title="Lista de Serviços">
             <:actions>
               <.search_bar value={@search_term} />
               <.link patch={~p"/admin/services/new"} class="btn btn-primary h-10 min-h-0">
                 <.icon name="hero-plus" class="mr-2" /> Novo
               </.link>
             </:actions>
-        </.action_header>
+          </.action_header>
 
-        <.admin_table id="services" rows={@services}>
-          <:col :let={service} label="Nome do Serviço">{service.name}</:col>
-          <:col :let={service} label="Duração">{service.duration} minutos</:col>
-          <:action :let={service}>
-            <.link patch={~p"/admin/services/#{service}/edit"} class="btn btn-sm btn-ghost btn-square" title="Editar">
-              <.icon name="hero-pencil-square" class="size-5 text-blue-400" />
-            </.link>
-            <button
-              phx-click="delete"
-              phx-value-id={service.id}
-              class="btn btn-sm btn-ghost btn-square"
-              title="Excluir"
-            >
-              <.icon name="hero-trash" class="size-5 text-red-400" />
-            </button>
-          </:action>
-        </.admin_table>
+          <.admin_table id="services" rows={@services}>
+            <:col :let={service} label="Nome do Serviço">{service.name}</:col>
+            <:col :let={service} label="Duração">{service.duration} minutos</:col>
+            <:action :let={service}>
+              <.link
+                patch={~p"/admin/services/#{service}/edit"}
+                class="btn btn-sm btn-ghost btn-square"
+                title="Editar"
+              >
+                <.icon name="hero-pencil-square" class="size-5 text-blue-400" />
+              </.link>
+              <button
+                phx-click="delete"
+                phx-value-id={service.id}
+                class="btn btn-sm btn-ghost btn-square"
+                title="Excluir"
+              >
+                <.icon name="hero-trash" class="size-5 text-red-400" />
+              </button>
+            </:action>
+          </.admin_table>
 
-        <.pagination page={@page} total_pages={@total_pages} />
+          <.pagination page={@page} total_pages={@total_pages} />
         </.page_header>
       </div>
-
 
       <%= if @live_action in [:new, :edit] do %>
         <.modal id="service-modal" show on_cancel={JS.patch(~p"/admin/services")} transparent={true}>

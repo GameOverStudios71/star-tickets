@@ -126,7 +126,7 @@ defmodule StarTicketsWeb.Admin.FormsLive do
 
   def render(assigns) do
     ~H"""
-    <div class="st-app has-background min-h-screen flex flex-col" style="padding-top: 80px;">
+    <div class="st-app has-background min-h-screen flex flex-col pt-20">
       <.flash kind={:info} title="Informação" flash={@flash} />
       <.flash kind={:success} title="Sucesso" flash={@flash} />
       <.flash kind={:warning} title="Atenção" flash={@flash} />
@@ -145,7 +145,7 @@ defmodule StarTicketsWeb.Admin.FormsLive do
         impersonating={@impersonating}
       />
 
-      <div class="st-container flex-1 m-4">
+      <div class="st-container flex-1 m-4" style="margin-top: 0;">
         <.page_header
           title="📝 Formulários"
           description="Gerencie os modelos de formulários de atendimento."
@@ -173,25 +173,33 @@ defmodule StarTicketsWeb.Admin.FormsLive do
               </span>
             </:col>
             <:col :let={template} label="Serviços">
-               <div class="flex flex-wrap gap-1 max-w-xs">
-                 <%= if template.services == [] or template.services == nil do %>
-                   <span class="text-xs text-gray-500">-</span>
-                 <% else %>
-                   <%= for service <- template.services do %>
-                     <span class="st-badge bg-yellow-500/20 text-yellow-200 border border-yellow-500/50 text-xs">
-                       {service.name}
-                     </span>
-                   <% end %>
-                 <% end %>
-               </div>
+              <div class="flex flex-wrap gap-1 max-w-xs">
+                <%= if template.services == [] or template.services == nil do %>
+                  <span class="text-xs text-gray-500">-</span>
+                <% else %>
+                  <%= for service <- template.services do %>
+                    <span class="st-badge bg-yellow-500/20 text-yellow-200 border border-yellow-500/50 text-xs">
+                      {service.name}
+                    </span>
+                  <% end %>
+                <% end %>
+              </div>
             </:col>
 
             <:action :let={template}>
-               <.link navigate={~p"/admin/forms/#{template}/builder"} class="btn btn-sm btn-ghost btn-square" title="Construtor de Campos">
-                  <.icon name="hero-puzzle-piece" class="size-5 text-yellow-400" />
-               </.link>
+              <.link
+                navigate={~p"/admin/forms/#{template}/builder"}
+                class="btn btn-sm btn-ghost btn-square"
+                title="Construtor de Campos"
+              >
+                <.icon name="hero-puzzle-piece" class="size-5 text-yellow-400" />
+              </.link>
 
-              <.link patch={~p"/admin/forms/#{template}/edit"} class="btn btn-sm btn-ghost btn-square" title="Editar Metadados">
+              <.link
+                patch={~p"/admin/forms/#{template}/edit"}
+                class="btn btn-sm btn-ghost btn-square"
+                title="Editar Metadados"
+              >
                 <.icon name="hero-pencil-square" class="size-5 text-blue-400" />
               </.link>
               <button
@@ -212,7 +220,12 @@ defmodule StarTicketsWeb.Admin.FormsLive do
           show={@show_confirm_modal}
           id="confirm-modal"
           title="Excluir Formulário?"
-          message={if @item_to_delete, do: "Deseja excluir '#{@item_to_delete.name}'? Isso removerá todos os campos associados.", else: ""}
+          message={
+            if @item_to_delete,
+              do:
+                "Deseja excluir '#{@item_to_delete.name}'? Isso removerá todos os campos associados.",
+              else: ""
+          }
           confirm_label="Excluir"
           cancel_label="Cancelar"
           on_confirm="confirm_delete"
@@ -220,9 +233,13 @@ defmodule StarTicketsWeb.Admin.FormsLive do
         />
       </div>
 
-
       <%= if @live_action in [:new, :edit] do %>
-        <.modal id="form-template-modal" show on_cancel={JS.patch(~p"/admin/forms")} transparent={true}>
+        <.modal
+          id="form-template-modal"
+          show
+          on_cancel={JS.patch(~p"/admin/forms")}
+          transparent={true}
+        >
           <.live_component
             module={StarTicketsWeb.Admin.Forms.FormComponent}
             id={@form_template.id || :new}

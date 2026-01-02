@@ -31,13 +31,32 @@ defmodule StarTicketsWeb.Admin.Establishments.FormComponent do
       >
         <div class="flex flex-col md:flex-row gap-8">
           <div class="flex-1 space-y-2">
-            <.input field={@form[:name]} type="text" label="Nome do Estabelecimento" placeholder="Ex: Matriz - SP" />
+            <.input
+              field={@form[:name]}
+              type="text"
+              label="Nome do Estabelecimento"
+              placeholder="Ex: Matriz - SP"
+            />
             <.input field={@form[:code]} type="hidden" />
-            <.error :for={msg <- @form[:code].errors} :if={translate_error(msg) not in ["can't be blank", "não pode ficar em branco"]}>
+            <.error
+              :for={msg <- @form[:code].errors}
+              :if={translate_error(msg) not in ["can't be blank", "não pode ficar em branco"]}
+            >
               Código (Slug): {translate_error(msg)}
             </.error>
-            <.input field={@form[:address]} type="text" label="Endereço Completo" placeholder="Rua, Número, Bairro, Cidade - UF" />
-            <.input field={@form[:phone]} type="tel" label="Telefone de Contato" placeholder="(00) 00000-0000" phx-hook="PhoneMask" />
+            <.input
+              field={@form[:address]}
+              type="text"
+              label="Endereço Completo"
+              placeholder="Rua, Número, Bairro, Cidade - UF"
+            />
+            <.input
+              field={@form[:phone]}
+              type="tel"
+              label="Telefone de Contato"
+              placeholder="(00) 00000-0000"
+              phx-hook="PhoneMask"
+            />
             <div class="pt-2">
               <.input field={@form[:is_active]} type="checkbox" label="Estabelecimento Ativo" />
             </div>
@@ -46,8 +65,7 @@ defmodule StarTicketsWeb.Admin.Establishments.FormComponent do
           <div class="w-full md:w-72 hidden md:block">
             <div class="bg-white/5 border border-white/10 p-4 rounded-lg text-sm space-y-4 h-full backdrop-blur-md">
               <h4 class="font-bold flex items-center gap-2 text-white">
-                <.icon name="hero-information-circle" class="size-6" />
-                Informações
+                <.icon name="hero-information-circle" class="size-6" /> Informações
               </h4>
 
               <div class="space-y-4 text-gray-300">
@@ -70,12 +88,15 @@ defmodule StarTicketsWeb.Admin.Establishments.FormComponent do
           </div>
         </div>
 
-
-
-        <div :if={@form.source.action in [:insert, :update] and not @form.source.valid?} class="my-4 text-center">
+        <div
+          :if={@form.source.action in [:insert, :update] and not @form.source.valid?}
+          class="my-4 text-center"
+        >
           <div class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-red-500/20 border border-red-500/20 text-white font-medium">
             <.icon name="hero-exclamation-circle" class="size-5 text-red-400" />
-            <span :if={@form[:name].errors != []}>Nome: {translate_error(List.first(@form[:name].errors))}</span>
+            <span :if={@form[:name].errors != []}>
+              Nome: {translate_error(List.first(@form[:name].errors))}
+            </span>
             <span :if={@form[:name].errors == []}>Verifique os erros no formulário</span>
           </div>
         </div>
@@ -83,8 +104,15 @@ defmodule StarTicketsWeb.Admin.Establishments.FormComponent do
         <hr class="my-4 border-white/40 border-dashed" />
 
         <:actions>
-          <.link patch={@patch} class="btn btn-ghost text-white hover:bg-white/10 hover:shadow-none">Cancelar</.link>
-          <.button phx-disable-with="Salvando..." class="btn bg-orange-600/40 backdrop-blur-md border border-orange-500/90 text-white hover:bg-orange-600/50 shadow-lg">Salvar Estabelecimento</.button>
+          <.link patch={@patch} class="btn btn-ghost text-white hover:bg-white/10 hover:shadow-none">
+            Cancelar
+          </.link>
+          <.button
+            phx-disable-with="Salvando..."
+            class="btn bg-orange-600/40 backdrop-blur-md border border-orange-500/90 text-white hover:bg-orange-600/50 shadow-lg"
+          >
+            Salvar Estabelecimento
+          </.button>
         </:actions>
       </.simple_form>
     </div>

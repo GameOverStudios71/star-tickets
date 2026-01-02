@@ -2,23 +2,20 @@
 const CACHE_NAME = 'star-tickets-v1';
 const OFFLINE_URL = '/offline.html';
 
-// Assets to cache on install
+// Only precache offline page - other assets are cached on-demand
 const PRECACHE_ASSETS = [
-    '/',
-    '/offline.html',
-    '/assets/app.css',
-    '/assets/app.js',
-    '/images/icons/icon-192x192.png',
-    '/images/icons/icon-512x512.png'
+    '/offline.html'
 ];
 
-// Install event - precache assets
+// Install event - precache minimal assets
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then((cache) => {
-                console.log('[SW] Precaching assets');
-                return cache.addAll(PRECACHE_ASSETS);
+                console.log('[SW] Precaching offline page');
+                return cache.addAll(PRECACHE_ASSETS).catch((err) => {
+                    console.log('[SW] Precache failed (non-critical):', err);
+                });
             })
             .then(() => self.skipWaiting())
     );

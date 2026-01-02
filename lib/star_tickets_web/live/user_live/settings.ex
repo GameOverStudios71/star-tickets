@@ -8,25 +8,24 @@ defmodule StarTicketsWeb.UserLive.Settings do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="st-app has-background min-h-screen flex flex-col" style="padding-top: 100px;">
+    <div class="st-app has-background min-h-screen flex flex-col pt-20">
+      <.flash kind={:info} title="Informação" flash={@flash} />
+      <.flash kind={:success} title="Sucesso" flash={@flash} />
+      <.flash kind={:warning} title="Atenção" flash={@flash} />
+      <.flash kind={:error} title="Erro" flash={@flash} />
+
       <.app_header title="Meus Dados" show_home={true} current_scope={@current_scope} />
 
       <%!-- Content --%>
-      <div class="st-container" style="padding-top: 20px;">
+      <div class="st-container py-6" style="margin-top: 0;">
+        <%!-- Breadcrumb --%>
+        <div class="mb-6 flex justify-center">
+          <div class="st-card st-acrylic px-4 py-2 inline-block rounded-full">
+            <.breadcrumb items={[%{label: "Meus Dados"}]} />
+          </div>
+        </div>
+
         <div class="st-login-container" style="max-width: 700px; margin: 0 auto;">
-          <%!-- Flash Messages --%>
-          <div :if={Phoenix.Flash.get(@flash, :info)} class="st-card st-acrylic-success p-3 mb-4">
-            <p class="text-white text-sm">{Phoenix.Flash.get(@flash, :info)}</p>
-          </div>
-
-          <div
-            :if={Phoenix.Flash.get(@flash, :error)}
-            class="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-lg mb-4"
-          >
-            <p class="text-sm">{Phoenix.Flash.get(@flash, :error)}</p>
-          </div>
-
-          <%!-- User Info Section --%>
           <h2 class="text-xl font-bold text-white mb-4">👤 Informações do Usuário</h2>
           <div class="space-y-2 mb-6">
             <div class="st-info-row">
@@ -230,7 +229,7 @@ defmodule StarTicketsWeb.UserLive.Settings do
         Accounts.deliver_user_update_email_instructions(
           Ecto.Changeset.apply_action!(changeset, :insert),
           user.email,
-          &url(~p"/users/settings/confirm-email/#{&1}")
+          fn token -> url(~p"/users/settings/confirm_email/#{token}") end
         )
 
         info = "Um link de confirmação foi enviado para o novo email."

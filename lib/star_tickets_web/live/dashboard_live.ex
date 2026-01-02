@@ -80,7 +80,7 @@ defmodule StarTicketsWeb.DashboardLive do
 
   def render(assigns) do
     ~H"""
-    <div class="st-app has-background min-h-screen flex flex-col" style="padding-top: 100px;">
+    <div class="st-app has-background min-h-screen flex flex-col pt-20">
       <.app_header
         current_scope={@current_scope}
         client_name={@client && @client.name}
@@ -93,18 +93,20 @@ defmodule StarTicketsWeb.DashboardLive do
       />
 
       <%!-- Menu Grid --%>
-      <div class="st-container">
+      <div class="st-container" style="margin-top: 0;">
         <div class="text-center mb-8">
-          <h1 class="text-3xl font-bold text-white mb-2">Bem-vindo, <%= @current_scope.user.name || @current_scope.user.email %>!</h1>
+          <h1 class="text-3xl font-bold text-white mb-2">
+            Bem-vindo, {@current_scope.user.name || @current_scope.user.email}!
+          </h1>
           <p class="text-white/70">Selecione uma opção abaixo para começar</p>
         </div>
 
         <div class="flex flex-wrap justify-center gap-6">
           <%= for item <- @menu_items do %>
             <.link navigate={item.href} class="st-card st-nav-card w-64">
-              <span class="st-icon"><%= icon_for_key(item.key) %></span>
-              <h2><%= item.label %></h2>
-              <p><%= description_for_key(item.key) %></p>
+              <span class="st-icon">{icon_for_key(item.key)}</span>
+              <h2>{item.label}</h2>
+              <p>{description_for_key(item.key)}</p>
             </.link>
           <% end %>
 
@@ -118,7 +120,6 @@ defmodule StarTicketsWeb.DashboardLive do
           <% end %>
         </div>
       </div>
-
     </div>
     """
   end

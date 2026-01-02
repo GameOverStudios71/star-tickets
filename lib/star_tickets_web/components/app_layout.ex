@@ -42,19 +42,19 @@ defmodule StarTicketsWeb.Components.AppLayout do
           <a href={@home_path} class="st-home-btn">🏠</a>
         <% end %>
         <%= if @left != [] do %>
-          <%= render_slot(@left) %>
+          {render_slot(@left)}
         <% else %>
           <%= if @title == "Star Tickets" do %>
             <span class="text-2xl">🎫</span>
           <% end %>
-          <h1><%= @title %></h1>
+          <h1>{@title}</h1>
         <% end %>
       </div>
 
       <%!-- Center section: Client and Establishment --%>
       <div class="st-header-center flex flex-col items-center">
         <%= if @client_name do %>
-          <span class="text-white font-bold text-lg"><%= @client_name %></span>
+          <span class="text-white font-bold text-lg">{@client_name}</span>
         <% end %>
         <%!-- Show dropdown for establishments if available, otherwise show name --%>
         <%= if length(@establishments) > 0 do %>
@@ -66,22 +66,25 @@ defmodule StarTicketsWeb.Components.AppLayout do
               class="bg-white/10 text-white text-sm py-1 px-3 rounded cursor-pointer border-none outline-none [&>option]:bg-neutral-900 [&>option]:text-white"
             >
               <%= for est <- @establishments do %>
-                <option value={est.id} selected={to_string(est.id) == to_string(@selected_establishment_id)}>
-                  <%= est.name %>
+                <option
+                  value={est.id}
+                  selected={to_string(est.id) == to_string(@selected_establishment_id)}
+                >
+                  {est.name}
                 </option>
               <% end %>
             </select>
           </form>
         <% else %>
           <%= if @establishment_name do %>
-            <span class="text-white/70 text-sm"><%= @establishment_name %></span>
+            <span class="text-white/70 text-sm">{@establishment_name}</span>
           <% end %>
         <% end %>
       </div>
 
       <div class="st-header-right flex items-center gap-4">
         <%= if @right != [] do %>
-          <%= render_slot(@right) %>
+          {render_slot(@right)}
         <% end %>
 
         <%= if @current_scope && @current_scope.user do %>
@@ -97,17 +100,22 @@ defmodule StarTicketsWeb.Components.AppLayout do
                 >
                   <option value="">-- Navegar como --</option>
                   <%= for user <- @users do %>
-                    <option value={user.id} selected={to_string(user.id) == to_string(@selected_user_id)}>
-                      <%= user.name %> (<%= user.role %>)
+                    <option
+                      value={user.id}
+                      selected={to_string(user.id) == to_string(@selected_user_id)}
+                    >
+                      {user.name} ({user.role})
                     </option>
                   <% end %>
                 </select>
               </form>
             <% else %>
-              <span class="st-user-name text-white font-medium"><%= @current_scope.user.name || @current_scope.user.email %></span>
+              <span class="st-user-name text-white font-medium">
+                {@current_scope.user.name || @current_scope.user.email}
+              </span>
             <% end %>
             <span class={"text-xs px-2 py-0.5 rounded-full " <> role_badge_class(@current_scope.user.role)}>
-              <%= format_role(@current_scope.user.role) %>
+              {format_role(@current_scope.user.role)}
             </span>
             <%= if @impersonating do %>
               <form action="/impersonate" method="post" style="display: inline;">
@@ -166,8 +174,8 @@ defmodule StarTicketsWeb.Components.AppLayout do
           href={item.href}
           class="st-btn st-btn-acrylic st-btn-small flex items-center gap-2"
         >
-          <span class="text-lg"><%= icon_for_key(item.key) %></span>
-          <%= item.label %>
+          <span class="text-lg">{icon_for_key(item.key)}</span>
+          {item.label}
         </a>
       <% end %>
     </nav>
@@ -194,15 +202,23 @@ defmodule StarTicketsWeb.Components.AppLayout do
   def breadcrumb(assigns) do
     ~H"""
     <nav class="st-text-subtitle text-sm flex items-center wrap">
-      <.link navigate="/dashboard" class="text-gray-400 hover:text-blue-300 hover:underline transition-colors flex items-center gap-1">
+      <.link
+        navigate="/dashboard"
+        class="text-gray-400 hover:text-blue-300 hover:underline transition-colors flex items-center gap-1"
+      >
         <i class="fa-solid fa-house"></i> Home
       </.link>
       <%= for {item, index} <- Enum.with_index(@items) do %>
         <span class="mx-2 text-gray-600">/</span>
         <%= if index == length(@items) - 1 do %>
-          <span class="text-white font-semibold"><%= item.label %></span>
+          <span class="text-white font-semibold">{item.label}</span>
         <% else %>
-          <.link navigate={item.href} class="text-gray-400 hover:text-blue-300 hover:underline transition-colors"><%= item.label %></.link>
+          <.link
+            navigate={item.href}
+            class="text-gray-400 hover:text-blue-300 hover:underline transition-colors"
+          >
+            {item.label}
+          </.link>
         <% end %>
       <% end %>
     </nav>
@@ -217,6 +233,7 @@ defmodule StarTicketsWeb.Components.AppLayout do
   attr(:description, :string, default: nil)
   attr(:breadcrumb_items, :list, required: true)
   slot(:inner_block, required: false)
+  slot(:actions)
 
   def page_header(assigns) do
     ~H"""
@@ -228,10 +245,10 @@ defmodule StarTicketsWeb.Components.AppLayout do
       </div>
 
       <div class="st-card st-acrylic p-6 flex-1">
-        <h1 class="text-2xl font-bold st-text-title"><%= @title %></h1>
-        <p :if={@description} class="st-text-subtitle mt-1 mb-6"><%= @description %></p>
+        <h1 class="text-2xl font-bold st-text-title">{@title}</h1>
+        <p :if={@description} class="st-text-subtitle mt-1 mb-6">{@description}</p>
 
-        <%= render_slot(@inner_block) %>
+        {render_slot(@inner_block)}
       </div>
     </div>
     """
@@ -250,7 +267,7 @@ defmodule StarTicketsWeb.Components.AppLayout do
     end
   end
 
-  @doc "Retorna classes CSS para badge de role no header"
+  # Retorna classes CSS para badge de role no header
   defp role_badge_class("admin"), do: "bg-red-500/30 text-red-200 border border-red-500/50"
   defp role_badge_class("manager"), do: "bg-blue-900/50 text-blue-200 border border-blue-700/50"
 

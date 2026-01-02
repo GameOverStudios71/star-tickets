@@ -12,7 +12,7 @@ defmodule StarTicketsWeb.Admin.TotemsLive do
 
   def render(assigns) do
     ~H"""
-    <div class="st-app has-background min-h-screen flex flex-col" style="padding-top: 80px;">
+    <div class="st-app has-background min-h-screen flex flex-col pt-20">
       <.app_header
         title="Administração"
         show_home={true}
@@ -26,7 +26,7 @@ defmodule StarTicketsWeb.Admin.TotemsLive do
         impersonating={@impersonating}
       />
 
-      <div class="st-container flex-1 m-4">
+      <div class="st-container flex-1 m-4" style="margin-top: 0;">
         <.page_header
           title="🎫 Configuração do Totem"
           description="Configure os menus e opções dos totens de autoatendimento."
@@ -41,10 +41,15 @@ defmodule StarTicketsWeb.Admin.TotemsLive do
             <%= for establishment <- @establishments do %>
               <div class="card bg-white/10 backdrop-blur-md shadow-xl border border-gray-500/10 hover:border-orange-500/50 transition-colors">
                 <div class="card-body">
-                  <h2 class="card-title text-white"><%= establishment.name %></h2>
-                  <p class="text-white/60 text-sm">Configure o menu de navegação e serviços para este estabelecimento.</p>
+                  <h2 class="card-title text-white">{establishment.name}</h2>
+                  <p class="text-white/60 text-sm">
+                    Configure o menu de navegação e serviços para este estabelecimento.
+                  </p>
                   <div class="card-actions justify-end mt-4">
-                    <.link navigate={~p"/admin/establishments/#{establishment.id}/menus"} class="btn btn-primary btn-sm">
+                    <.link
+                      navigate={~p"/admin/establishments/#{establishment.id}/menus"}
+                      class="btn btn-primary btn-sm"
+                    >
                       Configurar Menu
                     </.link>
                   </div>
@@ -60,7 +65,6 @@ defmodule StarTicketsWeb.Admin.TotemsLive do
           </div>
         </.page_header>
       </div>
-
     </div>
     """
   end

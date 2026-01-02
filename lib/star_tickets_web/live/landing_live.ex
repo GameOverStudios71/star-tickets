@@ -7,7 +7,7 @@ defmodule StarTicketsWeb.LandingLive do
 
   def render(assigns) do
     ~H"""
-    <div class="st-app has-background min-h-screen flex flex-col" style="padding-top: 100px;">
+    <div class="st-app has-background min-h-screen flex flex-col pt-20">
       <%!-- Header --%>
       <header class="st-app-header">
         <div class="st-header-left">
@@ -21,9 +21,15 @@ defmodule StarTicketsWeb.LandingLive do
         </div>
       </header>
 
-      <section class="st-container text-center" style="padding: 80px 20px;">
-        <div class="st-card st-acrylic-strong" style="max-width: 600px; margin: 0 auto; padding: 40px;">
-          <h1 class="text-5xl font-bold text-white mb-4" style="text-shadow: 0 2px 10px rgba(0,0,0,0.3);">
+      <section class="st-container text-center py-10" style="margin-top: 0;">
+        <div
+          class="st-card st-acrylic-strong"
+          style="max-width: 600px; margin: 0 auto; padding: 40px;"
+        >
+          <h1
+            class="text-5xl font-bold text-white mb-4"
+            style="text-shadow: 0 2px 10px rgba(0,0,0,0.3);"
+          >
             Sistema de Gestão de Senhas
           </h1>
           <p class="text-xl text-white/80 mb-8">
@@ -31,7 +37,7 @@ defmodule StarTicketsWeb.LandingLive do
             Gerencie filas, otimize atendimentos e melhore a experiência dos seus clientes.
           </p>
           <div class="flex gap-4 justify-center">
-            <.link navigate={~p"/register"} class="st-btn st-btn-large">
+            <.link navigate={~p"/users/register"} class="st-btn st-btn-large">
               🚀 Começar Agora
             </.link>
             <.link navigate={~p"/users/log-in"} class="st-btn st-btn-acrylic st-btn-large">

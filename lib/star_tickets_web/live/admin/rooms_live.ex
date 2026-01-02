@@ -7,7 +7,7 @@ defmodule StarTicketsWeb.Admin.RoomsLive do
   import StarTicketsWeb.AdminComponents
 
   @impl true
-  def mount(params, session, socket) do
+  def mount(_params, session, socket) do
     impersonation_assigns =
       ImpersonationHelpers.load_impersonation_assigns(socket.assigns.current_scope, session)
 
@@ -65,7 +65,6 @@ defmodule StarTicketsWeb.Admin.RoomsLive do
   end
 
   @impl true
-  @impl true
   def handle_event("confirm_delete", %{"id" => id}, socket) do
     {:noreply, assign(socket, show_confirm_modal: true, item_to_delete: id)}
   end
@@ -103,7 +102,7 @@ defmodule StarTicketsWeb.Admin.RoomsLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="st-app has-background min-h-screen flex flex-col" style="padding-top: 80px;">
+    <div class="st-app has-background min-h-screen flex flex-col pt-20">
       <.flash kind={:info} title="Informação" flash={@flash} />
       <.flash kind={:success} title="Sucesso" flash={@flash} />
       <.flash kind={:warning} title="Atenção" flash={@flash} />
@@ -123,73 +122,91 @@ defmodule StarTicketsWeb.Admin.RoomsLive do
         impersonating={@impersonating}
       />
 
-      <div class="st-container flex-1 m-4">
-          <.page_header
-            title="� Posições de Atendimento"
-            description="Gerencie salas, guichês e mesas de recepção."
-            breadcrumb_items={[
-              %{label: "Administração", href: "/admin"},
-              %{label: "Posições"}
-            ]}
-          >
-            <hr class="my-6 border-white/500 opacity-40 border-dashed" />
+      <div class="st-container flex-1 m-4" style="margin-top: 0;">
+        <.page_header
+          title="� Posições de Atendimento"
+          description="Gerencie salas, guichês e mesas de recepção."
+          breadcrumb_items={[
+            %{label: "Administração", href: "/admin"},
+            %{label: "Posições"}
+          ]}
+        >
+          <hr class="my-6 border-white/500 opacity-40 border-dashed" />
 
-            <%= if @selected_establishment_id do %>
-               <.action_header title="Lista de Salas">
-                 <:actions>
-                   <.search_bar value={@params["search"] || ""} />
-                   <.link patch={~p"/admin/rooms/new"} class="btn btn-primary h-10 min-h-0">
-                     <.icon name="hero-plus" class="mr-2" /> Nova Sala
-                   </.link>
-                 </:actions>
-               </.action_header>
+          <%= if @selected_establishment_id do %>
+            <.action_header title="Lista de Salas">
+              <:actions>
+                <.search_bar value={@params["search"] || ""} />
+                <.link patch={~p"/admin/rooms/new"} class="btn btn-primary h-10 min-h-0">
+                  <.icon name="hero-plus" class="mr-2" /> Nova Sala
+                </.link>
+              </:actions>
+            </.action_header>
 
-               <.admin_table id="rooms" rows={@rooms}>
-                 <:col :let={room} label="Nome"><%= room.name %></:col>
-                 <:col :let={room} label="Tipo">
-                    <span class={"st-badge " <> type_badge_class(room.type)}>
-                      <%= type_label(room.type) %>
-                    </span>
-                    <%= unless room.is_active do %>
-                      <span class="st-badge bg-red-500/30 text-red-200 border border-red-500/50 ml-1">Inativa</span>
+            <.admin_table id="rooms" rows={@rooms}>
+              <:col :let={room} label="Nome">{room.name}</:col>
+              <:col :let={room} label="Tipo">
+                <span class={"st-badge " <> type_badge_class(room.type)}>
+                  {type_label(room.type)}
+                </span>
+                <%= unless room.is_active do %>
+                  <span class="st-badge bg-red-500/30 text-red-200 border border-red-500/50 ml-1">
+                    Inativa
+                  </span>
+                <% end %>
+              </:col>
+              <:col :let={room} label="Capacidade">{room.capacity_threshold}</:col>
+              <:col :let={room} label="Serviços">
+                <%= if room.all_services do %>
+                  <span class="st-badge bg-purple-500/30 text-purple-200 border border-purple-500/50">
+                    Todos
+                  </span>
+                <% else %>
+                  <div class="flex flex-wrap gap-1">
+                    <%= for service <- room.services do %>
+                      <span class="st-badge bg-blue-500/30 text-blue-200 border border-blue-500/50">
+                        {service.name}
+                      </span>
                     <% end %>
-                 </:col>
-                 <:col :let={room} label="Capacidade"><%= room.capacity_threshold %></:col>
-                 <:col :let={room} label="Serviços">
-                    <%= if room.all_services do %>
-                      <span class="st-badge bg-purple-500/30 text-purple-200 border border-purple-500/50">Todos</span>
-                    <% else %>
-                      <div class="flex flex-wrap gap-1">
-                        <%= for service <- room.services do %>
-                          <span class="st-badge bg-blue-500/30 text-blue-200 border border-blue-500/50">
-                            <%= service.name %>
-                          </span>
-                        <% end %>
-                        <%= if Enum.empty?(room.services) do %>
-                          <span class="text-xs italic text-gray-500">Nenhum</span>
-                        <% end %>
-                      </div>
+                    <%= if Enum.empty?(room.services) do %>
+                      <span class="text-xs italic text-gray-500">Nenhum</span>
                     <% end %>
-                 </:col>
-                 <:action :let={room}>
-                    <.link patch={~p"/admin/rooms/#{room}/edit"} class="btn btn-sm btn-ghost btn-square" title="Editar">
-                      <.icon name="hero-pencil" class="size-5 text-blue-400" />
-                    </.link>
-                    <button phx-click="confirm_delete" phx-value-id={room.id} class="btn btn-sm btn-ghost btn-square" title="Excluir">
-                      <.icon name="hero-trash" class="size-5 text-red-400" />
-                    </button>
-                 </:action>
-               </.admin_table>
-            <% else %>
-               <p class="text-yellow-200 bg-yellow-900/40 p-4 rounded border border-yellow-500/50">
-                 Selecione um estabelecimento no cabeçalho para gerenciar salas.
-               </p>
-            <% end %>
-          </.page_header>
+                  </div>
+                <% end %>
+              </:col>
+              <:action :let={room}>
+                <.link
+                  patch={~p"/admin/rooms/#{room}/edit"}
+                  class="btn btn-sm btn-ghost btn-square"
+                  title="Editar"
+                >
+                  <.icon name="hero-pencil" class="size-5 text-blue-400" />
+                </.link>
+                <button
+                  phx-click="confirm_delete"
+                  phx-value-id={room.id}
+                  class="btn btn-sm btn-ghost btn-square"
+                  title="Excluir"
+                >
+                  <.icon name="hero-trash" class="size-5 text-red-400" />
+                </button>
+              </:action>
+            </.admin_table>
+          <% else %>
+            <p class="text-yellow-200 bg-yellow-900/40 p-4 rounded border border-yellow-500/50">
+              Selecione um estabelecimento no cabeçalho para gerenciar salas.
+            </p>
+          <% end %>
+        </.page_header>
       </div>
 
-
-      <.modal :if={@show_confirm_modal} id="confirm-modal" show={@show_confirm_modal} transparent={true} on_cancel={JS.push("cancel_delete")}>
+      <.modal
+        :if={@show_confirm_modal}
+        id="confirm-modal"
+        show={@show_confirm_modal}
+        transparent={true}
+        on_cancel={JS.push("cancel_delete")}
+      >
         <div class="st-modal-confirm">
           <div class="st-modal-icon-container">
             <.icon name="hero-exclamation-triangle" class="size-12 text-red-500" />

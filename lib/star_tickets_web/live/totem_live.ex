@@ -3,6 +3,7 @@ defmodule StarTicketsWeb.TotemLive do
 
   alias StarTickets.Accounts
   alias StarTickets.Tickets
+  alias StarTickets.Audit
   alias StarTicketsWeb.ImpersonationHelpers
   alias EQRCode
 
@@ -17,9 +18,19 @@ defmodule StarTicketsWeb.TotemLive do
 
     establishment_id = impersonation_assigns.selected_establishment_id
 
+    # Generate session ID for tracking totem interactions
+    totem_session_id = Ecto.UUID.generate()
+
     if establishment_id do
       # Load root menus for the selected establishment
       root_menus = Accounts.list_root_totem_menus(establishment_id)
+
+      # Log totem session start
+      Audit.log_action("TOTEM_SESSION_START", %{
+        resource_type: "TotemSession",
+        resource_id: totem_session_id,
+        details: %{establishment_id: establishment_id}
+      })
 
       {:ok,
        socket
@@ -31,7 +42,8 @@ defmodule StarTicketsWeb.TotemLive do
          selected_services: [],
          selected_tags: [],
          ticket: nil,
-         establishment_id: establishment_id
+         establishment_id: establishment_id,
+         totem_session_id: totem_session_id
        )}
     else
       # No establishment selected - show error
@@ -44,22 +56,27 @@ defmodule StarTicketsWeb.TotemLive do
          menu_stack: [],
          selected_services: [],
          selected_tags: [],
-         ticket: nil
+         ticket: nil,
+         totem_session_id: totem_session_id
        )}
     end
   end
 
   def render(assigns) do
     ~H"""
-    <div id="totem-sounds" phx-hook="TotemSounds" class="st-app has-background totem-layout min-h-screen flex flex-col">
+    <div
+      id="totem-sounds"
+      phx-hook="TotemSounds"
+      class="st-app has-background totem-layout min-h-screen flex flex-col"
+    >
       <!-- Logo -->
       <div class="fixed bottom-6 right-6 z-50">
         <div class="px-6 py-4 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10">
           <span class="text-2xl font-bold text-white/80">⭐ Star Tickets</span>
         </div>
       </div>
-
-      <!-- Back Button - Only show during menu/services navigation, not on confirmation/ticket -->
+      
+    <!-- Back Button - Only show during menu/services navigation, not on confirmation/ticket -->
       <%= if length(@menu_stack) > 0 and @current_step in [:menu, :services] do %>
         <div class="fixed top-6 left-6 z-50">
           <button
@@ -73,30 +90,26 @@ defmodule StarTicketsWeb.TotemLive do
           </button>
         </div>
       <% end %>
-
-      <!-- Main Content -->
+      
+    <!-- Main Content -->
       <div class="flex-1 flex flex-col items-center justify-center p-8">
         <%= case @current_step do %>
           <% :no_establishment -> %>
             <.no_establishment_screen />
-
           <% :menu -> %>
             <.menu_screen
               menus={@current_menus}
               selected_services={@selected_services}
               menu_stack={@menu_stack}
             />
-
           <% :services -> %>
             <.service_screen
               available_services={@available_services}
               selected_services={@selected_services}
               current_menu_name={@current_menu_name}
             />
-
           <% :confirmation -> %>
             <.confirmation_screen selected_services={@selected_services} />
-
           <% :ticket -> %>
             <.ticket_screen
               ticket={@ticket}
@@ -114,19 +127,8 @@ defmodule StarTicketsWeb.TotemLive do
   defp menu_screen(assigns) do
     ~H"""
     <div class="w-full max-w-5xl">
-      <!-- Title -->
-      <!--<div class="text-center mb-12">
-        <h1 class="text-4xl font-bold text-white/90 mb-4">
-          <%= if length(@menu_stack) == 0, do: "Selecione o tipo de atendimento", else: "Selecione uma opção" %>
-        </h1>
-        <%= if length(@selected_services) > 0 do %>
-          <p class="text-xl text-orange-400">
-            <%= length(@selected_services) %> serviço(s) selecionado(s)
-          </p>
-        <% end %>
-      </div>-->
-
-      <!-- Menu Grid -->
+      
+    <!-- Menu Grid -->
       <% menu_cols = if length(@menus) >= 3, do: "grid-cols-3", else: "grid-cols-2" %>
       <div class={"grid #{menu_cols} gap-8 mb-8"}>
         <%= for menu <- @menus do %>
@@ -141,23 +143,23 @@ defmodule StarTicketsWeb.TotemLive do
           >
             <!-- Icon -->
             <div class="text-6xl mb-6 opacity-80 group-hover:opacity-100 transition-opacity">
-              <%= get_menu_emoji(menu.name) %>
+              {get_menu_emoji(menu.name)}
             </div>
-
-            <!-- Name -->
+            
+    <!-- Name -->
             <div class="text-2xl font-bold text-white/90">
-              <%= clean_menu_name(menu.name) %>
+              {clean_menu_name(menu.name)}
             </div>
-
-            <!-- Description only if exists -->
+            
+    <!-- Description only if exists -->
             <%= if menu.description do %>
-              <div class="text-base text-white/60 mt-2"><%= menu.description %></div>
+              <div class="text-base text-white/60 mt-2">{menu.description}</div>
             <% end %>
           </button>
         <% end %>
       </div>
-
-      <!-- Action Buttons -->
+      
+    <!-- Action Buttons -->
       <%= if length(@selected_services) > 0 do %>
         <div class="flex flex-col gap-4 max-w-2xl mx-auto">
           <button
@@ -202,13 +204,13 @@ defmodule StarTicketsWeb.TotemLive do
           </p>-->
         <% end %>
       </div>
-
-      <!-- Services Grid -->
+      
+    <!-- Services Grid -->
       <% service_cols = if length(@available_services) >= 3, do: "grid-cols-3", else: "grid-cols-2" %>
       <div class={"grid #{service_cols} gap-6 mb-8"}>
         <%= for menu_service <- @available_services do %>
           <% service = menu_service.service %>
-          <% is_selected = Enum.any?(@selected_services, & &1.id == service.id) %>
+          <% is_selected = Enum.any?(@selected_services, &(&1.id == service.id)) %>
           <button
             phx-click="toggle_service"
             phx-value-id={service.id}
@@ -227,35 +229,33 @@ defmodule StarTicketsWeb.TotemLive do
                 ○
               <% end %>
             </div>
-
-            <!-- Icon from TotemMenuService -->
+            
+    <!-- Icon from TotemMenuService -->
             <%= if menu_service.icon_class do %>
               <div class="text-4xl mb-3 opacity-80">
-                <%= menu_service.icon_class %>
+                {menu_service.icon_class}
               </div>
             <% end %>
-
-            <!-- Service Name -->
+            
+    <!-- Service Name -->
             <div class={"text-2xl font-bold mb-2 " <> if(is_selected, do: "text-white", else: "text-white/90")}>
-              <%= service.name %>
+              {service.name}
             </div>
-
-            <!-- Description from Service -->
+            
+    <!-- Description from Service -->
             <%= if service.description do %>
               <div class="text-base text-white/60 mb-2">
-                <%= service.description %>
+                {service.description}
               </div>
             <% end %>
-
             <!-- Duration -->
-            <!--<div class="text-sm text-white/50">
-              <%= service.duration %> min
+            <!--<div class="text-sm text-white/50"> {service.duration} min
             </div>-->
           </button>
         <% end %>
       </div>
-
-      <!-- Action Buttons -->
+      
+    <!-- Action Buttons -->
       <%= if length(@selected_services) > 0 do %>
         <div class="flex flex-col gap-4 max-w-2xl mx-auto">
           <button
@@ -290,29 +290,29 @@ defmodule StarTicketsWeb.TotemLive do
         <h2 class="text-3xl font-bold text-white text-center mb-8">
           Confirme seus serviços
         </h2>
-
-        <!-- Services List -->
+        
+    <!-- Services List -->
         <div class="space-y-3 mb-8">
           <%= for service <- @selected_services do %>
             <div class="flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10">
               <div class="w-3 h-3 rounded-full bg-green-500"></div>
-              <span class="text-lg text-white/90"><%= service.name %></span>
-              <span class="ml-auto text-sm text-white/50"><%= service.duration %> min</span>
+              <span class="text-lg text-white/90">{service.name}</span>
+              <span class="ml-auto text-sm text-white/50">{service.duration} min</span>
             </div>
           <% end %>
         </div>
-
-        <!-- Total -->
+        
+    <!-- Total -->
         <div class="p-4 rounded-xl bg-white/5 border border-white/10 mb-8">
           <div class="flex justify-between items-center">
             <span class="text-white/70">Tempo estimado:</span>
             <span class="text-2xl font-bold text-white">
-              <%= Enum.sum(Enum.map(@selected_services, & &1.duration)) %> minutos
+              {Enum.sum(Enum.map(@selected_services, & &1.duration))} minutos
             </span>
           </div>
         </div>
-
-        <!-- Buttons -->
+        
+    <!-- Buttons -->
         <div class="flex flex-col gap-4">
           <button
             phx-click="generate_ticket"
@@ -350,44 +350,48 @@ defmodule StarTicketsWeb.TotemLive do
           <!-- Left: Ticket Code -->
           <div class="flex flex-col items-center justify-center p-8 rounded-3xl bg-white/5 border border-white/10 h-full">
             <div class="text-8xl font-bold text-white mb-2 font-mono tracking-wider">
-              <%= @ticket.display_code %>
+              {@ticket.display_code}
             </div>
             <p class="text-xl text-white/70">
               Sua senha
             </p>
             <div class="mt-8 flex items-center gap-3 text-white/50 text-sm bg-white/5 px-4 py-2 rounded-lg">
-               <div class="text-xl">🔔</div>
-               <span>Aguarde o chamado no painel</span>
+              <div class="text-xl">🔔</div>
+              <span>Aguarde o chamado no painel</span>
             </div>
           </div>
-
-          <!-- Right: QR Code -->
+          
+    <!-- Right: QR Code -->
           <div class="flex flex-col items-center justify-center p-8 rounded-3xl bg-white/5 border border-white/10 h-full">
             <%= if assigns[:qr_code] do %>
               <div class="bg-white p-3 rounded-xl mb-4 shadow-lg transform hover:scale-105 transition-transform duration-300">
-                <%= raw(@qr_code) %>
+                {raw(@qr_code)}
               </div>
               <p class="text-lg text-white font-semibold text-center mb-1">
-                <%= if @has_forms, do: "Faça WebCheckin!", else: "Acompanhe pelo celular" %>
+                {if @has_forms, do: "Faça WebCheckin!", else: "Acompanhe pelo celular"}
               </p>
               <p class="text-sm text-white/50 text-center">
                 Escaneie o QR Code acima
               </p>
 
               <%= if assigns[:url] do %>
-                <a href={@url} target="_blank" class="mt-4 px-4 py-2 rounded-lg bg-blue-500/20 text-blue-200 text-xs hover:bg-blue-500/30 border border-blue-500/30 transition-colors flex items-center gap-2">
+                <a
+                  href={@url}
+                  target="_blank"
+                  class="mt-4 px-4 py-2 rounded-lg bg-blue-500/20 text-blue-200 text-xs hover:bg-blue-500/30 border border-blue-500/30 transition-colors flex items-center gap-2"
+                >
                   <span>🔗</span> (Modo Dev: Abrir Link)
                 </a>
               <% end %>
             <% else %>
-               <div class="text-6xl mb-4 opacity-50">📱</div>
-               <p class="text-lg text-white font-semibold">Sem QR Code</p>
-               <p class="text-sm text-white/50">Veja na impressão</p>
+              <div class="text-6xl mb-4 opacity-50">📱</div>
+              <p class="text-lg text-white font-semibold">Sem QR Code</p>
+              <p class="text-sm text-white/50">Veja na impressão</p>
             <% end %>
           </div>
         </div>
-
-        <!-- Finish Button -->
+        
+    <!-- Finish Button -->
         <button
           phx-click="reset"
           class="w-full py-6 rounded-2xl text-2xl font-bold text-white
@@ -412,8 +416,7 @@ defmodule StarTicketsWeb.TotemLive do
           Estabelecimento não configurado
         </h2>
         <p class="text-lg text-white/70 mb-8">
-          Este usuário não possui um estabelecimento vinculado.
-          <br/>
+          Este usuário não possui um estabelecimento vinculado. <br />
           Por favor, faça login com um usuário de totem ou selecione um estabelecimento.
         </p>
         <a
@@ -513,6 +516,17 @@ defmodule StarTicketsWeb.TotemLive do
   end
 
   def handle_event("show_confirmation", _params, socket) do
+    # Log confirmation step
+    Audit.log_action("TOTEM_CONFIRMATION_SHOWN", %{
+      resource_type: "TotemSession",
+      resource_id: socket.assigns.totem_session_id,
+      details: %{
+        selected_services:
+          Enum.map(socket.assigns.selected_services, &%{id: &1.id, name: &1.name}),
+        total_services: length(socket.assigns.selected_services)
+      }
+    })
+
     {:noreply,
      socket
      |> push_event("play_sound", %{sound: "confirm"})
@@ -574,12 +588,25 @@ defmodule StarTicketsWeb.TotemLive do
 
   def handle_event("generate_ticket", _params, socket) do
     # Create real ticket
+    ticket_code = generate_ticket_code()
+
     ticket_params = %{
-      display_code: generate_ticket_code(),
+      display_code: ticket_code,
       establishment_id: socket.assigns.establishment_id,
       services: socket.assigns.selected_services,
       tags: socket.assigns.selected_tags
     }
+
+    # Log ticket generation attempt
+    Audit.log_action("TOTEM_TICKET_GENERATION_STARTED", %{
+      resource_type: "TotemSession",
+      resource_id: socket.assigns.totem_session_id,
+      details: %{
+        ticket_code: ticket_code,
+        services: Enum.map(socket.assigns.selected_services, &%{id: &1.id, name: &1.name}),
+        establishment_id: socket.assigns.establishment_id
+      }
+    })
 
     case Tickets.create_ticket(ticket_params) do
       {:ok, ticket} ->
@@ -590,6 +617,19 @@ defmodule StarTicketsWeb.TotemLive do
 
         # Generate QR Code
         qr_code = url |> EQRCode.encode() |> EQRCode.svg(width: 200)
+
+        # Log successful ticket generation (linked to actual ticket)
+        Audit.log_action("TOTEM_TICKET_PRINTED", %{
+          resource_type: "Ticket",
+          resource_id: to_string(ticket.id),
+          details: %{
+            totem_session_id: socket.assigns.totem_session_id,
+            ticket_code: ticket.display_code,
+            token: ticket.token,
+            has_forms: has_forms,
+            url: url
+          }
+        })
 
         {:noreply,
          socket
@@ -602,7 +642,17 @@ defmodule StarTicketsWeb.TotemLive do
            has_forms: has_forms
          )}
 
-      {:error, _changeset} ->
+      {:error, changeset} ->
+        # Log failure
+        Audit.log_action("TOTEM_TICKET_GENERATION_FAILED", %{
+          resource_type: "TotemSession",
+          resource_id: socket.assigns.totem_session_id,
+          details: %{
+            ticket_code: ticket_code,
+            errors: inspect(changeset.errors)
+          }
+        })
+
         # Fallback error handling (maybe show toast)
         {:noreply, socket}
     end

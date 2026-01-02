@@ -6,7 +6,6 @@ defmodule StarTickets.Tickets do
   import Ecto.Query, warn: false
   alias StarTickets.Repo
   alias StarTickets.Tickets.Ticket
-  alias StarTickets.Accounts.Service
   alias Phoenix.PubSub
 
   @topic "tickets"
@@ -20,39 +19,50 @@ defmodule StarTickets.Tickets do
     {:ok, ticket}
   end
 
-  defp broadcast({:error, _} = error, _event), do: error
+  # defp broadcast({:error, _} = error, _event), do: error
+
+  alias StarTickets.Audit
 
   @doc """
-  Creates a ticket.
-
-  ## Examples
-
-      iex> create_ticket(%{field: value})
-      {:ok, %Ticket{}}
-
-      iex> create_ticket(%{field: bad_value})
-      {:error, %Ecto.Changeset{}}
-
+  Updates a ticket with new attributes.
   """
-  def update_ticket(%Ticket{} = ticket, attrs) do
-    ticket
-    |> Ticket.changeset(attrs)
-    |> Repo.update()
-    |> broadcast(:ticket_updated)
+  def update_ticket(%Ticket{} = ticket, attrs, actor \\ nil) do
+    changeset = Ticket.changeset(ticket, attrs)
+
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:ticket, changeset)
+    |> Ecto.Multi.run(:log, fn repo, %{ticket: updated_ticket} ->
+      Audit.log_diff(repo, ticket, updated_ticket, "TICKET", actor)
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{ticket: ticket}} -> broadcast({:ok, ticket}, :ticket_updated)
+      {:error, _, reason, _} -> {:error, reason}
+    end
   end
 
   @doc """
   Updates a ticket with new attributes and replaces its services.
   """
-  def update_ticket_with_services(%Ticket{} = ticket, attrs, services) do
-    ticket
-    |> Ticket.changeset(attrs)
-    |> Ecto.Changeset.put_assoc(:services, services)
-    |> Repo.update()
-    |> broadcast(:ticket_updated)
+  def update_ticket_with_services(%Ticket{} = ticket, attrs, services, actor \\ nil) do
+    changeset =
+      ticket
+      |> Ticket.changeset(attrs)
+      |> Ecto.Changeset.put_assoc(:services, services)
+
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:ticket, changeset)
+    |> Ecto.Multi.run(:log, fn repo, %{ticket: updated_ticket} ->
+      Audit.log_diff(repo, ticket, updated_ticket, "TICKET_SERVICES", actor)
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{ticket: ticket}} -> broadcast({:ok, ticket}, :ticket_updated)
+      {:error, _, reason, _} -> {:error, reason}
+    end
   end
 
-  def create_ticket(attrs \\ %{}) do
+  def create_ticket(attrs \\ %{}, actor \\ nil) do
     services = attrs[:services] || []
     tags = attrs[:tags] || []
 
@@ -60,12 +70,30 @@ defmodule StarTickets.Tickets do
     token = Ecto.UUID.generate()
     attrs = Map.put_new(attrs, :token, token)
 
-    %Ticket{}
-    |> Ticket.changeset(attrs)
-    |> Ecto.Changeset.put_assoc(:services, services)
-    |> Ecto.Changeset.put_assoc(:tags, tags)
-    |> Repo.insert()
-    |> broadcast(:ticket_created)
+    changeset =
+      %Ticket{}
+      |> Ticket.changeset(attrs)
+      |> Ecto.Changeset.put_assoc(:services, services)
+      |> Ecto.Changeset.put_assoc(:tags, tags)
+
+    Ecto.Multi.new()
+    |> Ecto.Multi.insert(:ticket, changeset)
+    |> Ecto.Multi.run(:log, fn _repo, %{ticket: ticket} ->
+      Audit.log_action(
+        "TICKET_CREATED",
+        %{
+          resource_type: "Ticket",
+          resource_id: to_string(ticket.id),
+          details: %{code: ticket.display_code}
+        },
+        actor
+      )
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{ticket: ticket}} -> broadcast({:ok, ticket}, :ticket_created)
+      {:error, _, reason, _} -> {:error, reason}
+    end
   end
 
   def list_reception_tickets(establishment_id) do
@@ -79,11 +107,11 @@ defmodule StarTickets.Tickets do
     |> Repo.all()
   end
 
-  def assign_ticket_to_room(%Ticket{} = ticket, room_id) do
-    update_ticket(ticket, %{room_id: room_id})
+  def assign_ticket_to_room(%Ticket{} = ticket, room_id, actor \\ nil) do
+    update_ticket(ticket, %{room_id: room_id}, actor)
   end
 
-  def update_ticket_status(%Ticket{} = ticket, status) do
+  def update_ticket_status(%Ticket{} = ticket, status, actor \\ nil) do
     attrs = %{status: status}
 
     # If returning to waiting, maybe clear user assignment?
@@ -95,7 +123,7 @@ defmodule StarTickets.Tickets do
         attrs
       end
 
-    update_ticket(ticket, attrs)
+    update_ticket(ticket, attrs, actor)
   end
 
   @doc """
@@ -114,11 +142,15 @@ defmodule StarTickets.Tickets do
     |> Repo.all()
   end
 
-  def start_attendance(%Ticket{} = ticket, user_id) do
-    update_ticket(ticket, %{
-      status: "IN_RECEPTION",
-      user_id: user_id
-    })
+  def start_attendance(%Ticket{} = ticket, user_id, actor \\ nil) do
+    update_ticket(
+      ticket,
+      %{
+        status: "IN_RECEPTION",
+        user_id: user_id
+      },
+      actor
+    )
   end
 
   def count_waiting_tickets(establishment_id) do
@@ -203,13 +235,17 @@ defmodule StarTickets.Tickets do
     |> Repo.all()
   end
 
-  def call_ticket_to_room(%Ticket{} = ticket, user_id, room_id) do
+  def call_ticket_to_room(%Ticket{} = ticket, user_id, room_id, actor \\ nil) do
     result =
-      update_ticket(ticket, %{
-        status: "CALLED_PROFESSIONAL",
-        user_id: user_id,
-        room_id: room_id
-      })
+      update_ticket(
+        ticket,
+        %{
+          status: "CALLED_PROFESSIONAL",
+          user_id: user_id,
+          room_id: room_id
+        },
+        actor
+      )
 
     # Broadcast for TV display
     case result do
@@ -223,13 +259,17 @@ defmodule StarTickets.Tickets do
     end
   end
 
-  def call_ticket_reception(%Ticket{} = ticket, user_id, room_id) do
+  def call_ticket_reception(%Ticket{} = ticket, user_id, room_id, actor \\ nil) do
     result =
-      update_ticket(ticket, %{
-        status: "CALLED_RECEPTION",
-        user_id: user_id,
-        room_id: room_id
-      })
+      update_ticket(
+        ticket,
+        %{
+          status: "CALLED_RECEPTION",
+          user_id: user_id,
+          room_id: room_id
+        },
+        actor
+      )
 
     # Broadcast for TV display
     case result do
@@ -243,44 +283,44 @@ defmodule StarTickets.Tickets do
     end
   end
 
-  def start_professional_attendance(%Ticket{} = ticket) do
-    update_ticket(ticket, %{status: "IN_ATTENDANCE"})
+  def start_professional_attendance(%Ticket{} = ticket, actor \\ nil) do
+    update_ticket(ticket, %{status: "IN_ATTENDANCE"}, actor)
   end
 
   @doc """
   Finishes attendance. Debits (removes) services performed by this room.
   If services remain, returns to queue. Else finishes.
   """
-  def finish_attendance_and_route(%Ticket{} = ticket, room_services) do
+  def finish_attendance_and_route(%Ticket{} = ticket, room_services, actor \\ nil) do
     ticket = Repo.preload(ticket, :services, force: true)
 
     # identify performed services (intersection)
     room_service_ids = Enum.map(room_services, & &1.id)
-    executed_services = Enum.filter(ticket.services, fn s -> s.id in room_service_ids end)
+    _executed_services = Enum.filter(ticket.services, fn s -> s.id in room_service_ids end)
 
     # Debit services (remove from association)
     # We use put_assoc with the remaining list (subtraction)
     remaining_services = Enum.reject(ticket.services, fn s -> s.id in room_service_ids end)
 
-    # We need to use specific Changeset to remove the association explicitly, or just set the new list
-    changeset =
-      ticket
-      |> Ticket.changeset(%{})
-      |> Ecto.Changeset.put_assoc(:services, remaining_services)
-
-    Repo.update!(changeset)
+    # Use update_ticket_with_services to log the service removal
+    # We pass empty attrs because we are only changing associations first
+    {:ok, ticket} = update_ticket_with_services(ticket, %{}, remaining_services, actor)
 
     # Decide next status
     if Enum.empty?(remaining_services) do
       # All done
-      update_ticket(ticket, %{status: "FINISHED"})
+      update_ticket(ticket, %{status: "FINISHED"}, actor)
     else
       # Back to queue
-      update_ticket(ticket, %{
-        status: "WAITING_NEXT_SERVICE",
-        user_id: nil,
-        room_id: nil
-      })
+      update_ticket(
+        ticket,
+        %{
+          status: "WAITING_NEXT_SERVICE",
+          user_id: nil,
+          room_id: nil
+        },
+        actor
+      )
     end
   end
 

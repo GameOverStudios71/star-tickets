@@ -33,8 +33,18 @@ defmodule StarTicketsWeb.Admin.Users.FormComponent do
         <div class="flex flex-col md:flex-row gap-8">
           <div class="flex-1 space-y-2">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <.input field={@form[:name]} type="text" label="Nome Completo" placeholder="Ex: João Silva" />
-              <.input field={@form[:username]} type="text" label="Username" placeholder="Ex: joao.silva" />
+              <.input
+                field={@form[:name]}
+                type="text"
+                label="Nome Completo"
+                placeholder="Ex: João Silva"
+              />
+              <.input
+                field={@form[:username]}
+                type="text"
+                label="Username"
+                placeholder="Ex: joao.silva"
+              />
             </div>
 
             <.input field={@form[:email]} type="email" label="Email" placeholder="joao@email.com" />
@@ -70,13 +80,12 @@ defmodule StarTicketsWeb.Admin.Users.FormComponent do
 
             <input type="hidden" name="user[client_id]" value={@client_id} />
           </div>
-
-          <!-- Sidebar com Dicas e Preview -->
+          
+    <!-- Sidebar com Dicas e Preview -->
           <div class="w-full md:w-72 hidden md:block">
             <div class="bg-white/5 border border-white/10 p-4 rounded-lg text-sm space-y-4 h-full backdrop-blur-md">
               <h4 class="font-bold flex items-center gap-2 text-white">
-                <.icon name="hero-information-circle" class="size-6" />
-                Informações
+                <.icon name="hero-information-circle" class="size-6" /> Informações
               </h4>
 
               <div class="bg-blue-600/40 border border-blue-500/40 p-3 rounded text-blue-100">
@@ -93,18 +102,30 @@ defmodule StarTicketsWeb.Admin.Users.FormComponent do
               <div class="bg-black/40 border border-white/10 p-3 rounded">
                 <div class="text-gray-400 text-xs mb-1">Exemplo de Login:</div>
                 <div class="font-mono text-white text-md break-all">
-                  {preview_login(@client_slug, @form[:establishment_id].value, @form[:username].value, @establishments_map)}
+                  {preview_login(
+                    @client_slug,
+                    @form[:establishment_id].value,
+                    @form[:username].value,
+                    @establishments_map
+                  )}
                 </div>
-                <div class="text-xs text-gray-400 mt-1 text-right">(cliente . estabelecimento . usuario)</div>
+                <div class="text-xs text-gray-400 mt-1 text-right">
+                  (cliente . estabelecimento . usuario)
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div :if={@form.source.action in [:insert, :update] and not @form.source.valid?} class="my-4 text-center">
-           <div class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-red-500/20 border border-red-500/20 text-white font-medium">
+        <div
+          :if={@form.source.action in [:insert, :update] and not @form.source.valid?}
+          class="my-4 text-center"
+        >
+          <div class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-red-500/20 border border-red-500/20 text-white font-medium">
             <.icon name="hero-exclamation-circle" class="size-5 text-red-400" />
-            <span :if={@form[:email].errors != []}>Email: {translate_error(List.first(@form[:email].errors))}</span>
+            <span :if={@form[:email].errors != []}>
+              Email: {translate_error(List.first(@form[:email].errors))}
+            </span>
             <span :if={@form[:email].errors == []}>Verifique os erros no formulário</span>
           </div>
         </div>
@@ -112,8 +133,15 @@ defmodule StarTicketsWeb.Admin.Users.FormComponent do
         <hr class="my-4 border-white/40 border-dashed" />
 
         <:actions>
-          <.link patch={@patch} class="btn btn-ghost text-white hover:bg-white/10 hover:shadow-none">Cancelar</.link>
-          <.button phx-disable-with="Salvando..." class="btn bg-orange-600/40 backdrop-blur-md border border-orange-500/90 text-white hover:bg-orange-600/50 shadow-lg">Salvar Usuário</.button>
+          <.link patch={@patch} class="btn btn-ghost text-white hover:bg-white/10 hover:shadow-none">
+            Cancelar
+          </.link>
+          <.button
+            phx-disable-with="Salvando..."
+            class="btn bg-orange-600/40 backdrop-blur-md border border-orange-500/90 text-white hover:bg-orange-600/50 shadow-lg"
+          >
+            Salvar Usuário
+          </.button>
         </:actions>
       </.simple_form>
     </div>

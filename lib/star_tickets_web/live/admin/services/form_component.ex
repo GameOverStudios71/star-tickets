@@ -33,26 +33,53 @@ defmodule StarTicketsWeb.Admin.Services.FormComponent do
         <div class="space-y-4">
           <!-- Info Box Global -->
           <div class="bg-blue-600/20 border border-blue-500/40 p-4 rounded-lg flex gap-3 text-blue-100 items-start">
-             <.icon name="hero-information-circle" class="size-6 shrink-0 mt-0.5" />
-             <div class="text-sm">
-               <p class="font-bold mb-1">Informação Importante:</p>
-               <p>Os serviços cadastrados aqui representam <strong>todos os serviços prestados</strong> por todos os estabelecimentos do cliente.</p>
-               <p class="mt-2 text-blue-200 text-xs">Futuramente, você poderá relacionar as salas de cada estabelecimento com um ou mais destes serviços.</p>
-             </div>
+            <.icon name="hero-information-circle" class="size-6 shrink-0 mt-0.5" />
+            <div class="text-sm">
+              <p class="font-bold mb-1">Informação Importante:</p>
+              <p>
+                Os serviços cadastrados aqui representam <strong>todos os serviços prestados</strong>
+                por todos os estabelecimentos do cliente.
+              </p>
+              <p class="mt-2 text-blue-200 text-xs">
+                Futuramente, você poderá relacionar as salas de cada estabelecimento com um ou mais destes serviços.
+              </p>
+            </div>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <.input field={@form[:name]} type="text" label="Nome do Serviço" placeholder="Ex: Consulta Geral" required />
-            <.input field={@form[:duration]} type="number" label="Duração (minutos)" placeholder="Ex: 30" required min="1" />
+            <.input
+              field={@form[:name]}
+              type="text"
+              label="Nome do Serviço"
+              placeholder="Ex: Consulta Geral"
+              required
+            />
+            <.input
+              field={@form[:duration]}
+              type="number"
+              label="Duração (minutos)"
+              placeholder="Ex: 30"
+              required
+              min="1"
+            />
           </div>
 
-          <.input field={@form[:form_template_id]} type="select" label="Formulário de Atendimento (Opcional)" options={@templates} prompt="Selecione um formulário..." />
+          <.input
+            field={@form[:form_template_id]}
+            type="select"
+            label="Formulário de Atendimento (Opcional)"
+            options={@templates}
+            prompt="Selecione um formulário..."
+          />
 
           <input type="hidden" name="service[client_id]" value={@client_id} />
         </div>
 
-        <div :if={@form.source.action in [:insert, :update] and not @form.source.valid?} class="my-4 text-center">
-           <div class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-red-500/20 border border-red-500/20 text-white font-medium">
+        <div
+          :if={@form.source.action in [:insert, :update] and not @form.source.valid?}
+          class="my-4 text-center"
+        >
+          <div class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-red-500/20 border border-red-500/20 text-white font-medium">
             <.icon name="hero-exclamation-circle" class="size-5 text-red-400" />
             <span>Verifique os erros no formulário</span>
           </div>
@@ -61,8 +88,15 @@ defmodule StarTicketsWeb.Admin.Services.FormComponent do
         <hr class="my-4 border-white/40 border-dashed" />
 
         <:actions>
-          <.link patch={@patch} class="btn btn-ghost text-white hover:bg-white/10 hover:shadow-none">Cancelar</.link>
-          <.button phx-disable-with="Salvando..." class="btn bg-orange-600/40 backdrop-blur-md border border-orange-500/90 text-white hover:bg-orange-600/50 shadow-lg">Salvar Serviço</.button>
+          <.link patch={@patch} class="btn btn-ghost text-white hover:bg-white/10 hover:shadow-none">
+            Cancelar
+          </.link>
+          <.button
+            phx-disable-with="Salvando..."
+            class="btn bg-orange-600/40 backdrop-blur-md border border-orange-500/90 text-white hover:bg-orange-600/50 shadow-lg"
+          >
+            Salvar Serviço
+          </.button>
         </:actions>
       </.simple_form>
     </div>

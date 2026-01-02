@@ -79,7 +79,7 @@ defmodule StarTicketsWeb.ImpersonationComponent do
         >
           <%= for est <- @establishments do %>
             <option value={est.id} selected={est.id == @selected_establishment_id}>
-              <%= est.name %>
+              {est.name}
             </option>
           <% end %>
         </select>
@@ -95,7 +95,7 @@ defmodule StarTicketsWeb.ImpersonationComponent do
           <option value="">-- Navegar como --</option>
           <%= for user <- @users do %>
             <option value={user.id} selected={user.id == @selected_user_id}>
-              <%= user.name %> (<%= user.role %>)
+              {user.name} ({user.role})
             </option>
           <% end %>
         </select>

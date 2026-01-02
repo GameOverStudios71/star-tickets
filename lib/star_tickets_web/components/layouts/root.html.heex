@@ -2,30 +2,39 @@
 <html lang="pt-BR">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+    />
     <meta name="csrf-token" content={get_csrf_token()} />
-    
+
     <%!-- PWA Meta Tags --%>
     <meta name="theme-color" content="#10b981" />
-    <meta name="description" content="Star Tickets - Sistema de Gerenciamento de Senhas e Atendimento" />
+    <meta
+      name="description"
+      content="Star Tickets - Sistema de Gerenciamento de Senhas e Atendimento"
+    />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="StarTickets" />
-    
+
     <%!-- PWA Manifest --%>
     <link rel="manifest" href="/manifest.json" />
-    
+
     <%!-- Icons --%>
     <link rel="icon" type="image/png" sizes="192x192" href="/images/icons/icon-192x192.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/images/icons/icon-512x512.png" />
     <link rel="apple-touch-icon" href="/images/icons/icon-192x192.png" />
-    
+
     <.live_title default="StarTickets" suffix=" · Star Tickets">
       {assigns[:page_title]}
     </.live_title>
     <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
     <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
     </script>
     <script>

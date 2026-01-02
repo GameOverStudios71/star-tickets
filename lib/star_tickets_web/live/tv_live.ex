@@ -3,15 +3,19 @@ defmodule StarTicketsWeb.TVLive do
 
   alias StarTickets.Tickets
   alias StarTickets.Accounts
+  alias StarTickets.Audit
 
   # 10 seconds default
   @rotation_interval_ms 10_000
 
   @impl true
-  def mount(_params, session, socket) do
+  def mount(_params, _session, socket) do
     # Get current user from session for establishment filtering
     user = socket.assigns[:current_scope] && socket.assigns.current_scope.user
     establishment_id = user && user.establishment_id
+
+    # Generate TV session ID for tracking
+    tv_session_id = Ecto.UUID.generate()
 
     # Get TV configuration
     # For TV users: load their associated TV config
@@ -41,8 +45,27 @@ defmodule StarTicketsWeb.TVLive do
       |> assign(:rotation_timer, nil)
       |> assign(:rotation_index, 0)
       |> assign(:config, %{interval_ms: @rotation_interval_ms, tts_enabled: true})
+      |> assign(:tv_session_id, tv_session_id)
 
     if connected?(socket) do
+      # Log TV session start
+      Audit.log_action(
+        "TV_SESSION_START",
+        %{
+          resource_type: "TVSession",
+          resource_id: tv_session_id,
+          details: %{
+            establishment_id: establishment_id,
+            tv_config: %{
+              room_ids: tv_config.room_ids,
+              all_rooms: tv_config.all_rooms,
+              news_enabled: tv_config.news_enabled
+            }
+          }
+        },
+        user
+      )
+
       # Subscribe to ticket events
       Tickets.subscribe()
 
@@ -62,9 +85,41 @@ defmodule StarTicketsWeb.TVLive do
     if ticket.establishment_id == socket.assigns.establishment_id do
       # Filter by configured rooms (if TV has room filter)
       if should_show_ticket?(ticket, socket.assigns.tv_config) do
+        # Log ticket received by TV
+        Audit.log_action(
+          "TV_TICKET_RECEIVED",
+          %{
+            resource_type: "TVSession",
+            resource_id: socket.assigns.tv_session_id,
+            details: %{
+              ticket_id: ticket.id,
+              ticket_code: ticket.display_code,
+              room_id: ticket.room_id,
+              status: ticket.status
+            }
+          },
+          socket.assigns[:current_scope][:user]
+        )
+
         socket = add_incoming_call(socket, ticket)
         {:noreply, socket}
       else
+        # Log filtered out ticket
+        Audit.log_action(
+          "TV_TICKET_FILTERED",
+          %{
+            resource_type: "TVSession",
+            resource_id: socket.assigns.tv_session_id,
+            details: %{
+              ticket_id: ticket.id,
+              ticket_code: ticket.display_code,
+              room_id: ticket.room_id,
+              reason: "room_filter"
+            }
+          },
+          socket.assigns[:current_scope][:user]
+        )
+
         {:noreply, socket}
       end
     else
@@ -130,6 +185,23 @@ defmodule StarTicketsWeb.TVLive do
       length(socket.assigns.incoming_queue) > 0 ->
         [ticket | rest] = socket.assigns.incoming_queue
 
+        # Log ticket displayed with TTS
+        Audit.log_action(
+          "TV_TICKET_DISPLAYED",
+          %{
+            resource_type: "TVSession",
+            resource_id: socket.assigns.tv_session_id,
+            details: %{
+              ticket_id: ticket.id,
+              ticket_code: ticket.code,
+              room_name: ticket.room_name,
+              display_mode: "incoming_with_tts",
+              speech_text: build_speech_text(ticket)
+            }
+          },
+          socket.assigns[:current_scope][:user]
+        )
+
         socket
         |> assign(:incoming_queue, rest)
         |> assign(:current_ticket, ticket)
@@ -143,6 +215,24 @@ defmodule StarTicketsWeb.TVLive do
         rotation_queue = socket.assigns.rotation_queue
         index = rem(socket.assigns.rotation_index, length(rotation_queue))
         ticket = Enum.at(rotation_queue, index)
+
+        # Log ticket displayed in rotation
+        Audit.log_action(
+          "TV_TICKET_DISPLAYED",
+          %{
+            resource_type: "TVSession",
+            resource_id: socket.assigns.tv_session_id,
+            details: %{
+              ticket_id: ticket.id,
+              ticket_code: ticket.code,
+              room_name: ticket.room_name,
+              display_mode: "rotation",
+              rotation_index: index,
+              queue_size: length(rotation_queue)
+            }
+          },
+          socket.assigns[:current_scope][:user]
+        )
 
         socket
         |> assign(:current_ticket, ticket)
@@ -323,7 +413,11 @@ defmodule StarTicketsWeb.TVLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div id="tv-container" class={["st-app has-background tv-page", @tv_config[:news_enabled] && "tv-with-video"]} phx-hook="TVSound">
+    <div
+      id="tv-container"
+      class={["st-app has-background tv-page", @tv_config[:news_enabled] && "tv-with-video"]}
+      phx-hook="TVSound"
+    >
       <%= if @tv_config[:news_enabled] && @tv_config[:news_url] do %>
         <%!-- Split Layout: Video + Tickets --%>
         <div class="tv-video-split-container">
@@ -335,21 +429,22 @@ defmodule StarTicketsWeb.TVLive do
               frameborder="0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowfullscreen
-            ></iframe>
+            >
+            </iframe>
           </div>
 
           <%!-- Right Side: Tickets --%>
           <div class="tv-tickets-side">
             <div class="tv-main-card-compact">
-              <div class="tv-establishment-name-small"><%= @establishment_name %></div>
+              <div class="tv-establishment-name-small">{@establishment_name}</div>
 
               <%= if @current_ticket do %>
                 <div class="tv-ticket-display-compact animate-pulse-once">
-                  <div class="tv-customer-name-small"><%= @current_ticket.customer_name %></div>
-                  <div class="tv-ticket-code-small"><%= @current_ticket.display_code %></div>
+                  <div class="tv-customer-name-small">{@current_ticket.customer_name}</div>
+                  <div class="tv-ticket-code-small">{@current_ticket.display_code}</div>
                   <div class="tv-room-name-small">
                     <span class="tv-room-label-small">Compareça à:</span>
-                    <span class="tv-room-value-small"><%= @current_ticket.room_name %></span>
+                    <span class="tv-room-value-small">{@current_ticket.room_name}</span>
                   </div>
                 </div>
               <% else %>
@@ -363,8 +458,8 @@ defmodule StarTicketsWeb.TVLive do
               <div class="tv-mini-history">
                 <%= for ticket <- Enum.take(@history, 3) do %>
                   <div class="tv-mini-history-item">
-                    <span class="code"><%= ticket.display_code %></span>
-                    <span class="room"><%= ticket.room_name %></span>
+                    <span class="code">{ticket.display_code}</span>
+                    <span class="room">{ticket.room_name}</span>
                   </div>
                 <% end %>
               </div>
@@ -377,15 +472,15 @@ defmodule StarTicketsWeb.TVLive do
           <!-- Left Side: Main Ticket Display -->
           <div class="tv-split-left">
             <div class="tv-main-card">
-              <div class="tv-establishment-name"><%= @establishment_name %></div>
+              <div class="tv-establishment-name">{@establishment_name}</div>
 
               <%= if @current_ticket do %>
                 <div class="tv-ticket-display animate-pulse-once">
-                  <div class="tv-customer-name"><%= @current_ticket.customer_name %></div>
-                  <div class="tv-ticket-code"><%= @current_ticket.display_code %></div>
+                  <div class="tv-customer-name">{@current_ticket.customer_name}</div>
+                  <div class="tv-ticket-code">{@current_ticket.display_code}</div>
                   <div class="tv-room-name">
                     <span class="tv-room-label">Compareça à:</span>
-                    <span class="tv-room-value"><%= @current_ticket.room_name %></span>
+                    <span class="tv-room-value">{@current_ticket.room_name}</span>
                   </div>
                 </div>
               <% else %>
@@ -397,17 +492,17 @@ defmodule StarTicketsWeb.TVLive do
               <% end %>
             </div>
           </div>
-
-          <!-- Right Side: History -->
+          
+    <!-- Right Side: History -->
           <div class="tv-split-right">
             <div class="tv-history-section">
               <div class="tv-history-title">Últimas Chamadas</div>
               <div class="tv-history-list">
                 <%= for ticket <- @history do %>
                   <div class="tv-history-item">
-                    <span class="ticket-code"><%= ticket.display_code %></span>
-                    <span class="customer-name"><%= ticket.customer_name %></span>
-                    <span class="room-name"><%= ticket.room_name %></span>
+                    <span class="ticket-code">{ticket.display_code}</span>
+                    <span class="customer-name">{ticket.customer_name}</span>
+                    <span class="room-name">{ticket.room_name}</span>
                   </div>
                 <% end %>
                 <%= if Enum.empty?(@history) do %>
@@ -415,11 +510,11 @@ defmodule StarTicketsWeb.TVLive do
                 <% end %>
               </div>
             </div>
-
-            <!-- Queue Status (Debug/Info) -->
+            
+    <!-- Queue Status (Debug/Info) -->
             <div class="tv-queue-status">
               <span class="queue-badge">
-                Fila: <%= length(@rotation_queue) %> senha(s)
+                Fila: {length(@rotation_queue)} senha(s)
               </span>
             </div>
           </div>

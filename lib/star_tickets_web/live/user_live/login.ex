@@ -22,18 +22,24 @@ defmodule StarTicketsWeb.UserLive.Login do
             <%= if @current_scope do %>
               Reautentique para acessar ações sensíveis.
             <% else %>
-              Não tem conta? <.link navigate={~p"/register"} class="text-white underline">Cadastre sua empresa</.link>
+              Não tem conta?
+              <.link navigate={~p"/users/register"} class="text-white underline">
+                Cadastre sua empresa
+              </.link>
             <% end %>
           </p>
         </div>
 
         <%!-- Flash Messages --%>
         <div :if={Phoenix.Flash.get(@flash, :info)} class="st-card st-acrylic-success p-3 mb-4">
-          <p class="text-white"><%= Phoenix.Flash.get(@flash, :info) %></p>
+          <p class="text-white">{Phoenix.Flash.get(@flash, :info)}</p>
         </div>
 
-        <div :if={Phoenix.Flash.get(@flash, :error)} class="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-lg mb-4">
-          <p><%= Phoenix.Flash.get(@flash, :error) %></p>
+        <div
+          :if={Phoenix.Flash.get(@flash, :error)}
+          class="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-lg mb-4"
+        >
+          <p>{Phoenix.Flash.get(@flash, :error)}</p>
         </div>
 
         <%!-- Login with Password --%>
@@ -74,7 +80,12 @@ defmodule StarTicketsWeb.UserLive.Login do
             />
           </div>
 
-          <button type="submit" name={@form[:remember_me].name} value="true" class="st-btn st-btn-large w-full">
+          <button
+            type="submit"
+            name={@form[:remember_me].name}
+            value="true"
+            class="st-btn st-btn-large w-full"
+          >
             🔑 Entrar e Manter Conectado
           </button>
 

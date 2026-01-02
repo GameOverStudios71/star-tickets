@@ -127,9 +127,37 @@ defmodule StarTicketsWeb.Admin.UsersLive do
     {:noreply, push_patch(socket, to: ~p"/admin/users?#{params}")}
   end
 
+  def handle_event("confirm_delete", %{"id" => id}, socket) do
+    {:noreply, assign(socket, show_confirm_modal: true, item_to_delete: id)}
+  end
+
+  def handle_event("cancel_delete", _params, socket) do
+    {:noreply, assign(socket, show_confirm_modal: false, item_to_delete: nil)}
+  end
+
+  def handle_event("do_delete", _params, socket) do
+    id = socket.assigns.item_to_delete
+    user = Accounts.get_user!(id)
+
+    case Accounts.delete_user(user) do
+      {:ok, _} ->
+        {:noreply,
+         socket
+         |> assign(show_confirm_modal: false, item_to_delete: nil)
+         |> put_flash(:delete, "Usuário excluído com sucesso!")
+         |> push_navigate(to: ~p"/admin/users")}
+
+      {:error, _changeset} ->
+        {:noreply,
+         socket
+         |> assign(show_confirm_modal: false, item_to_delete: nil)
+         |> put_flash(:error, "Erro ao excluir usuário.")}
+    end
+  end
+
   def render(assigns) do
     ~H"""
-    <div class="st-app has-background min-h-screen flex flex-col" style="padding-top: 80px;">
+    <div class="st-app has-background min-h-screen flex flex-col pt-20">
       <.flash kind={:info} title="Informação" flash={@flash} />
       <.flash kind={:success} title="Sucesso" flash={@flash} />
       <.flash kind={:warning} title="Atenção" flash={@flash} />
@@ -149,7 +177,7 @@ defmodule StarTicketsWeb.Admin.UsersLive do
         impersonating={@impersonating}
       />
 
-      <div class="st-container flex-1 m-4">
+      <div class="st-container flex-1 m-4" style="margin-top: 0;">
         <.page_header
           title="👥 Usuários"
           description="Gerencie os usuários e suas permissões de acesso."
@@ -186,7 +214,11 @@ defmodule StarTicketsWeb.Admin.UsersLive do
               {if user.establishment, do: user.establishment.name, else: "Todos"}
             </:col>
             <:action :let={user}>
-              <.link patch={~p"/admin/users/#{user}/edit"} class="btn btn-sm btn-ghost btn-square" title="Editar">
+              <.link
+                patch={~p"/admin/users/#{user}/edit"}
+                class="btn btn-sm btn-ghost btn-square"
+                title="Editar"
+              >
                 <.icon name="hero-pencil-square" class="size-5 text-blue-400" />
               </.link>
               <button
@@ -203,7 +235,13 @@ defmodule StarTicketsWeb.Admin.UsersLive do
           <.pagination page={@page} total_pages={@total_pages} />
         </.page_header>
 
-        <.modal :if={@show_confirm_modal} id="confirm-modal" show={@show_confirm_modal} transparent={true} on_cancel={JS.push("cancel_delete")}>
+        <.modal
+          :if={@show_confirm_modal}
+          id="confirm-modal"
+          show={@show_confirm_modal}
+          transparent={true}
+          on_cancel={JS.push("cancel_delete")}
+        >
           <div class="st-modal-confirm">
             <div class="st-modal-icon-container">
               <.icon name="hero-exclamation-triangle" class="size-12 text-red-500" />
@@ -230,8 +268,13 @@ defmodule StarTicketsWeb.Admin.UsersLive do
         </.modal>
       </div>
 
-
-      <.modal :if={@live_action in [:new, :edit]} id="user-modal" transparent={true} show on_cancel={JS.patch(~p"/admin/users")}>
+      <.modal
+        :if={@live_action in [:new, :edit]}
+        id="user-modal"
+        transparent={true}
+        show
+        on_cancel={JS.patch(~p"/admin/users")}
+      >
         <.live_component
           module={StarTicketsWeb.Admin.Users.FormComponent}
           id={@user.id || :new}
@@ -261,32 +304,4 @@ defmodule StarTicketsWeb.Admin.UsersLive do
     do: "bg-purple-500/30 text-purple-200 border border-purple-500/50"
 
   def role_badge_class(_), do: "bg-gray-500/30 text-gray-200 border border-gray-500/50"
-
-  def handle_event("confirm_delete", %{"id" => id}, socket) do
-    {:noreply, assign(socket, show_confirm_modal: true, item_to_delete: id)}
-  end
-
-  def handle_event("cancel_delete", _params, socket) do
-    {:noreply, assign(socket, show_confirm_modal: false, item_to_delete: nil)}
-  end
-
-  def handle_event("do_delete", _params, socket) do
-    id = socket.assigns.item_to_delete
-    user = Accounts.get_user!(id)
-
-    case Accounts.delete_user(user) do
-      {:ok, _} ->
-        {:noreply,
-         socket
-         |> assign(show_confirm_modal: false, item_to_delete: nil)
-         |> put_flash(:delete, "Usuário excluído com sucesso!")
-         |> push_navigate(to: ~p"/admin/users")}
-
-      {:error, _changeset} ->
-        {:noreply,
-         socket
-         |> assign(show_confirm_modal: false, item_to_delete: nil)
-         |> put_flash(:error, "Erro ao excluir usuário.")}
-    end
-  end
 end

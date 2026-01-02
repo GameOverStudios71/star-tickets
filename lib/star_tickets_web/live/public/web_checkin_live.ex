@@ -189,112 +189,139 @@ defmodule StarTicketsWeb.Public.WebCheckinLive do
   def render(assigns) do
     ~H"""
     <div class="st-app has-background min-h-screen text-white p-6 flex flex-col items-center">
-
-      <!-- Logo/Header -->
+      
+    <!-- Logo/Header -->
       <div class="text-center mb-8 pt-6 w-full max-w-2xl">
         <h1 class="text-2xl font-bold tracking-tight text-white/80 mb-2">Web Check-in</h1>
         <div class="inline-block px-4 py-1 rounded-full bg-white/10 text-white/60 text-sm font-mono">
-           Senha: <span class="text-white font-bold">{@ticket.display_code}</span>
+          Senha: <span class="text-white font-bold">{@ticket.display_code}</span>
         </div>
       </div>
 
       <div class="w-[85%] max-w-6xl transition-all duration-500">
-
-        <!-- STEP 1: Name Input -->
+        
+    <!-- STEP 1: Name Input -->
         <%= if @current_step == :name_input do %>
           <div class="bg-white/10 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl animate-fade-in">
-             <div class="text-center mb-8">
-               <div class="text-5xl mb-4">👋</div>
-               <h2 class="text-2xl font-bold text-white">Bem-vindo(a)!</h2>
-               <p class="text-white/60 mt-2">Para começarmos o atendimento, precisamos saber seu nome.</p>
-             </div>
+            <div class="text-center mb-8">
+              <div class="text-5xl mb-4">👋</div>
+              <h2 class="text-2xl font-bold text-white">Bem-vindo(a)!</h2>
+              <p class="text-white/60 mt-2">
+                Para começarmos o atendimento, precisamos saber seu nome.
+              </p>
+            </div>
 
-             <form phx-submit="save_name" phx-change="validate_name">
-               <div class="mb-8">
-                 <label class="block text-sm font-medium text-white/80 mb-2">Nome Completo</label>
-                 <input type="text" name="customer_name" value={@customer_name}
-                        class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-4 text-lg text-white placeholder-white/30 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-center"
-                        placeholder="Digite seu nome aqui..." autofocus />
-               </div>
+            <form phx-submit="save_name" phx-change="validate_name">
+              <div class="mb-8">
+                <label class="block text-sm font-medium text-white/80 mb-2">Nome Completo</label>
+                <input
+                  type="text"
+                  name="customer_name"
+                  value={@customer_name}
+                  class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-4 text-lg text-white placeholder-white/30 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-center"
+                  placeholder="Digite seu nome aqui..."
+                  autofocus
+                />
+              </div>
 
-               <button type="submit" class="w-full py-4 rounded-xl font-bold text-white text-lg
+              <button
+                type="submit"
+                class="w-full py-4 rounded-xl font-bold text-white text-lg
                       bg-gradient-to-r from-blue-600 to-indigo-600
                       hover:from-blue-500 hover:to-indigo-500 hover:scale-[1.02]
-                      transition-all duration-300 shadow-lg shadow-blue-500/20">
-                  Continuar
-               </button>
-             </form>
+                      transition-all duration-300 shadow-lg shadow-blue-500/20"
+              >
+                Continuar
+              </button>
+            </form>
           </div>
         <% end %>
-
-        <!-- STEP 2: Forms / Wizard -->
+        
+    <!-- STEP 2: Forms / Wizard -->
         <%= if @current_step == :forms do %>
-           <form phx-submit="save_forms" phx-change="validate_forms" class="space-y-8 animate-fade-in-up">
-
-              <!-- Customer Name Header -->
-              <div class="text-center mb-6">
-                 <p class="text-white/50 text-sm">Atendimento para</p>
-                 <h3 class="text-xl font-bold text-white">{@customer_name}</h3>
-              </div>
-
-              <!-- Wizard Progress (Dots) -->
-              <%= if length(@sections) > 1 do %>
-                <div class="flex justify-center gap-2 mb-8">
-                   <%= for {_, idx} <- Enum.with_index(@sections) do %>
-                      <div class={"w-2 h-2 rounded-full transition-all duration-300 " <>
+          <form
+            phx-submit="save_forms"
+            phx-change="validate_forms"
+            class="space-y-8 animate-fade-in-up"
+          >
+            
+    <!-- Customer Name Header -->
+            <div class="text-center mb-6">
+              <p class="text-white/50 text-sm">Atendimento para</p>
+              <h3 class="text-xl font-bold text-white">{@customer_name}</h3>
+            </div>
+            
+    <!-- Wizard Progress (Dots) -->
+            <%= if length(@sections) > 1 do %>
+              <div class="flex justify-center gap-2 mb-8">
+                <%= for {_, idx} <- Enum.with_index(@sections) do %>
+                  <div class={"w-2 h-2 rounded-full transition-all duration-300 " <>
                          if(idx == @current_section_index, do: "bg-blue-500 scale-125 w-4", else: if(idx < @current_section_index, do: "bg-blue-500/50", else: "bg-white/20"))}>
-                      </div>
-                   <% end %>
-                </div>
-              <% end %>
-
-              <!-- Sections Container (Render all but hide via CSS to preserve state) -->
-              <%= for {section, idx} <- Enum.with_index(@sections) do %>
-                 <div class={"bg-white/10 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl " <> if(idx != @current_section_index, do: "hidden", else: "block")}>
-
-                    <!-- Section Header -->
-                    <div class="bg-white/5 border-b border-white/5 p-6">
-                      <h2 class="text-xl font-bold text-white flex items-center gap-3">
-                        <span class="text-2xl">{if idx == 0, do: "📝", else: "📄"}</span>
-                        {section.title}
-                      </h2>
-                      <!-- Handle fallback struct vs struct -->
-                      <%= if Map.has_key?(section, :description) and section.description do %>
-                         <p class="text-white/60 text-sm mt-1 ml-9">{section.description}</p>
-                      <% end %>
-                    </div>
-
-                    <!-- Fields -->
-                    <div class="p-6 space-y-6">
-                      <%= for field <- field_list_for(section) do %>
-                        <.render_field field={field} uploads={assigns[:uploads] || %{}} form_data={@form_data} />
-                      <% end %>
-                    </div>
-                 </div>
-              <% end %>
-
-              <!-- Wizard Controls -->
-              <div class="flex gap-4 pt-4">
-                 <%= if @current_section_index > 0 do %>
-                    <button type="button" phx-click="prev_section" class="flex-1 py-4 rounded-xl font-semibold text-white/70 bg-white/5 hover:bg-white/10 transition-all">
-                       ← Voltar
-                    </button>
-                 <% end %>
-
-                 <%= if @current_section_index < length(@sections) - 1 do %>
-                    <button type="button" phx-click="next_section" class={"flex-1 py-4 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-500 transition-all shadow-lg shadow-blue-500/20 " <> if(@current_section_index == 0, do: "w-full", else: "")}>
-                       Continuar →
-                    </button>
-                 <% else %>
-                    <button type="submit" class={"flex-1 py-4 rounded-xl font-bold text-white bg-green-600 hover:bg-green-500 transition-all shadow-lg shadow-green-500/20 " <> if(@current_section_index == 0, do: "w-full", else: "")}>
-                       Enviar Informações ✓
-                    </button>
-                 <% end %>
+                  </div>
+                <% end %>
               </div>
+            <% end %>
+            
+    <!-- Sections Container (Render all but hide via CSS to preserve state) -->
+            <%= for {section, idx} <- Enum.with_index(@sections) do %>
+              <div class={"bg-white/10 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl " <> if(idx != @current_section_index, do: "hidden", else: "block")}>
+                
+    <!-- Section Header -->
+                <div class="bg-white/5 border-b border-white/5 p-6">
+                  <h2 class="text-xl font-bold text-white flex items-center gap-3">
+                    <span class="text-2xl">{if idx == 0, do: "📝", else: "📄"}</span>
+                    {section.title}
+                  </h2>
+                  <!-- Handle fallback struct vs struct -->
+                  <%= if Map.has_key?(section, :description) and section.description do %>
+                    <p class="text-white/60 text-sm mt-1 ml-9">{section.description}</p>
+                  <% end %>
+                </div>
+                
+    <!-- Fields -->
+                <div class="p-6 space-y-6">
+                  <%= for field <- field_list_for(section) do %>
+                    <.render_field
+                      field={field}
+                      uploads={assigns[:uploads] || %{}}
+                      form_data={@form_data}
+                    />
+                  <% end %>
+                </div>
+              </div>
+            <% end %>
+            
+    <!-- Wizard Controls -->
+            <div class="flex gap-4 pt-4">
+              <%= if @current_section_index > 0 do %>
+                <button
+                  type="button"
+                  phx-click="prev_section"
+                  class="flex-1 py-4 rounded-xl font-semibold text-white/70 bg-white/5 hover:bg-white/10 transition-all"
+                >
+                  ← Voltar
+                </button>
+              <% end %>
 
-           </form>
+              <%= if @current_section_index < length(@sections) - 1 do %>
+                <button
+                  type="button"
+                  phx-click="next_section"
+                  class={"flex-1 py-4 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-500 transition-all shadow-lg shadow-blue-500/20 " <> if(@current_section_index == 0, do: "w-full", else: "")}
+                >
+                  Continuar →
+                </button>
+              <% else %>
+                <button
+                  type="submit"
+                  class={"flex-1 py-4 rounded-xl font-bold text-white bg-green-600 hover:bg-green-500 transition-all shadow-lg shadow-green-500/20 " <> if(@current_section_index == 0, do: "w-full", else: "")}
+                >
+                  Enviar Informações ✓
+                </button>
+              <% end %>
+            </div>
+          </form>
         <% end %>
-
       </div>
     </div>
     """
@@ -341,37 +368,60 @@ defmodule StarTicketsWeb.Public.WebCheckinLive do
       </label>
 
       <% field_name = "field_#{@field.id}" %>
-
-      <!-- Safe access to form_data -->
+      
+    <!-- Safe access to form_data -->
       <% form_data = assigns[:form_data] || %{} %>
 
       <%= case @field.type do %>
         <% "text" -> %>
-          <input type="text" name={field_name} value={form_data[field_name]} class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all" placeholder={@field.placeholder} />
-
+          <input
+            type="text"
+            name={field_name}
+            value={form_data[field_name]}
+            class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+            placeholder={@field.placeholder}
+          />
         <% "textarea" -> %>
-          <textarea name={field_name} rows="3" class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all" placeholder={@field.placeholder}>{form_data[field_name]}</textarea>
-
+          <textarea
+            name={field_name}
+            rows="3"
+            class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+            placeholder={@field.placeholder}
+          >{form_data[field_name]}</textarea>
         <% "number" -> %>
-          <input type="number" name={field_name} value={form_data[field_name]} class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all" placeholder={@field.placeholder} />
-
+          <input
+            type="number"
+            name={field_name}
+            value={form_data[field_name]}
+            class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+            placeholder={@field.placeholder}
+          />
         <% "select" -> %>
-          <select name={field_name} class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all appearance-none">
+          <select
+            name={field_name}
+            class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all appearance-none"
+          >
             <option value="" class="bg-slate-800 text-white/50">Selecione...</option>
             <% items = (@field.options || %{})["items"] || [] %>
             <%= for item <- items do %>
-              <option value={item["label"]} selected={form_data[field_name] == item["label"]} class="bg-slate-800">{item["label"]}</option>
+              <option
+                value={item["label"]}
+                selected={form_data[field_name] == item["label"]}
+                class="bg-slate-800"
+              >
+                {item["label"]}
+              </option>
             <% end %>
           </select>
-
         <% "checkbox" -> %>
           <% items = (@field.options || %{})["items"] || [] %>
           <% count = length(items) %>
-          <% grid_class = cond do
-               count > 8 -> "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
-               count > 4 -> "grid grid-cols-1 sm:grid-cols-2 gap-3"
-               true -> "space-y-3"
-             end %>
+          <% grid_class =
+            cond do
+              count > 8 -> "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
+              count > 4 -> "grid grid-cols-1 sm:grid-cols-2 gap-3"
+              true -> "space-y-3"
+            end %>
 
           <%= if items != [] do %>
             <div class={grid_class}>
@@ -381,14 +431,32 @@ defmodule StarTicketsWeb.Public.WebCheckinLive do
                    if(checked?,
                       do: "bg-emerald-500/20 border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.15)] ring-1 ring-emerald-500/30",
                       else: "bg-white/5 border-transparent hover:bg-white/10 hover:border-white/10")}>
-
                   <div class={"relative flex items-center justify-center w-5 h-5 min-w-[1.25rem] rounded border transition-all duration-300 " <>
                       if(checked?, do: "bg-emerald-500 border-emerald-500", else: "border-white/30 bg-white/5")}>
-                      <input type="checkbox" name={field_name <> "[]"} value={item["label"]} checked={checked?} class="absolute opacity-0 w-full h-full cursor-pointer" />
-                      <!-- Custom Checkmark Icon -->
-                      <%= if checked? do %>
-                        <svg class="w-3.5 h-3.5 text-white drop-shadow-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
-                      <% end %>
+                    <input
+                      type="checkbox"
+                      name={field_name <> "[]"}
+                      value={item["label"]}
+                      checked={checked?}
+                      class="absolute opacity-0 w-full h-full cursor-pointer"
+                    />
+                    <!-- Custom Checkmark Icon -->
+                    <%= if checked? do %>
+                      <svg
+                        class="w-3.5 h-3.5 text-white drop-shadow-sm"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="3"
+                          d="M5 13l4 4L19 7"
+                        >
+                        </path>
+                      </svg>
+                    <% end %>
                   </div>
 
                   <span class={"text-sm leading-tight flex-1 transition-colors " <> if(checked?, do: "text-white font-medium", else: "text-white/70 group-hover:text-white")}>
@@ -398,26 +466,43 @@ defmodule StarTicketsWeb.Public.WebCheckinLive do
               <% end %>
             </div>
           <% else %>
-             <% checked? = is_checked?(form_data, field_name, "on") %>
-             <label class={"flex items-center gap-3 cursor-pointer select-none group p-3 rounded-xl transition-all duration-300 border " <>
+            <% checked? = is_checked?(form_data, field_name, "on") %>
+            <label class={"flex items-center gap-3 cursor-pointer select-none group p-3 rounded-xl transition-all duration-300 border " <>
                    if(checked?,
                       do: "bg-emerald-500/20 border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.15)] ring-1 ring-emerald-500/30",
                       else: "bg-white/5 border-transparent hover:bg-white/10 hover:border-white/10")}>
-
-                  <div class={"relative flex items-center justify-center w-5 h-5 rounded border transition-all duration-300 " <>
+              <div class={"relative flex items-center justify-center w-5 h-5 rounded border transition-all duration-300 " <>
                       if(checked?, do: "bg-emerald-500 border-emerald-500", else: "border-white/30 bg-white/5")}>
-                      <input type="checkbox" name={field_name} value="on" checked={checked?} class="absolute opacity-0 w-full h-full cursor-pointer" />
-                      <%= if checked? do %>
-                        <svg class="w-3.5 h-3.5 text-white drop-shadow-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
-                      <% end %>
-                  </div>
+                <input
+                  type="checkbox"
+                  name={field_name}
+                  value="on"
+                  checked={checked?}
+                  class="absolute opacity-0 w-full h-full cursor-pointer"
+                />
+                <%= if checked? do %>
+                  <svg
+                    class="w-3.5 h-3.5 text-white drop-shadow-sm"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="3"
+                      d="M5 13l4 4L19 7"
+                    >
+                    </path>
+                  </svg>
+                <% end %>
+              </div>
 
-                  <span class={"text-sm leading-tight flex-1 transition-colors " <> if(checked?, do: "text-white font-medium", else: "text-white/70 group-hover:text-white")}>
-                    Sim / Confirmar
-                  </span>
+              <span class={"text-sm leading-tight flex-1 transition-colors " <> if(checked?, do: "text-white font-medium", else: "text-white/70 group-hover:text-white")}>
+                Sim / Confirmar
+              </span>
             </label>
           <% end %>
-
         <% "radio" -> %>
           <% items = (@field.options || %{})["items"] || [] %>
           <div class="space-y-3">
@@ -427,13 +512,19 @@ defmodule StarTicketsWeb.Public.WebCheckinLive do
                    if(checked?,
                       do: "bg-emerald-500/20 border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.15)] ring-1 ring-emerald-500/30",
                       else: "bg-white/5 border-transparent hover:bg-white/10 hover:border-white/10")}>
-
                 <div class={"relative flex items-center justify-center w-5 h-5 min-w-[1.25rem] rounded-full border transition-all duration-300 " <>
                       if(checked?, do: "border-emerald-500", else: "border-white/30 bg-white/5")}>
-                      <input type="radio" name={field_name} value={item["label"]} checked={checked?} class="absolute opacity-0 w-full h-full cursor-pointer" />
-                      <%= if checked? do %>
-                        <div class="w-2.5 h-2.5 bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.8)]"></div>
-                      <% end %>
+                  <input
+                    type="radio"
+                    name={field_name}
+                    value={item["label"]}
+                    checked={checked?}
+                    class="absolute opacity-0 w-full h-full cursor-pointer"
+                  />
+                  <%= if checked? do %>
+                    <div class="w-2.5 h-2.5 bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.8)]">
+                    </div>
+                  <% end %>
                 </div>
 
                 <span class={"text-sm leading-tight flex-1 transition-colors " <> if(checked?, do: "text-white font-medium", else: "text-white/70 group-hover:text-white")}>
@@ -442,28 +533,40 @@ defmodule StarTicketsWeb.Public.WebCheckinLive do
               </label>
             <% end %>
           </div>
-
         <% "file" -> %>
-            <label phx-drop-target={@uploads[String.to_atom("field_#{@field.id}")].ref} class="cursor-pointer block border-2 border-dashed border-white/10 rounded-xl p-6 text-center hover:border-blue-500/30 transition-colors bg-black/10 hover:bg-white/5">
-               <div class="mb-4 pointer-events-none">
-                  <.live_file_input upload={@uploads[String.to_atom("field_#{@field.id}")]} class="hidden" />
-                  <div class="text-white/40 text-sm font-medium">
-                     <span class="text-blue-400">Clique para selecionar</span> ou arraste arquivos
-                  </div>
-               </div>
-
-               <!-- Preview of selected files -->
-               <div class="grid grid-cols-2 gap-2 mt-4 pointer-events-auto">
-                 <%= for entry <- @uploads[String.to_atom("field_#{@field.id}")].entries do %>
-                   <div class="relative bg-white/5 rounded-lg p-2 flex items-center gap-2 overflow-hidden border border-white/10">
-                      <div class="text-white text-xs truncate flex-1">{entry.client_name}</div>
-                      <div class="text-white/40 text-xs">{entry.progress}%</div>
-                      <button type="button" phx-click="cancel-upload" phx-value-ref={entry.ref} phx-value-upload={field_name} class="text-red-400 hover:text-red-300 p-1 hover:bg-white/10 rounded">&times;</button>
-                   </div>
-                 <% end %>
-               </div>
-            </label>
-
+          <label
+            phx-drop-target={@uploads[String.to_atom("field_#{@field.id}")].ref}
+            class="cursor-pointer block border-2 border-dashed border-white/10 rounded-xl p-6 text-center hover:border-blue-500/30 transition-colors bg-black/10 hover:bg-white/5"
+          >
+            <div class="mb-4 pointer-events-none">
+              <.live_file_input
+                upload={@uploads[String.to_atom("field_#{@field.id}")]}
+                class="hidden"
+              />
+              <div class="text-white/40 text-sm font-medium">
+                <span class="text-blue-400">Clique para selecionar</span> ou arraste arquivos
+              </div>
+            </div>
+            
+    <!-- Preview of selected files -->
+            <div class="grid grid-cols-2 gap-2 mt-4 pointer-events-auto">
+              <%= for entry <- @uploads[String.to_atom("field_#{@field.id}")].entries do %>
+                <div class="relative bg-white/5 rounded-lg p-2 flex items-center gap-2 overflow-hidden border border-white/10">
+                  <div class="text-white text-xs truncate flex-1">{entry.client_name}</div>
+                  <div class="text-white/40 text-xs">{entry.progress}%</div>
+                  <button
+                    type="button"
+                    phx-click="cancel-upload"
+                    phx-value-ref={entry.ref}
+                    phx-value-upload={field_name}
+                    class="text-red-400 hover:text-red-300 p-1 hover:bg-white/10 rounded"
+                  >
+                    &times;
+                  </button>
+                </div>
+              <% end %>
+            </div>
+          </label>
         <% _ -> %>
           <div class="text-red-400 text-xs">Tipo desconhecido: {@field.type}</div>
       <% end %>

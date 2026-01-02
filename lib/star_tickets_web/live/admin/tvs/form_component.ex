@@ -33,22 +33,46 @@ defmodule StarTicketsWeb.Admin.TVs.FormComponent do
         <div class="flex flex-col md:flex-row gap-8">
           <!-- Left Column: Inputs -->
           <div class="flex-1 space-y-4">
-            <.input field={@form[:name]} type="text" label="Nome da TV" placeholder="Ex: Recepção, Hall Entrada" />
+            <.input
+              field={@form[:name]}
+              type="text"
+              label="Nome da TV"
+              placeholder="Ex: Recepção, Hall Entrada"
+            />
 
             <%= if @action == :new do %>
-              <.input field={@form[:password]} type="text" label="Senha de Acesso" placeholder="Defina a senha da TV" />
+              <.input
+                field={@form[:password]}
+                type="text"
+                label="Senha de Acesso"
+                placeholder="Defina a senha da TV"
+              />
               <p class="text-xs text-white/40 -mt-2">Senha para o usuário da TV logar no sistema.</p>
             <% else %>
-               <.input field={@form[:password]} type="text" label="Redefinir Senha" placeholder="Deixe em branco para manter a atual" />
+              <.input
+                field={@form[:password]}
+                type="text"
+                label="Redefinir Senha"
+                placeholder="Deixe em branco para manter a atual"
+              />
             <% end %>
 
             <div class="bg-white/5 p-4 rounded-lg border border-white/10 space-y-4">
               <label class="flex items-center gap-3 cursor-pointer">
-                <.input field={@form[:news_enabled]} type="checkbox" label="Habilitar Notícias (RSS/URL)" />
+                <.input
+                  field={@form[:news_enabled]}
+                  type="checkbox"
+                  label="Habilitar Notícias (RSS/URL)"
+                />
               </label>
 
               <%= if Ecto.Changeset.get_field(@form.source, :news_enabled) do %>
-                <.input field={@form[:news_url]} type="text" label="URL da Notícia/Vídeo" placeholder="https://..." />
+                <.input
+                  field={@form[:news_url]}
+                  type="text"
+                  label="URL da Notícia/Vídeo"
+                  placeholder="https://..."
+                />
               <% end %>
             </div>
 
@@ -56,8 +80,12 @@ defmodule StarTicketsWeb.Admin.TVs.FormComponent do
               <div class="flex items-center justify-between mb-2">
                 <label class="block text-sm font-medium text-white/80">Salas Monitoradas</label>
                 <div class="flex items-center gap-2">
-                   <label class="flex items-center gap-2 cursor-pointer text-xs bg-blue-500/20 px-2 py-1 rounded border border-blue-500/30 text-blue-200 hover:bg-blue-500/30 transition-colors select-none">
-                    <.input field={@form[:all_rooms]} type="checkbox" class="checkbox-xs checkbox-primary" />
+                  <label class="flex items-center gap-2 cursor-pointer text-xs bg-blue-500/20 px-2 py-1 rounded border border-blue-500/30 text-blue-200 hover:bg-blue-500/30 transition-colors select-none">
+                    <.input
+                      field={@form[:all_rooms]}
+                      type="checkbox"
+                      class="checkbox-xs checkbox-primary"
+                    />
                     <span>Exibir Todas as Salas</span>
                   </label>
                 </div>
@@ -68,14 +96,14 @@ defmodule StarTicketsWeb.Admin.TVs.FormComponent do
               <div class={"bg-black/20 rounded border border-white/5 p-3 h-60 overflow-y-auto space-y-2 relative transition-opacity duration-300 " <> (if all_rooms, do: "opacity-50 pointer-events-none", else: "")}>
                 <%= for room <- @rooms do %>
                   <label class="flex items-center gap-3 cursor-pointer group hover:bg-white/5 p-2 rounded transition-colors">
-                     <input
-                       type="checkbox"
-                       name="tv[room_ids][]"
-                       value={room.id}
-                       checked={room.id in @selected_room_ids}
-                       class="checkbox checkbox-sm checkbox-primary border-white/30"
-                     />
-                     <span class="text-white group-hover:text-blue-300"><%= room.name %></span>
+                    <input
+                      type="checkbox"
+                      name="tv[room_ids][]"
+                      value={room.id}
+                      checked={room.id in @selected_room_ids}
+                      class="checkbox checkbox-sm checkbox-primary border-white/30"
+                    />
+                    <span class="text-white group-hover:text-blue-300">{room.name}</span>
                   </label>
                 <% end %>
                 <%= if Enum.empty?(@rooms) do %>
@@ -83,26 +111,27 @@ defmodule StarTicketsWeb.Admin.TVs.FormComponent do
                 <% end %>
 
                 <%= if all_rooms do %>
-                    <div class="absolute inset-0 flex items-center justify-center z-10">
-                      <span class="bg-black/80 text-white px-3 py-1 rounded text-sm font-semibold backdrop-blur-md border border-white/20 shadow-xl">
-                        Todas as salas serão exibidas
-                      </span>
-                    </div>
-                 <% end %>
+                  <div class="absolute inset-0 flex items-center justify-center z-10">
+                    <span class="bg-black/80 text-white px-3 py-1 rounded text-sm font-semibold backdrop-blur-md border border-white/20 shadow-xl">
+                      Todas as salas serão exibidas
+                    </span>
+                  </div>
+                <% end %>
               </div>
 
-              <.error :for={msg <- @form[:rooms].errors}><%= translate_error(msg) %></.error>
+              <.error :for={msg <- @form[:rooms].errors}>{translate_error(msg)}</.error>
 
-              <p class="text-xs text-white/40 mt-1">Selecione quais salas esta TV deve monitorar (chamadas de senhas).</p>
+              <p class="text-xs text-white/40 mt-1">
+                Selecione quais salas esta TV deve monitorar (chamadas de senhas).
+              </p>
             </div>
           </div>
-
-          <!-- Right Column: Info -->
+          
+    <!-- Right Column: Info -->
           <div class="w-full md:w-72 hidden md:block">
             <div class="bg-white/5 border border-white/10 p-4 rounded-lg text-sm space-y-4 h-full backdrop-blur-md">
               <h4 class="font-bold flex items-center gap-2 text-white">
-                <.icon name="hero-information-circle" class="size-6" />
-                Informações
+                <.icon name="hero-information-circle" class="size-6" /> Informações
               </h4>
 
               <div class="bg-blue-600/40 border border-blue-500/40 p-3 rounded text-blue-100">
@@ -113,18 +142,21 @@ defmodule StarTicketsWeb.Admin.TVs.FormComponent do
               <div class="bg-black/40 border border-white/10 p-3 rounded">
                 <div class="text-gray-400 text-xs mb-1">Login (Gerado):</div>
                 <div class="font-mono text-white text-md break-all">
-                  <%= preview_login(@establishment, @form[:name].value) %>
+                  {preview_login(@establishment, @form[:name].value)}
                 </div>
-                <div class="text-xs text-gray-400 mt-1 text-right">(cliente . estabelecimento . tv . nome)</div>
+                <div class="text-xs text-gray-400 mt-1 text-right">
+                  (cliente . estabelecimento . tv . nome)
+                </div>
               </div>
 
               <%= if @action == :edit do %>
                 <p class="text-xs text-white/50 bg-white/5 p-2 rounded">
-                  <span class="text-yellow-300">Nota:</span> Se alterar o nome da TV, o login do usuário pode não mudar automaticamente para evitar perda de acesso.
+                  <span class="text-yellow-300">Nota:</span>
+                  Se alterar o nome da TV, o login do usuário pode não mudar automaticamente para evitar perda de acesso.
                 </p>
               <% else %>
                 <p class="text-xs text-white/50">
-                   Utilize este usuário e a senha definida para logar na Smart TV ou Box.
+                  Utilize este usuário e a senha definida para logar na Smart TV ou Box.
                 </p>
               <% end %>
             </div>
@@ -134,8 +166,15 @@ defmodule StarTicketsWeb.Admin.TVs.FormComponent do
         <hr class="my-4 border-white/40 border-dashed" />
 
         <:actions>
-          <.link patch={@patch} class="btn btn-ghost text-white hover:bg-white/10 hover:shadow-none">Cancelar</.link>
-          <.button phx-disable-with="Salvando..." class="btn bg-orange-600/40 backdrop-blur-md border border-orange-500/90 text-white hover:bg-orange-600/50 shadow-lg">Salvar TV</.button>
+          <.link patch={@patch} class="btn btn-ghost text-white hover:bg-white/10 hover:shadow-none">
+            Cancelar
+          </.link>
+          <.button
+            phx-disable-with="Salvando..."
+            class="btn bg-orange-600/40 backdrop-blur-md border border-orange-500/90 text-white hover:bg-orange-600/50 shadow-lg"
+          >
+            Salvar TV
+          </.button>
         </:actions>
       </.simple_form>
     </div>

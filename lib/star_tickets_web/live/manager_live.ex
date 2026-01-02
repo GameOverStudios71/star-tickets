@@ -12,7 +12,7 @@ defmodule StarTicketsWeb.ManagerLive do
 
   def render(assigns) do
     ~H"""
-    <div class="st-app has-background min-h-screen flex flex-col" style="padding-top: 80px;">
+    <div class="st-app has-background min-h-screen flex flex-col pt-20">
       <.app_header
         title="Gerente"
         show_home={true}
@@ -26,7 +26,7 @@ defmodule StarTicketsWeb.ManagerLive do
         impersonating={@impersonating}
       />
 
-      <div class="st-container flex-1 m-4">
+      <div class="st-container flex-1 m-4" style="margin-top: 0;">
         <.page_header
           title="📊 Painel do Gerente"
           description="Otimização de filas e monitoramento de fluxo."
@@ -36,9 +36,22 @@ defmodule StarTicketsWeb.ManagerLive do
         >
           <hr class="my-6 border-white/500 opacity-40 border-dashed" />
 
+          <div class="st-grid mt-6">
+            <.link navigate={~p"/admin/audit"} class="st-card st-nav-card">
+              <span class="st-icon">🛡️</span>
+              <h2>Auditoria</h2>
+              <p>Logs forenses e rastreamento</p>
+            </.link>
+            
+    <!-- Placeholder for other manager tasks -->
+            <.link navigate={~p"/dashboard"} class="st-card st-nav-card opacity-50 cursor-not-allowed">
+              <span class="st-icon">📈</span>
+              <h2>Relatórios (Breve)</h2>
+              <p>Métricas de atendimento</p>
+            </.link>
+          </div>
         </.page_header>
       </div>
-
     </div>
     """
   end

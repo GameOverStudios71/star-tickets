@@ -1,4 +1,6 @@
 defmodule StarTickets.Accounts.TV do
+  @moduledoc false
+
   use Ecto.Schema
   import Ecto.Changeset
 

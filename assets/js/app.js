@@ -1,4 +1,4 @@
-w// If you want to use Phoenix channels, run `mix help phx.gen.channel`
+// If you want to use Phoenix channels, run `mix help phx.gen.channel`
 // to get started and then uncomment the line below.
 // import "./user_socket.js"
 
@@ -360,3 +360,31 @@ if ('serviceWorker' in navigator) {
       });
   });
 }
+
+// ============================================
+// Hardware Info Collection (for device tracking)
+// ============================================
+(function collectHardwareInfo() {
+  try {
+    const hardwareInfo = {
+      cpuCores: navigator.hardwareConcurrency || null,
+      memoryGb: navigator.deviceMemory || null,
+      screenResolution: `${screen.width}x${screen.height}`,
+      platform: navigator.platform || null,
+      language: navigator.language || null,
+      connectionType: navigator.connection?.effectiveType || null,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || null
+    };
+
+    // Encode as base64 JSON and store in cookie
+    const jsonStr = JSON.stringify(hardwareInfo);
+    const encoded = btoa(jsonStr);
+
+    // Set cookie with 1 hour expiry
+    document.cookie = `_st_hardware_info=${encoded}; path=/; max-age=3600; SameSite=Lax`;
+
+    console.log('[Hardware] Info collected:', hardwareInfo);
+  } catch (e) {
+    console.log('[Hardware] Failed to collect info:', e);
+  }
+})();

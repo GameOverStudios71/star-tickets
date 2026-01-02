@@ -1,4 +1,6 @@
 defmodule StarTicketsWeb.Admin.Forms.FieldFormComponent do
+  @moduledoc false
+
   use StarTicketsWeb, :live_component
 
   alias StarTickets.Forms
@@ -18,18 +20,28 @@ defmodule StarTicketsWeb.Admin.Forms.FieldFormComponent do
         <div class="space-y-4">
           <.input field={@form[:label]} type="text" label="Rótulo (Pergunta)" required />
           <%= if @field.type in ["text", "number", "textarea", "select"] do %>
-             <.input field={@form[:placeholder]} type="text" label="Placeholder (Dica de preenchimento)" />
+            <.input
+              field={@form[:placeholder]}
+              type="text"
+              label="Placeholder (Dica de preenchimento)"
+            />
           <% end %>
 
           <div class="flex items-center gap-2 pt-2">
-             <.input field={@form[:required]} type="checkbox" label="Obrigatório?" />
+            <.input field={@form[:required]} type="checkbox" label="Obrigatório?" />
           </div>
 
           <%= if @field.type in ["select", "radio", "checkbox"] do %>
             <div class="form-control">
               <label class="label text-white">Opções (uma por linha)</label>
-              <textarea name="options_text" class="textarea textarea-bordered bg-white/10 text-white h-32" placeholder="Opção 1&#10;Opção 2&#10;valor: Rótulo customizado">{@options_text}</textarea>
-              <p class="text-xs text-gray-400 mt-1">Para valores personalizados use: <code>valor: Rótulo</code></p>
+              <textarea
+                name="options_text"
+                class="textarea textarea-bordered bg-white/10 text-white h-32"
+                placeholder="Opção 1&#10;Opção 2&#10;valor: Rótulo customizado"
+              >{@options_text}</textarea>
+              <p class="text-xs text-gray-400 mt-1">
+                Para valores personalizados use: <code>valor: Rótulo</code>
+              </p>
             </div>
           <% end %>
 
@@ -37,7 +49,9 @@ defmodule StarTicketsWeb.Admin.Forms.FieldFormComponent do
         </div>
 
         <:actions>
-          <button type="button" phx-click="cancel_edit" class="btn btn-ghost text-white">Cancelar</button>
+          <button type="button" phx-click="cancel_edit" class="btn btn-ghost text-white">
+            Cancelar
+          </button>
           <.button class="btn btn-primary">Salvar Alterações</.button>
         </:actions>
       </.simple_form>

@@ -33,11 +33,15 @@ defmodule StarTicketsWeb.Router do
     pipe_through([:browser, :redirect_if_user_is_authenticated])
 
     live_session :redirect_if_user_is_authenticated,
-      on_mount: [{StarTicketsWeb.UserAuth, :mount_current_scope}] do
-      live("/users/register", UserRegistrationLive, :new)
+      on_mount: [
+        {StarTicketsWeb.UserAuth, :mount_current_scope},
+        {StarTicketsWeb.AuditHook, :default}
+      ] do
+      live("/users/register", ClientRegisterLive, :new)
       live("/users/log-in", UserLive.Login, :new)
-      live("/users/reset_password", UserForgotPasswordLive, :new)
-      live("/users/reset_password/:token", UserResetPasswordLive, :edit)
+      # Note: Password reset LiveViews not implemented yet
+      # live("/users/reset_password", UserForgotPasswordLive, :new)
+      # live("/users/reset_password/:token", UserResetPasswordLive, :edit)
     end
 
     post("/users/log-in", UserSessionController, :create)
@@ -49,12 +53,18 @@ defmodule StarTicketsWeb.Router do
     post("/impersonate", ImpersonationController, :create)
     delete("/impersonate", ImpersonationController, :delete)
     post("/select-establishment", ImpersonationController, :select_establishment)
+    post("/users/update-password", UserSessionController, :update_password)
 
     live_session :require_authenticated_user,
-      on_mount: [{StarTicketsWeb.UserAuth, :ensure_authenticated}] do
+      on_mount: [
+        {StarTicketsWeb.UserAuth, :ensure_authenticated},
+        {StarTicketsWeb.AuditHook, :default}
+      ] do
       live("/users/settings", UserLive.Settings, :edit)
       live("/users/settings/confirm_email/:token", UserLive.Settings, :confirm_email)
       live("/users/devices", UserLive.Devices, :index)
+
+      # Main Dashboards (Role protected inside LiveViews or hooks)
 
       # Main Dashboards (Role protected inside LiveViews or hooks)
       live("/dashboard", DashboardLive)
@@ -69,12 +79,14 @@ defmodule StarTicketsWeb.Router do
     live_session :admin_only,
       on_mount: [
         {StarTicketsWeb.UserAuth, :ensure_authenticated},
-        {StarTicketsWeb.UserAuth, :ensure_admin_or_manager}
+        {StarTicketsWeb.UserAuth, :ensure_admin_or_manager},
+        {StarTicketsWeb.AuditHook, :default}
       ] do
       live("/client-register", ClientRegisterLive, :new)
       live("/admin", AdminLive)
 
       live("/admin/users", Admin.UsersLive, :index)
+      live("/admin/audit", Admin.AuditLive)
       live("/admin/users/new", Admin.UsersLive, :new)
       live("/admin/users/:id/edit", Admin.UsersLive, :edit)
 
@@ -107,9 +119,18 @@ defmodule StarTicketsWeb.Router do
     pipe_through([:browser])
 
     delete("/users/log-out", UserSessionController, :delete)
-    get("/users/confirm", UserConfirmationController, :new)
-    post("/users/confirm", UserConfirmationController, :create)
-    get("/users/confirm/:token", UserConfirmationController, :edit)
-    post("/users/confirm/:token", UserConfirmationController, :update)
+    # Note: User confirmation controller not implemented yet
+    # get("/users/confirm", UserConfirmationController, :new)
+    # post("/users/confirm", UserConfirmationController, :create)
+    # get("/users/confirm/:token", UserConfirmationController, :edit)
+    # post("/users/confirm/:token", UserConfirmationController, :update)
+  end
+
+  if Mix.env() == :dev do
+    scope "/dev" do
+      pipe_through :browser
+
+      forward "/mailbox", Plug.Swoosh.MailboxPreview
+    end
   end
 end

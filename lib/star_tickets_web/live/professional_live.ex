@@ -6,8 +6,6 @@ defmodule StarTicketsWeb.ProfessionalLive do
   alias StarTickets.Tickets
   alias StarTickets.Repo
 
-  @topic "tickets"
-
   def mount(_params, session, socket) do
     impersonation_assigns =
       ImpersonationHelpers.load_impersonation_assigns(socket.assigns.current_scope, session)
@@ -122,7 +120,7 @@ defmodule StarTicketsWeb.ProfessionalLive do
     user_id = socket.assigns.current_scope.user.id
     room_id = socket.assigns.selected_room_id
 
-    case Tickets.call_ticket_to_room(ticket, user_id, room_id) do
+    case Tickets.call_ticket_to_room(ticket, user_id, room_id, socket.assigns.current_scope.user) do
       {:ok, _ticket} ->
         {:noreply,
          socket
@@ -138,7 +136,7 @@ defmodule StarTicketsWeb.ProfessionalLive do
 
   def handle_event("start_attendance", %{"id" => id}, socket) do
     ticket = Tickets.get_ticket!(id)
-    {:ok, _} = Tickets.start_professional_attendance(ticket)
+    {:ok, _} = Tickets.start_professional_attendance(ticket, socket.assigns.current_scope.user)
     {:noreply, socket |> put_flash(:info, "Atendimento iniciado!") |> load_tickets()}
   end
 
@@ -152,7 +150,12 @@ defmodule StarTicketsWeb.ProfessionalLive do
         socket.assigns.selected_room.services
       end
 
-    {:ok, updated_ticket} = Tickets.finish_attendance_and_route(ticket, room_services)
+    {:ok, updated_ticket} =
+      Tickets.finish_attendance_and_route(
+        ticket,
+        room_services,
+        socket.assigns.current_scope.user
+      )
 
     msg =
       if updated_ticket.status == "FINISHED" do
@@ -259,20 +262,33 @@ defmodule StarTicketsWeb.ProfessionalLive do
       >
         <:right>
           <div class="flex items-center gap-3" phx-hook="RoomPreference" id="room-preference">
-            <span class="text-white font-medium"><%= if @selected_room, do: "✅ Sala Ativa:", else: "🏥 Selecione sua Sala:" %></span>
+            <span class="text-white font-medium">
+              {if @selected_room, do: "✅ Sala Ativa:", else: "🏥 Selecione sua Sala:"}
+            </span>
             <form phx-change="select_room" class="m-0">
-               <select name="id" class="bg-black/30 text-white border border-white/20 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-emerald-500 outline-none backdrop-blur-md">
-                 <option value="" selected={is_nil(@selected_room_id)}>Escolher...</option>
-                 <%= for room <- @rooms do %>
-                   <%
-                      is_occupied = room.occupied_by_user_id && room.occupied_by_user_id != @current_scope.user.id
-                      occupier_name = if is_occupied && room.occupied_by_user, do: " (#{room.occupied_by_user.name})", else: ""
-                   %>
-                   <option value={room.id} selected={@selected_room_id == room.id} disabled={is_occupied} class={if is_occupied, do: "text-red-400 bg-black/80", else: "text-white"}>
-                      <%= room.name %><%= occupier_name %>
-                   </option>
-                 <% end %>
-               </select>
+              <select
+                name="id"
+                class="bg-black/30 text-white border border-white/20 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-emerald-500 outline-none backdrop-blur-md"
+              >
+                <option value="" selected={is_nil(@selected_room_id)}>Escolher...</option>
+                <%= for room <- @rooms do %>
+                  <% is_occupied =
+                    room.occupied_by_user_id && room.occupied_by_user_id != @current_scope.user.id
+
+                  occupier_name =
+                    if is_occupied && room.occupied_by_user,
+                      do: " (#{room.occupied_by_user.name})",
+                      else: "" %>
+                  <option
+                    value={room.id}
+                    selected={@selected_room_id == room.id}
+                    disabled={is_occupied}
+                    class={if is_occupied, do: "text-red-400 bg-black/80", else: "text-white"}
+                  >
+                    {room.name}{occupier_name}
+                  </option>
+                <% end %>
+              </select>
             </form>
           </div>
         </:right>
@@ -281,181 +297,237 @@ defmodule StarTicketsWeb.ProfessionalLive do
       <div class="st-container flex-1 p-6">
         <%= unless @selected_room_id do %>
           <div class="h-full flex flex-col items-center justify-center text-white/50 bg-emerald-950/30 backdrop-blur-md rounded-2xl border border-emerald-500/10">
-             <div class="text-6xl mb-4">🏥</div>
-             <h2 class="text-2xl font-bold text-white mb-2">Selecione sua Sala</h2>
-             <p>Escolha a sala onde você está atendendo no menu superior.</p>
+            <div class="text-6xl mb-4">🏥</div>
+            <h2 class="text-2xl font-bold text-white mb-2">Selecione sua Sala</h2>
+            <p>Escolha a sala onde você está atendendo no menu superior.</p>
           </div>
         <% else %>
-
           <div class="grid grid-cols-12 gap-6 h-[calc(100vh-140px)]">
-             <%!-- Left: Queue --%>
-             <div class="col-span-4 flex flex-col gap-4 h-full bg-emerald-950/30 backdrop-blur-md rounded-2xl p-4 border border-emerald-500/10 shadow-xl">
-                <div class="flex items-center justify-between">
-                   <div class="flex items-center gap-2 w-full">
-                      <button phx-click="set_tab" phx-value-tab="active"
-                              class={"flex-1 py-1.5 px-3 rounded-md text-sm font-bold transition-all " <>
+            <%!-- Left: Queue --%>
+            <div class="col-span-4 flex flex-col gap-4 h-full bg-emerald-950/30 backdrop-blur-md rounded-2xl p-4 border border-emerald-500/10 shadow-xl">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2 w-full">
+                  <button
+                    phx-click="set_tab"
+                    phx-value-tab="active"
+                    class={"flex-1 py-1.5 px-3 rounded-md text-sm font-bold transition-all " <>
                                 if(@tab == "active",
                                    do: "bg-emerald-600 text-white shadow-lg",
-                                   else: "text-white/50 hover:text-white hover:bg-white/5")}>
-                        👥 Aguardando
-                        <span class="ml-1 opacity-75 text-xs bg-black/20 px-1.5 rounded-full"><%= length(@tickets) %></span>
-                      </button>
-                      <button phx-click="set_tab" phx-value-tab="finished"
-                              class={"flex-1 py-1.5 px-3 rounded-md text-sm font-bold transition-all " <>
+                                   else: "text-white/50 hover:text-white hover:bg-white/5")}
+                  >
+                    👥 Aguardando
+                    <span class="ml-1 opacity-75 text-xs bg-black/20 px-1.5 rounded-full">
+                      {length(@tickets)}
+                    </span>
+                  </button>
+                  <button
+                    phx-click="set_tab"
+                    phx-value-tab="finished"
+                    class={"flex-1 py-1.5 px-3 rounded-md text-sm font-bold transition-all " <>
                                 if(@tab == "finished",
                                    do: "bg-emerald-600 text-white shadow-lg",
-                                   else: "text-white/50 hover:text-white hover:bg-white/5")}>
-                         ✅ Finalizados
-                      </button>
-                   </div>
+                                   else: "text-white/50 hover:text-white hover:bg-white/5")}
+                  >
+                    ✅ Finalizados
+                  </button>
                 </div>
+              </div>
 
-                <div class="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
-                   <%= for ticket <- @tickets do %>
-                      <div phx-click="select_ticket" phx-value-id={ticket.id}
-                           class={"p-4 rounded-xl border transition-all cursor-pointer relative overflow-hidden group " <>
+              <div class="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
+                <%= for ticket <- @tickets do %>
+                  <div
+                    phx-click="select_ticket"
+                    phx-value-id={ticket.id}
+                    class={"p-4 rounded-xl border transition-all cursor-pointer relative overflow-hidden group " <>
                              if(@selected_ticket && @selected_ticket.id == ticket.id,
                                 do: "bg-white/10 border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.2)]",
-                                else: "bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/20")}>
+                                else: "bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/20")}
+                  >
+                    <div class="flex justify-between items-start mb-2">
+                      <span class="text-2xl font-bold text-white font-mono tracking-tighter">
+                        {ticket.display_code}
+                      </span>
+                      <%= if ticket.is_priority do %>
+                        <span class="bg-amber-500 text-black text-[10px] font-bold px-1.5 py-0.5 rounded uppercase">
+                          Prioridade
+                        </span>
+                      <% end %>
+                    </div>
+                    <div class="text-white/80 font-medium truncate mb-1">
+                      {ticket.customer_name || "Sem identificação"}
+                    </div>
+                    <div class="text-white/40 text-xs flex items-center gap-2 flex-wrap">
+                      <span>🕒 {Calendar.strftime(ticket.inserted_at, "%H:%M")}</span>
+                      <%= case ticket.status do %>
+                        <% "WAITING_PROFESSIONAL" -> %>
+                          <span class="bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded text-[10px] border border-emerald-500/30 font-bold">
+                            🆕 Aguardando
+                          </span>
+                        <% "WAITING_NEXT_SERVICE" -> %>
+                          <span class="bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded text-[10px] border border-blue-500/30 font-bold">
+                            🔄 Retorno
+                          </span>
+                        <% "FINISHED" -> %>
+                          <span class="bg-gray-500/20 text-gray-300 px-1.5 py-0.5 rounded text-[10px] border border-gray-500/30 font-bold">
+                            ✅ Finalizado
+                          </span>
+                        <% other -> %>
+                          <span class="bg-white/10 text-white/50 px-1.5 py-0.5 rounded text-[10px] border border-white/10">
+                            {other}
+                          </span>
+                      <% end %>
+                    </div>
+                  </div>
+                <% end %>
+                <%= if Enum.empty?(@tickets) do %>
+                  <div class="text-center py-10 text-white/30 border-2 border-dashed border-white/5 rounded-xl">
+                    Nenhum paciente aguardando para esta sala.
+                  </div>
+                <% end %>
+              </div>
+            </div>
 
-                         <div class="flex justify-between items-start mb-2">
-                            <span class="text-2xl font-bold text-white font-mono tracking-tighter"><%= ticket.display_code %></span>
-                            <%= if ticket.is_priority do %>
-                               <span class="bg-amber-500 text-black text-[10px] font-bold px-1.5 py-0.5 rounded uppercase">Prioridade</span>
-                            <% end %>
-                         </div>
-                         <div class="text-white/80 font-medium truncate mb-1"><%= ticket.customer_name || "Sem identificação" %></div>
-                         <div class="text-white/40 text-xs flex items-center gap-2 flex-wrap">
-                            <span>🕒 <%= Calendar.strftime(ticket.inserted_at, "%H:%M") %></span>
-                            <%= case ticket.status do %>
-                              <% "WAITING_PROFESSIONAL" -> %>
-                                 <span class="bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded text-[10px] border border-emerald-500/30 font-bold">🆕 Aguardando</span>
-                              <% "WAITING_NEXT_SERVICE" -> %>
-                                 <span class="bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded text-[10px] border border-blue-500/30 font-bold">🔄 Retorno</span>
-                              <% "FINISHED" -> %>
-                                 <span class="bg-gray-500/20 text-gray-300 px-1.5 py-0.5 rounded text-[10px] border border-gray-500/30 font-bold">✅ Finalizado</span>
-                              <% other -> %>
-                                 <span class="bg-white/10 text-white/50 px-1.5 py-0.5 rounded text-[10px] border border-white/10"><%= other %></span>
-                            <% end %>
-                         </div>
+            <%!-- Right: Active Ticket / Details --%>
+            <div class="col-span-8 flex flex-col h-full">
+              <%= if @active_ticket do %>
+                <%!-- Active Patient Card --%>
+                <div class="bg-gradient-to-br from-emerald-900/80 to-black/90 border border-emerald-500/40 rounded-2xl p-8 shadow-2xl backdrop-blur-xl relative overflow-hidden flex-1 flex flex-col">
+                  <div class="absolute top-0 right-0 p-4">
+                    <span class="bg-emerald-500 text-white font-bold px-3 py-1 rounded-full text-sm shadow-lg animate-pulse">
+                      {if @active_ticket.status == "CALLED_PROFESSIONAL",
+                        do: "📢 CHAMANDO...",
+                        else: "👨‍⚕️ EM ATENDIMENTO"}
+                    </span>
+                  </div>
+
+                  <div class="grid grid-cols-1 gap-4 mb-8 mt-12">
+                    <%= if @active_ticket.status == "CALLED_PROFESSIONAL" do %>
+                      <button
+                        phx-click="start_attendance"
+                        phx-value-id={@active_ticket.id}
+                        class="w-full py-5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-2xl rounded-xl shadow-lg transition-transform hover:scale-[1.01] active:scale-[0.99] border border-white/20"
+                      >
+                        ▶️ INICIAR CONSULTA
+                      </button>
+                    <% else %>
+                      <button
+                        phx-click="finish_attendance"
+                        phx-value-id={@active_ticket.id}
+                        class="w-full py-5 bg-orange-600 hover:bg-orange-500 text-white font-bold text-2xl rounded-xl shadow-lg transition-transform hover:scale-[1.01] active:scale-[0.99] border border-white/20"
+                      >
+                        ✅ FINALIZAR
+                      </button>
+                    <% end %>
+                  </div>
+
+                  <div class="mb-8">
+                    <h1 class="text-6xl font-black text-white mb-2 font-mono tracking-tighter">
+                      {@active_ticket.display_code}
+                    </h1>
+                    <h2 class="text-3xl text-emerald-100 font-bold">
+                      {@active_ticket.customer_name}
+                    </h2>
+                    <%= if @active_ticket.is_priority do %>
+                      <span class="text-amber-400 font-bold text-lg mt-2 block">★ PRIORIDADE</span>
+                    <% end %>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-6 bg-black/20 p-6 rounded-xl border border-white/5">
+                    <div>
+                      <span class="text-white/40 text-sm block mb-1">
+                        Serviços Pendentes Nesta Sala:
+                      </span>
+                      <div class="flex flex-wrap gap-2">
+                        <%= for service <- @active_ticket.services do %>
+                          <%= if Enum.any?(@selected_room.services, &(&1.id == service.id)) do %>
+                            <span class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-1 rounded text-sm">
+                              {service.name}
+                            </span>
+                          <% end %>
+                        <% end %>
                       </div>
-                   <% end %>
-                   <%= if Enum.empty?(@tickets) do %>
-                      <div class="text-center py-10 text-white/30 border-2 border-dashed border-white/5 rounded-xl">
-                         Nenhum paciente aguardando para esta sala.
+                    </div>
+                    <div>
+                      <span class="text-white/40 text-sm block mb-1">Outros Serviços:</span>
+                      <div class="flex flex-wrap gap-2">
+                        <%= for service <- @active_ticket.services do %>
+                          <%= unless Enum.any?(@selected_room.services, &(&1.id == service.id)) do %>
+                            <span class="bg-white/10 text-white/60 border border-white/10 px-2 py-1 rounded text-sm">
+                              {service.name}
+                            </span>
+                          <% end %>
+                        <% end %>
                       </div>
-                   <% end %>
+                    </div>
+                  </div>
                 </div>
-             </div>
+              <% else %>
+                <%!-- Selection State --%>
+                <%= if @selected_ticket do %>
+                  <div class="bg-emerald-950/50 backdrop-blur-xl p-8 rounded-2xl border border-emerald-500/10 h-full flex flex-col shadow-2xl">
+                    <div class="mb-6">
+                      <%= if @tab != "finished" do %>
+                        <button
+                          phx-click="call_ticket"
+                          phx-value-id={@selected_ticket.id}
+                          class="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xl rounded-xl transition-all border border-white/20 shadow-lg shadow-blue-500/20"
+                        >
+                          📢 CHAMAR PACIENTE
+                        </button>
+                      <% else %>
+                        <div class="w-full py-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-center">
+                          <span class="text-emerald-400 font-bold text-lg">
+                            ✅ Atendimento Finalizado
+                          </span>
+                          <div class="text-white/40 text-sm mt-1">
+                            Concluído em {Calendar.strftime(@selected_ticket.updated_at, "%H:%M")}
+                          </div>
+                        </div>
+                      <% end %>
+                    </div>
 
-             <%!-- Right: Active Ticket / Details --%>
-             <div class="col-span-8 flex flex-col h-full">
-                <%= if @active_ticket do %>
-                   <%!-- Active Patient Card --%>
-                   <div class="bg-gradient-to-br from-emerald-900/80 to-black/90 border border-emerald-500/40 rounded-2xl p-8 shadow-2xl backdrop-blur-xl relative overflow-hidden flex-1 flex flex-col">
-                      <div class="absolute top-0 right-0 p-4">
-                         <span class="bg-emerald-500 text-white font-bold px-3 py-1 rounded-full text-sm shadow-lg animate-pulse">
-                            <%= if @active_ticket.status == "CALLED_PROFESSIONAL", do: "📢 CHAMANDO...", else: "👨‍⚕️ EM ATENDIMENTO" %>
-                         </span>
+                    <h2 class="text-3xl font-bold text-white mb-6">Detalhes da Senha</h2>
+
+                    <div class="flex-1">
+                      <div class="p-6 bg-black/20 rounded-xl mb-6">
+                        <div class="text-4xl font-mono font-bold text-white mb-2">
+                          {@selected_ticket.display_code}
+                        </div>
+                        <div class="text-xl text-white/80">
+                          {@selected_ticket.customer_name || "Sem nome"}
+                        </div>
                       </div>
-
-                      <div class="grid grid-cols-1 gap-4 mb-8 mt-12">
-                         <%= if @active_ticket.status == "CALLED_PROFESSIONAL" do %>
-                            <button phx-click="start_attendance" phx-value-id={@active_ticket.id}
-                                    class="w-full py-5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-2xl rounded-xl shadow-lg transition-transform hover:scale-[1.01] active:scale-[0.99] border border-white/20">
-                               ▶️ INICIAR CONSULTA
-                            </button>
-                         <% else %>
-                            <button phx-click="finish_attendance" phx-value-id={@active_ticket.id}
-                                    class="w-full py-5 bg-orange-600 hover:bg-orange-500 text-white font-bold text-2xl rounded-xl shadow-lg transition-transform hover:scale-[1.01] active:scale-[0.99] border border-white/20">
-                               ✅ FINALIZAR
-                            </button>
-                         <% end %>
-                      </div>
-
-                      <div class="mb-8">
-                         <h1 class="text-6xl font-black text-white mb-2 font-mono tracking-tighter"><%= @active_ticket.display_code %></h1>
-                         <h2 class="text-3xl text-emerald-100 font-bold"><%= @active_ticket.customer_name %></h2>
-                         <%= if @active_ticket.is_priority do %>
-                            <span class="text-amber-400 font-bold text-lg mt-2 block">★ PRIORIDADE</span>
-                         <% end %>
-                      </div>
-
-                      <div class="grid grid-cols-2 gap-6 bg-black/20 p-6 rounded-xl border border-white/5">
-                         <div>
-                            <span class="text-white/40 text-sm block mb-1">Serviços Pendentes Nesta Sala:</span>
-                            <div class="flex flex-wrap gap-2">
-                               <%= for service <- @active_ticket.services do %>
-                                  <%= if Enum.any?(@selected_room.services, &(&1.id == service.id)) do %>
-                                     <span class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-1 rounded text-sm"><%= service.name %></span>
-                                  <% end %>
-                               <% end %>
-                            </div>
-                         </div>
-                         <div>
-                             <span class="text-white/40 text-sm block mb-1">Outros Serviços:</span>
-                             <div class="flex flex-wrap gap-2">
-                                <%= for service <- @active_ticket.services do %>
-                                   <%= unless Enum.any?(@selected_room.services, &(&1.id == service.id)) do %>
-                                      <span class="bg-white/10 text-white/60 border border-white/10 px-2 py-1 rounded text-sm"><%= service.name %></span>
-                                   <% end %>
-                                <% end %>
-                             </div>
-                         </div>
-                      </div>
-                   </div>
-
-                <% else %>
-                   <%!-- Selection State --%>
-                   <%= if @selected_ticket do %>
-                      <div class="bg-emerald-950/50 backdrop-blur-xl p-8 rounded-2xl border border-emerald-500/10 h-full flex flex-col shadow-2xl">
-                         <div class="mb-6">
-                            <%= if @tab != "finished" do %>
-                               <button phx-click="call_ticket" phx-value-id={@selected_ticket.id}
-                                       class="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xl rounded-xl transition-all border border-white/20 shadow-lg shadow-blue-500/20">
-                                  📢 CHAMAR PACIENTE
-                               </button>
-                            <% else %>
-                               <div class="w-full py-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-center">
-                                  <span class="text-emerald-400 font-bold text-lg">✅ Atendimento Finalizado</span>
-                                  <div class="text-white/40 text-sm mt-1">Concluído em <%= Calendar.strftime(@selected_ticket.updated_at, "%H:%M") %></div>
-                               </div>
-                            <% end %>
-                         </div>
-
-                         <h2 class="text-3xl font-bold text-white mb-6">Detalhes da Senha</h2>
-
-                         <div class="flex-1">
-                            <div class="p-6 bg-black/20 rounded-xl mb-6">
-                               <div class="text-4xl font-mono font-bold text-white mb-2"><%= @selected_ticket.display_code %></div>
-                               <div class="text-xl text-white/80"><%= @selected_ticket.customer_name || "Sem nome" %></div>
-                            </div>
-                            <h3 class="text-white/60 uppercase text-sm font-bold mb-3">Serviços Solicitados</h3>
-                            <div class="flex flex-col gap-2">
-                               <%= for service <- @selected_ticket.services do %>
-                                  <div class={"p-3 rounded-lg border flex justify-between items-center " <>
+                      <h3 class="text-white/60 uppercase text-sm font-bold mb-3">
+                        Serviços Solicitados
+                      </h3>
+                      <div class="flex flex-col gap-2">
+                        <%= for service <- @selected_ticket.services do %>
+                          <div class={"p-3 rounded-lg border flex justify-between items-center " <>
                                      if(Enum.any?(@selected_room.services, &(&1.id == service.id)),
                                         do: "bg-emerald-500/10 border-emerald-500/30 text-emerald-100",
                                         else: "bg-white/5 border-white/10 text-white/50")}>
-                                     <span><%= service.name %></span>
-                                     <%= if Enum.any?(@selected_room.services, &(&1.id == service.id)) do %>
-                                        <span class="text-xs bg-emerald-500/20 px-2 py-0.5 rounded">Sua Sala</span>
-                                     <% end %>
-                                  </div>
-                               <% end %>
-                            </div>
-                         </div>
+                            <span>{service.name}</span>
+                            <%= if Enum.any?(@selected_room.services, &(&1.id == service.id)) do %>
+                              <span class="text-xs bg-emerald-500/20 px-2 py-0.5 rounded">
+                                Sua Sala
+                              </span>
+                            <% end %>
+                          </div>
+                        <% end %>
                       </div>
-                   <% else %>
-                      <div class="bg-emerald-950/30 backdrop-blur-md border border-emerald-500/10 rounded-2xl h-full flex flex-col items-center justify-center text-center text-white/40 shadow-xl">
-                         <div class="text-4xl mb-4">👈</div>
-                         <p class="text-lg">Selecione um paciente na lista<br/>para visualizar os detalhes.</p>
-                      </div>
-                   <% end %>
+                    </div>
+                  </div>
+                <% else %>
+                  <div class="bg-emerald-950/30 backdrop-blur-md border border-emerald-500/10 rounded-2xl h-full flex flex-col items-center justify-center text-center text-white/40 shadow-xl">
+                    <div class="text-4xl mb-4">👈</div>
+                    <p class="text-lg">
+                      Selecione um paciente na lista<br />para visualizar os detalhes.
+                    </p>
+                  </div>
                 <% end %>
-             </div>
+              <% end %>
+            </div>
           </div>
-
         <% end %>
       </div>
     </div>

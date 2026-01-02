@@ -43,7 +43,7 @@ defmodule StarTicketsWeb.ClientRegisterLive do
         # Send welcome email with confirmation link
         Accounts.deliver_login_instructions(
           user,
-          &url(~p"/users/log-in/#{&1}")
+          fn token -> url(~p"/users/log-in?token=#{token}") end
         )
 
         {:noreply,
@@ -135,17 +135,16 @@ defmodule StarTicketsWeb.ClientRegisterLive do
           <div class="text-6xl mb-4">📧</div>
           <h1 class="text-2xl font-bold text-white mb-4">Cadastro Realizado!</h1>
           <p class="text-white/80 mb-6">
-            Sua empresa foi cadastrada com sucesso!<br />
-            Enviamos um email de confirmação para:
+            Sua empresa foi cadastrada com sucesso!<br /> Enviamos um email de confirmação para:
           </p>
 
           <div class="st-card st-acrylic-light mb-4">
-            <p class="text-lg font-bold text-white"><%= @created_user.email %></p>
+            <p class="text-lg font-bold text-white">{@created_user.email}</p>
           </div>
 
           <div class="st-card st-acrylic mb-6">
             <p class="text-sm text-white/70 mb-2">Seu login será:</p>
-            <p class="text-xl font-mono font-bold text-white"><%= @preview_username %></p>
+            <p class="text-xl font-mono font-bold text-white">{@preview_username}</p>
           </div>
 
           <div class="bg-amber-500/20 border border-amber-500/50 text-amber-200 p-4 rounded-lg mb-6">
@@ -174,15 +173,28 @@ defmodule StarTicketsWeb.ClientRegisterLive do
 
           <%= if @error_message do %>
             <div class="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-lg mb-4">
-              <%= @error_message %>
+              {@error_message}
             </div>
           <% end %>
 
-          <.form for={@form} phx-change="validate" phx-submit="register" class="space-y-4">
+          <.form
+            for={@form}
+            phx-change="validate"
+            phx-submit="register"
+            class="space-y-4"
+            autocomplete="off"
+          >
             <div class="st-form-group">
               <label>Nome da Empresa</label>
-              <input type="text" name="company_name" value={@form.source["company_name"]}
-                     class="st-input" placeholder="Ex: Minha Empresa" required />
+              <input
+                type="text"
+                name="company_name"
+                value={@form.source["company_name"]}
+                class="st-input"
+                placeholder="Ex: Minha Empresa"
+                required
+                autocomplete="off"
+              />
             </div>
 
             <hr class="border-white/20 my-6" />
@@ -191,33 +203,61 @@ defmodule StarTicketsWeb.ClientRegisterLive do
 
             <div class="st-form-group">
               <label>Nome Completo</label>
-              <input type="text" name="admin_name" value={@form.source["admin_name"]}
-                     class="st-input" placeholder="Seu nome" required />
+              <input
+                type="text"
+                name="admin_name"
+                value={@form.source["admin_name"]}
+                class="st-input"
+                placeholder="Seu nome"
+                required
+                autocomplete="off"
+              />
             </div>
 
             <div class="st-form-group">
               <label>E-mail</label>
-              <input type="email" name="admin_email" value={@form.source["admin_email"]}
-                     class="st-input" placeholder="seu@email.com" required />
+              <input
+                type="email"
+                name="admin_email"
+                value={@form.source["admin_email"]}
+                class="st-input"
+                placeholder="seu@email.com"
+                required
+                autocomplete="off"
+              />
             </div>
 
             <div class="st-form-group">
               <label>Senha (mínimo 12 caracteres)</label>
-              <input type="password" name="password" value={@form.source["password"]}
-                     class="st-input" placeholder="••••••••••••" required minlength="12" />
+              <input
+                type="password"
+                name="password"
+                value={@form.source["password"]}
+                class="st-input"
+                placeholder="••••••••••••"
+                required
+                minlength="12"
+                autocomplete="new-password"
+              />
             </div>
 
             <div class="st-form-group">
               <label>Confirmar Senha</label>
-              <input type="password" name="password_confirmation"
-                     value={@form.source["password_confirmation"]}
-                     class="st-input" placeholder="••••••••••••" required />
+              <input
+                type="password"
+                name="password_confirmation"
+                value={@form.source["password_confirmation"]}
+                class="st-input"
+                placeholder="••••••••••••"
+                required
+                autocomplete="new-password"
+              />
             </div>
 
             <%= if @preview_username do %>
               <div class="st-card st-acrylic-light p-3">
                 <p class="text-sm text-white/70">Seu username será:</p>
-                <p class="text-lg font-mono font-bold text-white"><%= @preview_username %></p>
+                <p class="text-lg font-mono font-bold text-white">{@preview_username}</p>
               </div>
             <% end %>
 

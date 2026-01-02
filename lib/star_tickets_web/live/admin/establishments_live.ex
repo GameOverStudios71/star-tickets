@@ -115,122 +115,6 @@ defmodule StarTicketsWeb.Admin.EstablishmentsLive do
     {:noreply, push_patch(socket, to: ~p"/admin/establishments?#{params}")}
   end
 
-  def render(assigns) do
-    ~H"""
-    <div class="st-app has-background min-h-screen flex flex-col" style="padding-top: 80px;">
-      <.flash kind={:info} title="Informação" flash={@flash} />
-      <.flash kind={:success} title="Sucesso" flash={@flash} />
-      <.flash kind={:warning} title="Atenção" flash={@flash} />
-      <.flash kind={:error} title="Erro" flash={@flash} />
-      <.flash kind={:delete} title="Excluído" flash={@flash} />
-
-      <.app_header
-        title="Administração"
-        show_home={true}
-        current_scope={@current_scope}
-        client_name={@client_name}
-        establishment_name={if length(@header_establishments) == 0, do: @establishment_name}
-        establishments={@header_establishments}
-        users={@users}
-        selected_establishment_id={@selected_establishment_id}
-        selected_user_id={@selected_user_id}
-        impersonating={@impersonating}
-      />
-
-      <div class="st-container flex-1 m-4">
-        <.page_header
-          title="🏢 Estabelecimentos"
-          description="Gerencie os estabelecimentos da sua empresa."
-          breadcrumb_items={[
-            %{label: "Administração", href: "/admin"},
-            %{label: "Estabelecimentos"}
-          ]}
-        >
-          <hr class="my-6 border-white/500 opacity-40 border-dashed" />
-
-          <.action_header title="Lista de Estabelecimentos">
-            <:actions>
-              <.search_bar value={@search_term} />
-              <.link patch={~p"/admin/establishments/new"} class="btn btn-primary h-10 min-h-0">
-                <.icon name="hero-plus" class="mr-2" /> Novo
-              </.link>
-            </:actions>
-          </.action_header>
-
-          <.admin_table id="establishments" rows={@establishments}>
-            <:col :let={establishment} label="Nome">{establishment.name}</:col>
-            <:col :let={establishment} label="Código">
-            <span class="st-badge font-mono bg-yellow-500/30 text-yellow-200 border border-yellow-500/50">{establishment.code}</span>
-          </:col>
-          <:col :let={establishment} label="Endereço">{establishment.address || "-"}</:col>
-          <:col :let={establishment} label="Telefone">{establishment.phone || "-"}</:col>
-          <:col :let={establishment} label="Status">
-            <span class={"st-badge #{if establishment.is_active, do: "bg-green-500/30 text-green-200 border border-green-500/50", else: "bg-red-500/30 text-red-200 border border-red-500/50"}"}>
-              {if establishment.is_active, do: "Ativo", else: "Inativo"}
-            </span>
-          </:col>
-            <:action :let={establishment}>
-              <.link patch={~p"/admin/establishments/#{establishment}/edit"} class="btn btn-sm btn-ghost btn-square" title="Editar">
-                <.icon name="hero-pencil-square" class="size-5 text-blue-400" />
-              </.link>
-              <button
-                phx-click="confirm_delete"
-                phx-value-id={establishment.id}
-                class="btn btn-sm btn-ghost btn-square"
-                title="Excluir"
-              >
-                <.icon name="hero-trash" class="size-5 text-red-400" />
-              </button>
-            </:action>
-          </.admin_table>
-
-          <.pagination page={@page} total_pages={@total_pages} />
-        </.page_header>
-
-        <.modal :if={@show_confirm_modal} id="confirm-modal" show={@show_confirm_modal} transparent={true} on_cancel={JS.push("cancel_delete")}>
-          <div class="st-modal-confirm">
-            <div class="st-modal-icon-container">
-              <.icon name="hero-exclamation-triangle" class="size-12 text-red-500" />
-            </div>
-            <h3 class="st-modal-title">Excluir Estabelecimento?</h3>
-            <p class="st-modal-text">
-              Tem certeza que deseja excluir este estabelecimento? Esta ação não pode ser desfeita.
-            </p>
-            <div class="flex justify-center gap-3">
-              <button
-                phx-click="cancel_delete"
-                class="st-modal-btn st-modal-btn-cancel"
-              >
-                Cancelar
-              </button>
-              <button
-                phx-click="do_delete"
-                class="st-modal-btn st-modal-btn-confirm"
-              >
-                Excluir
-              </button>
-            </div>
-          </div>
-        </.modal>
-      </div>
-
-
-      <.modal :if={@live_action in [:new, :edit]} id="establishment-modal" transparent={true} show on_cancel={JS.patch(~p"/admin/establishments")}>
-        <.live_component
-          module={StarTicketsWeb.Admin.Establishments.FormComponent}
-          id={@establishment.id || :new}
-          title={@page_title}
-          action={@live_action}
-          establishment={@establishment}
-          patch={~p"/admin/establishments"}
-          client_name={@client_name}
-          client_id={@client_id}
-        />
-      </.modal>
-    </div>
-    """
-  end
-
   def handle_event("confirm_delete", %{"id" => id}, socket) do
     {:noreply, assign(socket, show_confirm_modal: true, item_to_delete: id)}
   end
@@ -257,5 +141,138 @@ defmodule StarTicketsWeb.Admin.EstablishmentsLive do
          |> assign(show_confirm_modal: false, item_to_delete: nil)
          |> put_flash(:error, "Erro ao excluir estabelecimento.")}
     end
+  end
+
+  def render(assigns) do
+    ~H"""
+    <div class="st-app has-background min-h-screen flex flex-col pt-20">
+      <.flash kind={:info} title="Informação" flash={@flash} />
+      <.flash kind={:success} title="Sucesso" flash={@flash} />
+      <.flash kind={:warning} title="Atenção" flash={@flash} />
+      <.flash kind={:error} title="Erro" flash={@flash} />
+      <.flash kind={:delete} title="Excluído" flash={@flash} />
+
+      <.app_header
+        title="Administração"
+        show_home={true}
+        current_scope={@current_scope}
+        client_name={@client_name}
+        establishment_name={if length(@header_establishments) == 0, do: @establishment_name}
+        establishments={@header_establishments}
+        users={@users}
+        selected_establishment_id={@selected_establishment_id}
+        selected_user_id={@selected_user_id}
+        impersonating={@impersonating}
+      />
+
+      <div class="st-container flex-1 m-4" style="margin-top: 0;">
+        <.page_header
+          title="🏢 Estabelecimentos"
+          description="Gerencie os estabelecimentos da sua empresa."
+          breadcrumb_items={[
+            %{label: "Administração", href: "/admin"},
+            %{label: "Estabelecimentos"}
+          ]}
+        >
+          <hr class="my-6 border-white/500 opacity-40 border-dashed" />
+
+          <.action_header title="Lista de Estabelecimentos">
+            <:actions>
+              <.search_bar value={@search_term} />
+              <.link patch={~p"/admin/establishments/new"} class="btn btn-primary h-10 min-h-0">
+                <.icon name="hero-plus" class="mr-2" /> Novo
+              </.link>
+            </:actions>
+          </.action_header>
+
+          <.admin_table id="establishments" rows={@establishments}>
+            <:col :let={establishment} label="Nome">{establishment.name}</:col>
+            <:col :let={establishment} label="Código">
+              <span class="st-badge font-mono bg-yellow-500/30 text-yellow-200 border border-yellow-500/50">
+                {establishment.code}
+              </span>
+            </:col>
+            <:col :let={establishment} label="Endereço">{establishment.address || "-"}</:col>
+            <:col :let={establishment} label="Telefone">{establishment.phone || "-"}</:col>
+            <:col :let={establishment} label="Status">
+              <span class={"st-badge #{if establishment.is_active, do: "bg-green-500/30 text-green-200 border border-green-500/50", else: "bg-red-500/30 text-red-200 border border-red-500/50"}"}>
+                {if establishment.is_active, do: "Ativo", else: "Inativo"}
+              </span>
+            </:col>
+            <:action :let={establishment}>
+              <.link
+                patch={~p"/admin/establishments/#{establishment}/edit"}
+                class="btn btn-sm btn-ghost btn-square"
+                title="Editar"
+              >
+                <.icon name="hero-pencil-square" class="size-5 text-blue-400" />
+              </.link>
+              <button
+                phx-click="confirm_delete"
+                phx-value-id={establishment.id}
+                class="btn btn-sm btn-ghost btn-square"
+                title="Excluir"
+              >
+                <.icon name="hero-trash" class="size-5 text-red-400" />
+              </button>
+            </:action>
+          </.admin_table>
+
+          <.pagination page={@page} total_pages={@total_pages} />
+        </.page_header>
+
+        <.modal
+          :if={@show_confirm_modal}
+          id="confirm-modal"
+          show={@show_confirm_modal}
+          transparent={true}
+          on_cancel={JS.push("cancel_delete")}
+        >
+          <div class="st-modal-confirm">
+            <div class="st-modal-icon-container">
+              <.icon name="hero-exclamation-triangle" class="size-12 text-red-500" />
+            </div>
+            <h3 class="st-modal-title">Excluir Estabelecimento?</h3>
+            <p class="st-modal-text">
+              Tem certeza que deseja excluir este estabelecimento? Esta ação não pode ser desfeita.
+            </p>
+            <div class="flex justify-center gap-3">
+              <button
+                phx-click="cancel_delete"
+                class="st-modal-btn st-modal-btn-cancel"
+              >
+                Cancelar
+              </button>
+              <button
+                phx-click="do_delete"
+                class="st-modal-btn st-modal-btn-confirm"
+              >
+                Excluir
+              </button>
+            </div>
+          </div>
+        </.modal>
+      </div>
+
+      <.modal
+        :if={@live_action in [:new, :edit]}
+        id="establishment-modal"
+        transparent={true}
+        show
+        on_cancel={JS.patch(~p"/admin/establishments")}
+      >
+        <.live_component
+          module={StarTicketsWeb.Admin.Establishments.FormComponent}
+          id={@establishment.id || :new}
+          title={@page_title}
+          action={@live_action}
+          establishment={@establishment}
+          patch={~p"/admin/establishments"}
+          client_name={@client_name}
+          client_id={@client_id}
+        />
+      </.modal>
+    </div>
+    """
   end
 end

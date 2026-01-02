@@ -56,7 +56,7 @@ defmodule StarTicketsWeb.AdminComponents do
 
   def pagination(assigns) do
     ~H"""
-    <div class="flex items-center justify-center gap-2 mt-4" :if={@total_pages > 1}>
+    <div :if={@total_pages > 1} class="flex items-center justify-center gap-2 mt-4">
       <button
         class="btn btn-sm btn-ghost"
         disabled={@page <= 1}
@@ -91,7 +91,11 @@ defmodule StarTicketsWeb.AdminComponents do
 
   def search_bar(assigns) do
     ~H"""
-    <form phx-change={@on_search} phx-submit={@on_search} class="form-control w-full max-w-xs opacity-85">
+    <form
+      phx-change={@on_search}
+      phx-submit={@on_search}
+      class="form-control w-full max-w-xs opacity-85"
+    >
       <div class="input-group">
         <input
           type="text"

@@ -33,6 +33,15 @@ defmodule StarTickets.Accounts.Devices do
   end
 
   @doc """
+  Gets device info by the raw session token.
+  """
+  def get_device_by_token(token) do
+    UserToken
+    |> where([t], t.token == ^token and t.context == "session")
+    |> Repo.one()
+  end
+
+  @doc """
   Revokes a specific device session.
   """
   def revoke_device(token_id, user_id) do

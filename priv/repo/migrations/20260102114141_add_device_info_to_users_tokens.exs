@@ -3,13 +3,20 @@ defmodule StarTickets.Repo.Migrations.AddDeviceInfoToUsersTokens do
 
   def change do
     alter table(:users_tokens) do
-      add :device_name, :string        # "Chrome on Windows"
-      add :device_type, :string        # "desktop", "mobile", "tablet"
-      add :browser, :string            # "Chrome 120"
-      add :os, :string                 # "Windows 11"
-      add :ip_address, :string         # "189.xxx.xxx.xxx"
-      add :location, :string           # "São Paulo, BR" (optional)
-      add :last_used_at, :utc_datetime # Last activity timestamp
+      # "Chrome on Windows"
+      add :device_name, :string
+      # "desktop", "mobile", "tablet"
+      add :device_type, :string
+      # "Chrome 120"
+      add :browser, :string
+      # "Windows 11"
+      add :os, :string
+      # "189.xxx.xxx.xxx"
+      add :ip_address, :string
+      # "São Paulo, BR" (optional)
+      add :location, :string
+      # Last activity timestamp
+      add :last_used_at, :utc_datetime
     end
 
     # Index for faster device queries per user

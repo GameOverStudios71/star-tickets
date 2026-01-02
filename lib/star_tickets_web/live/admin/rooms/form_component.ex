@@ -1,4 +1,6 @@
 defmodule StarTicketsWeb.Admin.Rooms.FormComponent do
+  @moduledoc false
+
   use StarTicketsWeb, :live_component
 
   alias StarTickets.Accounts
@@ -32,7 +34,12 @@ defmodule StarTicketsWeb.Admin.Rooms.FormComponent do
       >
         <div class="flex flex-col md:flex-row gap-8">
           <div class="flex-1 space-y-4">
-            <.input field={@form[:name]} type="text" label="Nome da Posição" placeholder="Ex: Guichê 1, Consultório A, Mesa 2" />
+            <.input
+              field={@form[:name]}
+              type="text"
+              label="Nome da Posição"
+              placeholder="Ex: Guichê 1, Consultório A, Mesa 2"
+            />
 
             <div class="flex gap-4">
               <div class="flex-1">
@@ -51,7 +58,11 @@ defmodule StarTicketsWeb.Admin.Rooms.FormComponent do
               </div>
             </div>
 
-            <.input field={@form[:capacity_threshold]} type="number" label="Capacidade Máxima (Pessoas)" />
+            <.input
+              field={@form[:capacity_threshold]}
+              type="number"
+              label="Capacidade Máxima (Pessoas)"
+            />
 
             <% type_value = Phoenix.HTML.Form.input_value(@form, :type) %>
             <%= if type_value == "professional" || type_value == :professional do %>
@@ -59,8 +70,12 @@ defmodule StarTicketsWeb.Admin.Rooms.FormComponent do
                 <div class="flex items-center justify-between mb-2">
                   <label class="block text-sm font-medium text-white/80">Serviços Atendidos</label>
                   <div class="flex items-center gap-2">
-                     <label class="flex items-center gap-2 cursor-pointer text-xs bg-blue-500/20 px-2 py-1 rounded border border-blue-500/30 text-blue-200 hover:bg-blue-500/30 transition-colors select-none">
-                      <.input field={@form[:all_services]} type="checkbox" class="checkbox-xs checkbox-primary" />
+                    <label class="flex items-center gap-2 cursor-pointer text-xs bg-blue-500/20 px-2 py-1 rounded border border-blue-500/30 text-blue-200 hover:bg-blue-500/30 transition-colors select-none">
+                      <.input
+                        field={@form[:all_services]}
+                        type="checkbox"
+                        class="checkbox-xs checkbox-primary"
+                      />
                       <span>Atender Todos os Serviços</span>
                     </label>
                   </div>
@@ -71,36 +86,44 @@ defmodule StarTicketsWeb.Admin.Rooms.FormComponent do
                 <div class={"bg-black/20 rounded border border-white/5 p-3 h-80 overflow-y-auto space-y-2 relative transition-opacity duration-300 " <> (if all_services, do: "opacity-50 pointer-events-none", else: "")}>
                   <%= for service <- @services do %>
                     <label class="flex items-center gap-3 cursor-pointer group hover:bg-white/5 p-2 rounded transition-colors">
-                       <input
-                         type="checkbox"
-                         name="room[service_ids][]"
-                         value={service.id}
-                         checked={service.id in @selected_service_ids}
-                         class="checkbox checkbox-sm checkbox-primary border-white/30"
-                       />
-                       <span class="text-white group-hover:text-blue-300"><%= service.name %></span>
+                      <input
+                        type="checkbox"
+                        name="room[service_ids][]"
+                        value={service.id}
+                        checked={service.id in @selected_service_ids}
+                        class="checkbox checkbox-sm checkbox-primary border-white/30"
+                      />
+                      <span class="text-white group-hover:text-blue-300">{service.name}</span>
                     </label>
                   <% end %>
                   <%= if Enum.empty?(@services) do %>
-                    <p class="text-white/40 text-sm text-center py-4">Nenhum serviço disponível neste estabelecimento.</p>
+                    <p class="text-white/40 text-sm text-center py-4">
+                      Nenhum serviço disponível neste estabelecimento.
+                    </p>
                   <% end %>
 
                   <%= if all_services do %>
-                      <div class="absolute inset-0 flex items-center justify-center z-10">
-                        <span class="bg-black/80 text-white px-3 py-1 rounded text-sm font-semibold backdrop-blur-md border border-white/20 shadow-xl">
-                          Todos os serviços serão atendidos
-                        </span>
-                      </div>
-                   <% end %>
+                    <div class="absolute inset-0 flex items-center justify-center z-10">
+                      <span class="bg-black/80 text-white px-3 py-1 rounded text-sm font-semibold backdrop-blur-md border border-white/20 shadow-xl">
+                        Todos os serviços serão atendidos
+                      </span>
+                    </div>
+                  <% end %>
                 </div>
                 <.error :for={msg <- @form[:services].errors}>{translate_error(msg)}</.error>
-                <p class="text-xs text-white/40 mt-1">Selecione um ou mais serviços que esta sala atende, ou marque "Atender Todos".</p>
+                <p class="text-xs text-white/40 mt-1">
+                  Selecione um ou mais serviços que esta sala atende, ou marque "Atender Todos".
+                </p>
               </div>
             <% else %>
               <div class="p-4 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-300">
                 <strong class="block text-white mb-2">ℹ️ Configuração Automática</strong>
-                <p>Salas de Recepção atendem automaticamente toda a demanda de chegada (senhas aguardando).</p>
-                <p class="mt-2 text-xs text-white/50">Não é necessário selecionar serviços específicos.</p>
+                <p>
+                  Salas de Recepção atendem automaticamente toda a demanda de chegada (senhas aguardando).
+                </p>
+                <p class="mt-2 text-xs text-white/50">
+                  Não é necessário selecionar serviços específicos.
+                </p>
               </div>
             <% end %>
           </div>
@@ -108,8 +131,7 @@ defmodule StarTicketsWeb.Admin.Rooms.FormComponent do
           <div class="w-full md:w-72 hidden md:block">
             <div class="bg-white/5 border border-white/10 p-4 rounded-lg text-sm space-y-4 h-full backdrop-blur-md">
               <h4 class="font-bold flex items-center gap-2 text-white">
-                <.icon name="hero-information-circle" class="size-6" />
-                Sobre a Capacidade
+                <.icon name="hero-information-circle" class="size-6" /> Sobre a Capacidade
               </h4>
 
               <div class="space-y-4 text-gray-300">
@@ -128,8 +150,15 @@ defmodule StarTicketsWeb.Admin.Rooms.FormComponent do
         <hr class="my-4 border-white/40 border-dashed" />
 
         <:actions>
-          <.link patch={@patch} class="btn btn-ghost text-white hover:bg-white/10 hover:shadow-none">Cancelar</.link>
-          <.button phx-disable-with="Salvando..." class="btn bg-orange-600/40 backdrop-blur-md border border-orange-500/90 text-white hover:bg-orange-600/50 shadow-lg">Salvar Sala</.button>
+          <.link patch={@patch} class="btn btn-ghost text-white hover:bg-white/10 hover:shadow-none">
+            Cancelar
+          </.link>
+          <.button
+            phx-disable-with="Salvando..."
+            class="btn bg-orange-600/40 backdrop-blur-md border border-orange-500/90 text-white hover:bg-orange-600/50 shadow-lg"
+          >
+            Salvar Sala
+          </.button>
         </:actions>
       </.simple_form>
     </div>

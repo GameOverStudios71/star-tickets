@@ -7,7 +7,7 @@ defmodule StarTicketsWeb.Admin.TVsLive do
   import StarTicketsWeb.AdminComponents
 
   @impl true
-  def mount(params, session, socket) do
+  def mount(_params, session, socket) do
     impersonation_assigns =
       ImpersonationHelpers.load_impersonation_assigns(socket.assigns.current_scope, session)
 
@@ -110,7 +110,7 @@ defmodule StarTicketsWeb.Admin.TVsLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="st-app has-background min-h-screen flex flex-col" style="padding-top: 80px;">
+    <div class="st-app has-background min-h-screen flex flex-col pt-20">
       <.flash kind={:info} title="Informação" flash={@flash} />
       <.flash kind={:success} title="Sucesso" flash={@flash} />
       <.flash kind={:warning} title="Atenção" flash={@flash} />
@@ -130,7 +130,7 @@ defmodule StarTicketsWeb.Admin.TVsLive do
         impersonating={@impersonating}
       />
 
-      <div class="st-container flex-1 m-4">
+      <div class="st-container flex-1 m-4" style="margin-top: 0;">
         <.page_header
           title="📺 Televisões"
           description="Configure os painéis de TV (Chamada de Senhas)."
@@ -142,69 +142,83 @@ defmodule StarTicketsWeb.Admin.TVsLive do
           <hr class="my-6 border-white/500 opacity-40 border-dashed" />
 
           <%= if @selected_establishment_id do %>
-             <.action_header title="Lista de TVs">
-               <:actions>
-                 <.search_bar value={@params["search"] || ""} />
-                 <.link patch={~p"/admin/tvs/new"} class="btn btn-primary h-10 min-h-0">
-                   <.icon name="hero-plus" class="mr-2" /> Nova TV
-                 </.link>
-               </:actions>
-             </.action_header>
+            <.action_header title="Lista de TVs">
+              <:actions>
+                <.search_bar value={@params["search"] || ""} />
+                <.link patch={~p"/admin/tvs/new"} class="btn btn-primary h-10 min-h-0">
+                  <.icon name="hero-plus" class="mr-2" /> Nova TV
+                </.link>
+              </:actions>
+            </.action_header>
 
-             <.admin_table id="tvs" rows={@tvs}>
-               <:col :let={tv} label="Nome"><%= tv.name %></:col>
-               <:col :let={tv} label="Usuário de Login">
-                  <span class="font-mono text-xs bg-black/30 px-2 py-1 rounded text-orange-200">
-                    <%= tv.user.username %>
+            <.admin_table id="tvs" rows={@tvs}>
+              <:col :let={tv} label="Nome">{tv.name}</:col>
+              <:col :let={tv} label="Usuário de Login">
+                <span class="font-mono text-xs bg-black/30 px-2 py-1 rounded text-orange-200">
+                  {tv.user.username}
+                </span>
+              </:col>
+              <:col :let={tv} label="Notícias">
+                <%= if tv.news_enabled do %>
+                  <span class="text-xs text-green-300 flex items-center gap-1">
+                    <.icon name="hero-check-circle" class="size-4" /> Ativo
                   </span>
-               </:col>
-                <:col :let={tv} label="Notícias">
-                  <%= if tv.news_enabled do %>
-                     <span class="text-xs text-green-300 flex items-center gap-1">
-                       <.icon name="hero-check-circle" class="size-4" /> Ativo
-                     </span>
-                     <div class="text-[10px] text-white/50 truncate max-w-[150px]"><%= tv.news_url %></div>
-                  <% else %>
-                     <span class="text-xs text-gray-400">Desativado</span>
-                  <% end %>
-               </:col>
-               <:col :let={tv} label="Salas Monitoradas">
-                  <%= if tv.all_rooms do %>
-                    <span class="st-badge bg-purple-500/30 text-purple-200 border border-purple-500/50">
-                      Todas as Salas
-                    </span>
-                  <% else %>
-                    <div class="flex flex-wrap gap-1">
-                      <%= for room <- tv.rooms do %>
-                        <span class="st-badge bg-emerald-500/30 text-emerald-200 border border-emerald-500/50">
-                          <%= room.name %>
-                        </span>
-                      <% end %>
-                      <%= if Enum.empty?(tv.rooms) do %>
-                        <span class="text-xs italic text-gray-500">Nenhuma</span>
-                      <% end %>
-                    </div>
-                  <% end %>
-               </:col>
-               <:action :let={tv}>
-                  <.link patch={~p"/admin/tvs/#{tv}/edit"} class="btn btn-sm btn-ghost btn-square" title="Editar">
-                    <.icon name="hero-pencil" class="size-5 text-blue-400" />
-                  </.link>
-                  <button phx-click="confirm_delete" phx-value-id={tv.id} class="btn btn-sm btn-ghost btn-square" title="Excluir">
-                    <.icon name="hero-trash" class="size-5 text-red-400" />
-                  </button>
-               </:action>
-             </.admin_table>
+                  <div class="text-[10px] text-white/50 truncate max-w-[150px]">{tv.news_url}</div>
+                <% else %>
+                  <span class="text-xs text-gray-400">Desativado</span>
+                <% end %>
+              </:col>
+              <:col :let={tv} label="Salas Monitoradas">
+                <%= if tv.all_rooms do %>
+                  <span class="st-badge bg-purple-500/30 text-purple-200 border border-purple-500/50">
+                    Todas as Salas
+                  </span>
+                <% else %>
+                  <div class="flex flex-wrap gap-1">
+                    <%= for room <- tv.rooms do %>
+                      <span class="st-badge bg-emerald-500/30 text-emerald-200 border border-emerald-500/50">
+                        {room.name}
+                      </span>
+                    <% end %>
+                    <%= if Enum.empty?(tv.rooms) do %>
+                      <span class="text-xs italic text-gray-500">Nenhuma</span>
+                    <% end %>
+                  </div>
+                <% end %>
+              </:col>
+              <:action :let={tv}>
+                <.link
+                  patch={~p"/admin/tvs/#{tv}/edit"}
+                  class="btn btn-sm btn-ghost btn-square"
+                  title="Editar"
+                >
+                  <.icon name="hero-pencil" class="size-5 text-blue-400" />
+                </.link>
+                <button
+                  phx-click="confirm_delete"
+                  phx-value-id={tv.id}
+                  class="btn btn-sm btn-ghost btn-square"
+                  title="Excluir"
+                >
+                  <.icon name="hero-trash" class="size-5 text-red-400" />
+                </button>
+              </:action>
+            </.admin_table>
           <% else %>
-             <p class="text-yellow-200 bg-yellow-900/40 p-4 rounded border border-yellow-500/50">
-               Selecione um estabelecimento no cabeçalho para gerenciar TVs.
-             </p>
+            <p class="text-yellow-200 bg-yellow-900/40 p-4 rounded border border-yellow-500/50">
+              Selecione um estabelecimento no cabeçalho para gerenciar TVs.
+            </p>
           <% end %>
         </.page_header>
       </div>
 
-
-      <.modal :if={@show_confirm_modal} id="confirm-modal" show={@show_confirm_modal} transparent={true} on_cancel={JS.push("cancel_delete")}>
+      <.modal
+        :if={@show_confirm_modal}
+        id="confirm-modal"
+        show={@show_confirm_modal}
+        transparent={true}
+        on_cancel={JS.push("cancel_delete")}
+      >
         <div class="st-modal-confirm">
           <div class="st-modal-icon-container">
             <.icon name="hero-exclamation-triangle" class="size-12 text-red-500" />

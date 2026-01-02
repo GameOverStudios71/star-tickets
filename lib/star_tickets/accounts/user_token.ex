@@ -27,6 +27,15 @@ defmodule StarTickets.Accounts.UserToken do
     field :location, :string
     field :last_used_at, :utc_datetime
 
+    # Hardware information fields
+    field :cpu_cores, :integer
+    field :memory_gb, :float
+    field :screen_resolution, :string
+    field :platform, :string
+    field :language, :string
+    field :connection_type, :string
+    field :timezone, :string
+
     belongs_to :user, StarTickets.Accounts.User
 
     timestamps(type: :utc_datetime, updated_at: false)
@@ -68,7 +77,15 @@ defmodule StarTickets.Accounts.UserToken do
        os: device_info[:os],
        ip_address: device_info[:ip_address],
        location: device_info[:location],
-       last_used_at: now
+       last_used_at: now,
+       # Hardware info
+       cpu_cores: device_info[:cpu_cores],
+       memory_gb: to_float(device_info[:memory_gb]),
+       screen_resolution: device_info[:screen_resolution],
+       platform: device_info[:platform],
+       language: device_info[:language],
+       connection_type: device_info[:connection_type],
+       timezone: device_info[:timezone]
      }}
   end
 
@@ -178,4 +195,17 @@ defmodule StarTickets.Accounts.UserToken do
   defp by_token_and_context_query(token, context) do
     from UserToken, where: [token: ^token, context: ^context]
   end
+
+  defp to_float(nil), do: nil
+  defp to_float(val) when is_float(val), do: val
+  defp to_float(val) when is_integer(val), do: val / 1
+
+  defp to_float(val) when is_binary(val) do
+    case Float.parse(val) do
+      {f, _} -> f
+      :error -> nil
+    end
+  end
+
+  defp to_float(_), do: nil
 end

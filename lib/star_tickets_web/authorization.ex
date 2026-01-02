@@ -4,10 +4,8 @@ defmodule StarTicketsWeb.Authorization do
   Defines permission rules for each user role.
   """
 
-  @doc """
-  Permission matrix: maps roles to allowed route keys.
-  :all means the role can access everything.
-  """
+  # Permission matrix: maps roles to allowed route keys.
+  # :all means the role can access everything.
   @permissions %{
     "admin" => [:all],
     "manager" => [:dashboard, :manager, :reception, :professional, :tv, :totem, :settings],
@@ -17,9 +15,7 @@ defmodule StarTicketsWeb.Authorization do
     "totem" => [:totem]
   }
 
-  @doc """
-  List of all route keys for reference.
-  """
+  # List of all route keys for reference.
   @route_keys [:dashboard, :admin, :manager, :reception, :professional, :tv, :totem, :settings]
 
   @doc """

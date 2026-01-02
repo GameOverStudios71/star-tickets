@@ -44,7 +44,7 @@ defmodule StarTicketsWeb.ImpersonationHelpers do
         real_user.establishment_id != nil ->
           real_user.establishment_id
 
-        real_user.role == "admin" and length(establishments) > 0 ->
+        real_user.role == "admin" and establishments != [] ->
           hd(establishments).id
 
         true ->

@@ -1,4 +1,6 @@
 defmodule StarTicketsWeb.UserAuth do
+  @moduledoc false
+
   use StarTicketsWeb, :verified_routes
 
   import Plug.Conn
@@ -146,8 +148,40 @@ defmodule StarTicketsWeb.UserAuth do
     user_agent = get_req_header(conn, "user-agent") |> List.first() || ""
     ip_address = get_client_ip(conn)
 
+    # Get hardware info from cookie (set by JavaScript)
+    conn = fetch_cookies(conn)
+    hardware_info = parse_hardware_cookie(conn.cookies["_st_hardware_info"])
+
     Devices.parse_user_agent(user_agent)
     |> Map.put(:ip_address, ip_address)
+    |> Map.merge(hardware_info)
+  end
+
+  defp parse_hardware_cookie(nil), do: %{}
+  defp parse_hardware_cookie(""), do: %{}
+
+  defp parse_hardware_cookie(cookie_value) do
+    case Base.decode64(cookie_value) do
+      {:ok, json} ->
+        case Jason.decode(json) do
+          {:ok, data} ->
+            %{
+              cpu_cores: data["cpuCores"],
+              memory_gb: data["memoryGb"],
+              screen_resolution: data["screenResolution"],
+              platform: data["platform"],
+              language: data["language"],
+              connection_type: data["connectionType"],
+              timezone: data["timezone"]
+            }
+
+          _ ->
+            %{}
+        end
+
+      _ ->
+        %{}
+    end
   end
 
   defp get_client_ip(conn) do
@@ -294,59 +328,45 @@ defmodule StarTicketsWeb.UserAuth do
   # Role-based access control hooks
   alias StarTicketsWeb.Authorization
 
-  @doc """
-  Requires the user to have admin role.
-  Use in live_session for /admin/* routes.
-  """
+  # Requires the user to have admin role.
+  # Use in live_session for /admin/* routes.
   def on_mount(:require_admin, _params, session, socket) do
     socket = mount_current_scope(socket, session)
     check_role_access(socket, :admin)
   end
 
-  @doc """
-  Requires the user to have dashboard access.
-  Allows admin, manager, reception, and professional roles.
-  """
+  # Requires the user to have dashboard access.
+  # Allows admin, manager, reception, and professional roles.
   def on_mount(:require_dashboard, _params, session, socket) do
     socket = mount_current_scope(socket, session)
     check_role_access(socket, :dashboard)
   end
 
-  @doc """
-  Requires the user to have manager or admin role.
-  """
+  # Requires the user to have manager or admin role.
   def on_mount(:require_manager, _params, session, socket) do
     socket = mount_current_scope(socket, session)
     check_role_access(socket, :manager)
   end
 
-  @doc """
-  Requires the user to have reception access.
-  """
+  # Requires the user to have reception access.
   def on_mount(:require_reception, _params, session, socket) do
     socket = mount_current_scope(socket, session)
     check_role_access(socket, :reception)
   end
 
-  @doc """
-  Requires the user to have professional access.
-  """
+  # Requires the user to have professional access.
   def on_mount(:require_professional, _params, session, socket) do
     socket = mount_current_scope(socket, session)
     check_role_access(socket, :professional)
   end
 
-  @doc """
-  Requires the user to have TV panel access.
-  """
+  # Requires the user to have TV panel access.
   def on_mount(:require_tv, _params, session, socket) do
     socket = mount_current_scope(socket, session)
     check_role_access(socket, :tv)
   end
 
-  @doc """
-  Requires the user to have totem access.
-  """
+  # Requires the user to have totem access.
   def on_mount(:require_totem, _params, session, socket) do
     socket = mount_current_scope(socket, session)
     check_role_access(socket, :totem)
