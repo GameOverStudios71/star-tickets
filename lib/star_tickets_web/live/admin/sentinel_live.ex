@@ -48,7 +48,7 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
 
   def render(assigns) do
     ~H"""
-    <div class="min-h-screen bg-gray-950 text-white font-mono p-4">
+    <div class="st-app has-background min-h-screen text-white font-mono p-4 flex flex-col pt-20">
       <!-- Header -->
       <div class="flex items-center justify-between mb-8 border-b border-cyan-900/50 pb-4">
         <div class="flex items-center gap-4">
@@ -83,7 +83,7 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
       
     <!-- Operational Flow Pipeline -->
       <% flow_status = check_operational_flow(connected) %>
-      <div class="mb-6 bg-black/40 border border-cyan-900/30 rounded-lg p-4">
+      <div class="mb-6 bg-black/30 backdrop-blur-md border border-white/10 rounded-xl p-6 shadow-2xl">
         <h2 class="text-cyan-600 font-bold uppercase tracking-widest mb-4 flex items-center gap-2 text-sm">
           <i class="fa-solid fa-code-branch"></i> Operational Flow
         </h2>
@@ -192,7 +192,7 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
     <!-- Connectivity Monitor -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <!-- Smart TVs -->
-        <div class="bg-black/40 border border-cyan-900/30 rounded-lg p-4 relative overflow-hidden group hover:border-cyan-500/30 transition-colors">
+        <div class="bg-black/30 backdrop-blur-md border border-white/10 rounded-xl p-4 relative overflow-hidden group hover:border-cyan-500/50 transition-all shadow-lg">
           <div class="absolute inset-0 bg-cyan-500/5 group-hover:bg-cyan-500/10 transition-colors">
           </div>
           <div class="flex justify-between items-center mb-3 relative z-10">
@@ -224,7 +224,7 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
         </div>
         
     <!-- Totems -->
-        <div class="bg-black/40 border border-amber-900/30 rounded-lg p-4 relative overflow-hidden group hover:border-amber-500/30 transition-colors">
+        <div class="bg-black/30 backdrop-blur-md border border-white/10 rounded-xl p-4 relative overflow-hidden group hover:border-amber-500/50 transition-all shadow-lg">
           <div class="absolute inset-0 bg-amber-500/5 group-hover:bg-amber-500/10 transition-colors">
           </div>
           <div class="flex justify-between items-center mb-3 relative z-10">
@@ -258,7 +258,7 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
         </div>
         
     <!-- Reception -->
-        <div class="bg-black/40 border border-purple-900/30 rounded-lg p-4 relative overflow-hidden group hover:border-purple-500/30 transition-colors">
+        <div class="bg-black/30 backdrop-blur-md border border-white/10 rounded-xl p-4 relative overflow-hidden group hover:border-purple-500/50 transition-all shadow-lg">
           <div class="absolute inset-0 bg-purple-500/5 group-hover:bg-purple-500/10 transition-colors">
           </div>
           <div class="flex justify-between items-center mb-3 relative z-10">
@@ -292,7 +292,7 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
         </div>
         
     <!-- Professionals -->
-        <div class="bg-black/40 border border-emerald-900/30 rounded-lg p-4 relative overflow-hidden group hover:border-emerald-500/30 transition-colors">
+        <div class="bg-black/30 backdrop-blur-md border border-white/10 rounded-xl p-4 relative overflow-hidden group hover:border-emerald-500/50 transition-all shadow-lg">
           <div class="absolute inset-0 bg-emerald-500/5 group-hover:bg-emerald-500/10 transition-colors">
           </div>
           <div class="flex justify-between items-center mb-3 relative z-10">
@@ -343,7 +343,7 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
           
     <!-- Anomalies (Errors) -->
           <%= if length(@anomalies) > 0 do %>
-            <div class="border border-red-500/50 bg-red-950/20 rounded-lg p-4 relative overflow-hidden">
+            <div class="border border-red-500/50 bg-red-950/20 backdrop-blur-md rounded-xl p-4 relative overflow-hidden shadow-[0_0_30px_rgba(239,68,68,0.2)]">
               <div class="absolute inset-0 bg-red-500/5 animate-pulse"></div>
               <h2 class="text-red-500 font-bold uppercase tracking-widest mb-4 flex items-center gap-2 relative z-10">
                 <i class="fa-solid fa-triangle-exclamation"></i>
@@ -395,7 +395,7 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
           <% end %>
           
     <!-- Projections Grid -->
-          <div class="bg-black/40 border border-cyan-900/30 rounded-lg p-4 flex-1 overflow-hidden flex flex-col">
+          <div class="bg-black/30 backdrop-blur-md border border-white/10 rounded-xl p-6 flex-1 overflow-hidden flex flex-col shadow-2xl">
             <h2 class="text-cyan-600 font-bold uppercase tracking-widest mb-4 flex items-center gap-2 text-sm">
               <i class="fa-solid fa-timeline"></i>
               Active Projections
@@ -509,7 +509,7 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
         </div>
         
     <!-- Right Column: Live Feed -->
-        <div class="lg:col-span-1 bg-black/60 border-l border-cyan-900/30 p-4 font-mono text-xs flex flex-col h-full overflow-hidden">
+        <div class="lg:col-span-1 bg-black/60 backdrop-blur-xl border-l border-white/10 p-4 font-mono text-xs flex flex-col h-full overflow-hidden shadow-2xl">
           <h2 class="text-cyan-600 font-bold uppercase tracking-widest mb-4 flex items-center gap-2 text-sm shrink-0">
             <i class="fa-solid fa-satellite-dish animate-pulse"></i> Live Ingestion
           </h2>

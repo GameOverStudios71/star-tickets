@@ -2,12 +2,34 @@ defmodule StarTicketsWeb.ManagerLive do
   use StarTicketsWeb, :live_view
 
   alias StarTicketsWeb.ImpersonationHelpers
+  alias StarTickets.Sentinel.Overseer
+  alias Phoenix.PubSub
 
   def mount(_params, session, socket) do
     impersonation_assigns =
       ImpersonationHelpers.load_impersonation_assigns(socket.assigns.current_scope, session)
 
-    {:ok, assign(socket, impersonation_assigns)}
+    if connected?(socket) do
+      PubSub.subscribe(StarTickets.PubSub, "sentinel_events")
+    end
+
+    initial_anomalies =
+      if connected?(socket) do
+        Overseer.get_state().anomalies
+      else
+        []
+      end
+
+    socket =
+      socket
+      |> assign(impersonation_assigns)
+      |> assign(:anomalies, initial_anomalies)
+
+    {:ok, socket}
+  end
+
+  def handle_info({:sentinel_update, state}, socket) do
+    {:noreply, assign(socket, :anomalies, state.anomalies)}
   end
 
   def render(assigns) do
@@ -56,6 +78,62 @@ defmodule StarTicketsWeb.ManagerLive do
               <p class="relative z-10 text-cyan-400/60 group-hover:text-cyan-300/80">
                 Monitoramento & Projeções
               </p>
+            </.link>
+            
+    <!-- MailBox / Notifications -->
+            <.link
+              navigate={~p"/admin/notifications"}
+              class="st-card st-nav-card group relative overflow-hidden bg-gradient-to-br from-gray-900 to-black border border-white/10 cursor-pointer flex flex-col"
+            >
+              <div class="flex justify-between items-start relative z-10 shrink-0">
+                <span class="st-icon transition-transform group-hover:scale-110">
+                  📬
+                </span>
+
+                <%= if length(@anomalies) > 0 do %>
+                  <div class="flex flex-col items-end">
+                    <span class="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse shadow-lg shadow-red-500/50 mb-1">
+                      {length(@anomalies)}
+                    </span>
+                  </div>
+                <% end %>
+              </div>
+
+              <div class="relative z-10 flex-1 min-h-0 flex flex-col">
+                <h2 class="text-white group-hover:text-emerald-300 transition-colors mb-1 shrink-0">
+                  Caixa de Entrada
+                </h2>
+
+                <%= if Enum.empty?(@anomalies) do %>
+                  <p class="text-white/60 text-sm group-hover:text-white/80">
+                    Histórico de alertas e notificações
+                  </p>
+                <% else %>
+                  <!-- Mini Inbox List (Compact) -->
+                  <div class="flex-1 overflow-hidden space-y-1 pt-1 opacity-80 pointer-events-none group-hover:opacity-100 transition-opacity">
+                    <%= for {anomaly, _idx} <- Enum.take(Enum.with_index(@anomalies), 3) do %>
+                      <div class="bg-white/5 px-2 py-1 rounded border border-white/10 flex justify-between items-center gap-2">
+                        <p class="text-red-300 text-[9px] font-bold truncate flex-1">
+                          {anomaly.action}
+                        </p>
+                        <p class="text-white/40 text-[9px] font-mono whitespace-nowrap">
+                          {Calendar.strftime(anomaly.inserted_at, "%H:%M")}
+                        </p>
+                      </div>
+                    <% end %>
+
+                    <%= if length(@anomalies) > 3 do %>
+                      <div class="text-[9px] text-white/40 italic text-right px-1">
+                        + {length(@anomalies) - 3} outros...
+                      </div>
+                    <% end %>
+                  </div>
+                <% end %>
+              </div>
+              
+    <!-- Background Glow -->
+              <div class="absolute -bottom-4 -right-4 w-24 h-24 bg-emerald-500/10 blur-2xl rounded-full group-hover:bg-emerald-500/20 transition-all">
+              </div>
             </.link>
             
     <!-- Placeholder for other manager tasks -->

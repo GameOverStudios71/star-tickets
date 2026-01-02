@@ -132,6 +132,7 @@ defmodule StarTickets.Audit do
     |> filter_by_user(params)
     |> filter_by_action(params)
     |> filter_by_resource(params)
+    |> filter_by_severity(params)
     |> limit(^page_size)
     |> offset(^offset)
     |> Repo.all()
@@ -144,6 +145,7 @@ defmodule StarTickets.Audit do
     |> filter_by_user(params)
     |> filter_by_action(params)
     |> filter_by_resource(params)
+    |> filter_by_severity(params)
     |> Repo.aggregate(:count, :id)
   end
 
@@ -203,4 +205,28 @@ defmodule StarTickets.Audit do
   end
 
   defp filter_by_resource(query, _), do: query
+
+  defp filter_by_severity(query, %{"severity" => "error"}) do
+    where(
+      query,
+      [q],
+      ilike(q.action, "%ERROR%") or ilike(q.action, "%FAILED%") or ilike(q.action, "%CRITICAL%")
+    )
+  end
+
+  defp filter_by_severity(query, %{"severity" => "warning"}) do
+    where(query, [q], ilike(q.action, "%WARNING%") or ilike(q.action, "%ALERT%"))
+  end
+
+  defp filter_by_severity(query, %{"severity" => "info"}) do
+    where(
+      query,
+      [q],
+      not (ilike(q.action, "%ERROR%") or ilike(q.action, "%FAILED%") or
+             ilike(q.action, "%CRITICAL%") or ilike(q.action, "%WARNING%") or
+             ilike(q.action, "%ALERT%"))
+    )
+  end
+
+  defp filter_by_severity(query, _), do: query
 end
