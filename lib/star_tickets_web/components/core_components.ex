@@ -98,6 +98,7 @@ defmodule StarTicketsWeb.CoreComponents do
   @doc """
   Renders a global offline indicator.
   Shown only when the LiveView socket is disconnected.
+  Uses phx-disconnected and phx-connected JS commands to toggle visibility.
   """
   def offline_indicator(assigns) do
     # Contact for critical alerts (from seeds/config) - using +55 11 97846-5523
@@ -114,8 +115,21 @@ defmodule StarTicketsWeb.CoreComponents do
 
     ~H"""
     <div
-      class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-md hidden phx-disconnected:flex transition-all duration-1000"
-      aria-hidden="true"
+      id="offline-indicator"
+      class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-md transition-all duration-500"
+      phx-disconnected={
+        JS.show(
+          to: "#offline-indicator",
+          transition: {"ease-out duration-300", "opacity-0", "opacity-100"}
+        )
+      }
+      phx-connected={
+        JS.hide(
+          to: "#offline-indicator",
+          transition: {"ease-in duration-200", "opacity-100", "opacity-0"}
+        )
+      }
+      hidden
     >
       <div class="relative max-w-sm w-full mx-4">
         <!-- Glow Effect behind -->
@@ -156,7 +170,7 @@ defmodule StarTicketsWeb.CoreComponents do
             <div class="inline-flex items-center gap-3 px-5 py-3 rounded-full bg-black/40 border border-white/5 backdrop-blur-xl shadow-inner">
               <span class="loading loading-spinner loading-xs text-red-500"></span>
               <span class="text-red-200/90 text-xs font-mono uppercase tracking-widest">
-                Resgatando conexão...
+                Reconectando...
               </span>
             </div>
             
