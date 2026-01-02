@@ -100,6 +100,18 @@ defmodule StarTicketsWeb.CoreComponents do
   Shown only when the LiveView socket is disconnected.
   """
   def offline_indicator(assigns) do
+    # Contact for critical alerts (from seeds/config) - using +55 11 97846-5523
+    admin_phone = "5511978465523"
+
+    message =
+      URI.encode(
+        "🚨 *ALERTA CRÍTICO*: O servidor do StarTickets caiu ou está inacessível. Por favor verificar imediatamente."
+      )
+
+    whatsapp_link = "https://wa.me/#{admin_phone}?text=#{message}"
+
+    assigns = assign(assigns, whatsapp_link: whatsapp_link)
+
     ~H"""
     <div
       class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-md hidden phx-disconnected:flex transition-all duration-1000"
@@ -146,6 +158,21 @@ defmodule StarTicketsWeb.CoreComponents do
               <span class="text-red-200/90 text-xs font-mono uppercase tracking-widest">
                 Resgatando conexão...
               </span>
+            </div>
+            
+    <!-- Report Button -->
+            <div class="pt-4 border-t border-white/5 mt-4">
+              <a
+                href={@whatsapp_link}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="st-btn-ghost text-xs text-red-400 hover:text-red-300 opacity-80 hover:opacity-100 transition-opacity"
+              >
+                <span class="flex items-center justify-center gap-2">
+                  <.icon name="hero-chat-bubble-oval-left-ellipsis-solid" class="size-5" />
+                  Notificar Administrador
+                </span>
+              </a>
             </div>
           </div>
         </div>

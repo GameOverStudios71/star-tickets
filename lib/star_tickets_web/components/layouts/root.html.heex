@@ -58,7 +58,7 @@
     </script>
   </head>
   <body class="min-h-screen bg-transparent">
-    <.offline_indicator />
+    <.offline_indicator scope={assigns[:current_scope]} />
     {@inner_content}
   </body>
 </html>
