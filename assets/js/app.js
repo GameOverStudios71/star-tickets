@@ -1,4 +1,4 @@
-// If you want to use Phoenix channels, run `mix help phx.gen.channel`
+w// If you want to use Phoenix channels, run `mix help phx.gen.channel`
 // to get started and then uncomment the line below.
 // import "./user_socket.js"
 
@@ -336,3 +336,27 @@ if (process.env.NODE_ENV === "development") {
   })
 }
 
+// ============================================
+// PWA Service Worker Registration
+// ============================================
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then((registration) => {
+        console.log('[PWA] Service Worker registered:', registration.scope);
+
+        // Check for updates
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              console.log('[PWA] New content available, refresh to update');
+            }
+          });
+        });
+      })
+      .catch((error) => {
+        console.log('[PWA] Service Worker registration failed:', error);
+      });
+  });
+}

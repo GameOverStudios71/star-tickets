@@ -52,8 +52,9 @@ defmodule StarTicketsWeb.Router do
 
     live_session :require_authenticated_user,
       on_mount: [{StarTicketsWeb.UserAuth, :ensure_authenticated}] do
-      live("/users/settings", UserSettingsLive, :edit)
-      live("/users/settings/confirm_email/:token", UserSettingsLive, :confirm_email)
+      live("/users/settings", UserLive.Settings, :edit)
+      live("/users/settings/confirm_email/:token", UserLive.Settings, :confirm_email)
+      live("/users/devices", UserLive.Devices, :index)
 
       # Main Dashboards (Role protected inside LiveViews or hooks)
       live("/dashboard", DashboardLive)

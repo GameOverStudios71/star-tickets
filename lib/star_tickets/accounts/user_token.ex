@@ -17,6 +17,16 @@ defmodule StarTickets.Accounts.UserToken do
     field :context, :string
     field :sent_to, :string
     field :authenticated_at, :utc_datetime
+
+    # Device information fields
+    field :device_name, :string
+    field :device_type, :string
+    field :browser, :string
+    field :os, :string
+    field :ip_address, :string
+    field :location, :string
+    field :last_used_at, :utc_datetime
+
     belongs_to :user, StarTickets.Accounts.User
 
     timestamps(type: :utc_datetime, updated_at: false)
@@ -41,10 +51,25 @@ defmodule StarTickets.Accounts.UserToken do
   and devices in the UI and allow users to explicitly expire any
   session they deem invalid.
   """
-  def build_session_token(user) do
+  def build_session_token(user, device_info \\ %{}) do
     token = :crypto.strong_rand_bytes(@rand_size)
     dt = user.authenticated_at || DateTime.utc_now(:second)
-    {token, %UserToken{token: token, context: "session", user_id: user.id, authenticated_at: dt}}
+    now = DateTime.utc_now(:second)
+
+    {token,
+     %UserToken{
+       token: token,
+       context: "session",
+       user_id: user.id,
+       authenticated_at: dt,
+       device_name: device_info[:device_name],
+       device_type: device_info[:device_type],
+       browser: device_info[:browser],
+       os: device_info[:os],
+       ip_address: device_info[:ip_address],
+       location: device_info[:location],
+       last_used_at: now
+     }}
   end
 
   @doc """

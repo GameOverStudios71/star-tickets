@@ -213,10 +213,10 @@ defmodule StarTickets.Accounts do
   ## Session
 
   @doc """
-  Generates a session token.
+  Generates a session token with optional device information.
   """
-  def generate_user_session_token(user) do
-    {token, user_token} = UserToken.build_session_token(user)
+  def generate_user_session_token(user, device_info \\ %{}) do
+    {token, user_token} = UserToken.build_session_token(user, device_info)
     Repo.insert!(user_token)
     token
   end

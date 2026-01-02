@@ -16,11 +16,14 @@ defmodule StarTicketsWeb.UserLive.Settings do
         <div class="st-login-container" style="max-width: 700px; margin: 0 auto;">
           <%!-- Flash Messages --%>
           <div :if={Phoenix.Flash.get(@flash, :info)} class="st-card st-acrylic-success p-3 mb-4">
-            <p class="text-white text-sm"><%= Phoenix.Flash.get(@flash, :info) %></p>
+            <p class="text-white text-sm">{Phoenix.Flash.get(@flash, :info)}</p>
           </div>
 
-          <div :if={Phoenix.Flash.get(@flash, :error)} class="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-lg mb-4">
-            <p class="text-sm"><%= Phoenix.Flash.get(@flash, :error) %></p>
+          <div
+            :if={Phoenix.Flash.get(@flash, :error)}
+            class="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-lg mb-4"
+          >
+            <p class="text-sm">{Phoenix.Flash.get(@flash, :error)}</p>
           </div>
 
           <%!-- User Info Section --%>
@@ -28,19 +31,19 @@ defmodule StarTicketsWeb.UserLive.Settings do
           <div class="space-y-2 mb-6">
             <div class="st-info-row">
               <span class="st-info-label">Nome:</span>
-              <span class="st-info-value"><%= @current_scope.user.name || "—" %></span>
+              <span class="st-info-value">{@current_scope.user.name || "—"}</span>
             </div>
             <div class="st-info-row">
               <span class="st-info-label">Username:</span>
-              <span class="st-info-value font-mono"><%= @current_scope.user.username || "—" %></span>
+              <span class="st-info-value font-mono">{@current_scope.user.username || "—"}</span>
             </div>
             <div class="st-info-row">
               <span class="st-info-label">Email:</span>
-              <span class="st-info-value"><%= @current_scope.user.email %></span>
+              <span class="st-info-value">{@current_scope.user.email}</span>
             </div>
             <div class="st-info-row">
               <span class="st-info-label">Função:</span>
-              <span class="st-info-value"><%= format_role(@current_scope.user.role) %></span>
+              <span class="st-info-value">{format_role(@current_scope.user.role)}</span>
             </div>
           </div>
 
@@ -51,7 +54,13 @@ defmodule StarTicketsWeb.UserLive.Settings do
             <%!-- Email Change Section --%>
             <div>
               <h2 class="text-lg font-bold text-white mb-3">📧 Alterar Email</h2>
-              <.form for={@email_form} id="email_form" phx-submit="update_email" phx-change="validate_email" class="space-y-3">
+              <.form
+                for={@email_form}
+                id="email_form"
+                phx-submit="update_email"
+                phx-change="validate_email"
+                class="space-y-3"
+              >
                 <div class="st-form-group">
                   <label>Novo Email</label>
                   <input
@@ -65,7 +74,7 @@ defmodule StarTicketsWeb.UserLive.Settings do
                   />
                   <%= if @email_form[:email].errors != [] do %>
                     <p class="text-red-400 text-sm mt-1">
-                      <%= Enum.map(@email_form[:email].errors, fn {msg, _} -> msg end) |> Enum.join(", ") %>
+                      {Enum.map(@email_form[:email].errors, fn {msg, _} -> msg end) |> Enum.join(", ")}
                     </p>
                   <% end %>
                 </div>
@@ -109,7 +118,8 @@ defmodule StarTicketsWeb.UserLive.Settings do
                   />
                   <%= if @password_form[:password].errors != [] do %>
                     <p class="text-red-400 text-sm mt-1">
-                      <%= Enum.map(@password_form[:password].errors, fn {msg, _} -> msg end) |> Enum.join(", ") %>
+                      {Enum.map(@password_form[:password].errors, fn {msg, _} -> msg end)
+                      |> Enum.join(", ")}
                     </p>
                   <% end %>
                 </div>
@@ -131,15 +141,39 @@ defmodule StarTicketsWeb.UserLive.Settings do
             </div>
           </div>
 
-          <hr class="border-white/20 my-4" />
+          <hr class="border-white/20 my-6" />
 
-          <%!-- Back Button --%>
-          <.link navigate={~p"/dashboard"} class="st-btn st-btn-acrylic w-full text-center">
-            ← Voltar ao Dashboard
+          <%!-- Security Section: Devices --%>
+          <.link navigate={~p"/users/devices"} class="block">
+            <div class="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-emerald-500/30 rounded-xl p-4 transition-all group cursor-pointer">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                  <div class="w-12 h-12 bg-emerald-500/20 rounded-full flex items-center justify-center">
+                    <i class="fa-solid fa-shield-halved text-emerald-400 text-xl"></i>
+                  </div>
+                  <div>
+                    <h3 class="text-white font-semibold text-lg group-hover:text-emerald-400 transition-colors">
+                      📱 Dispositivos Conectados
+                    </h3>
+                    <p class="text-white/60 text-sm">
+                      Ver e gerenciar dispositivos que acessaram sua conta
+                    </p>
+                  </div>
+                </div>
+                <i class="fa-solid fa-chevron-right text-white/40 group-hover:text-emerald-400 transition-colors">
+                </i>
+              </div>
+            </div>
           </.link>
+
+          <div class="mt-6">
+            <%!-- Back Button --%>
+            <.link navigate={~p"/dashboard"} class="st-btn st-btn-acrylic w-full text-center">
+              ← Voltar ao Dashboard
+            </.link>
+          </div>
         </div>
       </div>
-
     </div>
     """
   end

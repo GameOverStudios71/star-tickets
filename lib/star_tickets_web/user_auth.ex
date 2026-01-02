@@ -128,13 +128,40 @@ defmodule StarTicketsWeb.UserAuth do
   # function will clear the session to avoid fixation attacks. See the
   # renew_session function to customize this behaviour.
   defp create_or_extend_session(conn, user, params) do
-    token = Accounts.generate_user_session_token(user)
+    # Extract device information from the request
+    device_info = extract_device_info(conn)
+
+    token = Accounts.generate_user_session_token(user, device_info)
     remember_me = get_session(conn, :user_remember_me)
 
     conn
     |> renew_session(user)
     |> put_token_in_session(token)
     |> maybe_write_remember_me_cookie(token, params, remember_me)
+  end
+
+  defp extract_device_info(conn) do
+    alias StarTickets.Accounts.Devices
+
+    user_agent = get_req_header(conn, "user-agent") |> List.first() || ""
+    ip_address = get_client_ip(conn)
+
+    Devices.parse_user_agent(user_agent)
+    |> Map.put(:ip_address, ip_address)
+  end
+
+  defp get_client_ip(conn) do
+    # Try X-Forwarded-For header first (for proxies/load balancers)
+    case get_req_header(conn, "x-forwarded-for") do
+      [forwarded | _] ->
+        forwarded |> String.split(",") |> List.first() |> String.trim()
+
+      [] ->
+        # Fall back to remote_ip
+        conn.remote_ip
+        |> :inet.ntoa()
+        |> to_string()
+    end
   end
 
   # Do not renew session if the user is already logged in
