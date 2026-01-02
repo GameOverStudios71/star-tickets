@@ -96,6 +96,43 @@ defmodule StarTicketsWeb.CoreComponents do
   end
 
   @doc """
+  Renders a global offline indicator.
+  Shown only when the LiveView socket is disconnected.
+  """
+  def offline_indicator(assigns) do
+    ~H"""
+    <div
+      class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm hidden phx-disconnected:flex transition-all duration-300"
+      aria-hidden="true"
+    >
+      <div class="st-card st-acrylic max-w-sm w-full mx-4 p-8 text-center animate-bounce-slight border-red-500/30 shadow-[0_0_50px_rgba(239,68,68,0.2)]">
+        <div class="mb-6 relative">
+          <div class="absolute inset-0 bg-red-500/20 blur-xl rounded-full animate-pulse"></div>
+          <.icon name="hero-wifi-solid" class="size-16 text-red-500 relative z-10 mx-auto" />
+          <div class="absolute -top-1 -right-1">
+            <.icon name="hero-exclamation-circle-solid" class="size-6 text-red-400 animate-ping" />
+          </div>
+        </div>
+
+        <h2 class="text-2xl font-bold text-white mb-2">Sem Conexão</h2>
+        <p class="text-white/70 mb-8 leading-relaxed">
+          Você está offline no momento. Verifique sua conexão com a internet e tente novamente.
+        </p>
+
+        <button
+          onclick="window.location.reload()"
+          class="st-btn w-full bg-gradient-to-r from-red-600 to-red-800 hover:from-red-500 hover:to-red-700 border-red-500/50 shadow-lg shadow-red-900/20"
+        >
+          <span class="flex items-center justify-center gap-2">
+            <.icon name="hero-arrow-path" class="size-5" /> Tentar Novamente
+          </span>
+        </button>
+      </div>
+    </div>
+    """
+  end
+
+  @doc """
   Renders a modal.
 
   ## Examples
