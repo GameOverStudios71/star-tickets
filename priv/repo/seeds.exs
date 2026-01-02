@@ -429,7 +429,7 @@ admin =
     role: "admin",
     client_id: client.id,
     establishment_id: freguesia && freguesia.id,
-    phone_number: "55 11 999999999",
+    phone_number: "+55 (11) 97846-5523",
     confirmed_at: DateTime.utc_now() |> DateTime.truncate(:second)
   })
   |> Repo.insert!()
@@ -483,7 +483,7 @@ if freguesia do
     role: "manager",
     establishment_id: freguesia.id,
     client_id: client.id,
-    phone_number: "55 11 999999999",
+    phone_number: "+55 (11) 97846-5523",
     confirmed_at: DateTime.utc_now() |> DateTime.truncate(:second)
   })
   |> Repo.insert!()
