@@ -48,6 +48,59 @@ defmodule StarTicketsWeb.UserLive.Settings do
 
           <hr class="border-white/20 my-6" />
 
+          <hr class="border-white/20 my-6" />
+
+          <%!-- Profile Change Section --%>
+          <div>
+            <h2 class="text-lg font-bold text-white mb-3">👤 Dados Pessoais</h2>
+            <.form
+              for={@profile_form}
+              id="profile_form"
+              phx-submit="update_profile"
+              phx-change="validate_profile"
+              class="space-y-3"
+            >
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="st-form-group">
+                  <label>Nome Completo</label>
+                  <input
+                    type="text"
+                    name={@profile_form[:name].name}
+                    value={@profile_form[:name].value}
+                    class={"st-input #{if @profile_form[:name].errors != [], do: "border-red-500"}"}
+                    placeholder="Seu Nome"
+                    required
+                  />
+                  <%= if @profile_form[:name].errors != [] do %>
+                    <p class="text-red-400 text-sm mt-1">
+                      {Enum.map(@profile_form[:name].errors, fn {msg, _} -> msg end)
+                      |> Enum.join(", ")}
+                    </p>
+                  <% end %>
+                </div>
+
+                <div class="st-form-group">
+                  <label>WhatsApp / Celular</label>
+                  <input
+                    type="tel"
+                    name={@profile_form[:phone_number].name}
+                    value={@profile_form[:phone_number].value}
+                    class="st-input"
+                    placeholder="(11) 99999-9999"
+                  />
+                </div>
+              </div>
+
+              <div class="flex justify-end">
+                <button type="submit" class="st-btn" phx-disable-with="Salvando...">
+                  Salvar Dados
+                </button>
+              </div>
+            </.form>
+          </div>
+
+          <hr class="border-white/20 my-6" />
+
           <%!-- Email & Password in 2 columns --%>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <%!-- Email Change Section --%>
@@ -193,17 +246,47 @@ defmodule StarTicketsWeb.UserLive.Settings do
 
   def mount(_params, _session, socket) do
     user = socket.assigns.current_scope.user
+    profile_changeset = Accounts.change_user_profile(user)
     email_changeset = Accounts.change_user_email(user, %{}, validate_unique: false)
     password_changeset = Accounts.change_user_password(user, %{}, hash_password: false)
 
     socket =
       socket
       |> assign(:current_email, user.email)
+      |> assign(:profile_form, to_form(profile_changeset))
       |> assign(:email_form, to_form(email_changeset))
       |> assign(:password_form, to_form(password_changeset))
       |> assign(:trigger_submit, false)
 
     {:ok, socket}
+  end
+
+  @impl true
+  def handle_event("validate_profile", params, socket) do
+    %{"user" => user_params} = params
+
+    profile_form =
+      socket.assigns.current_scope.user
+      |> Accounts.change_user_profile(user_params)
+      |> Map.put(:action, :validate)
+      |> to_form()
+
+    {:noreply, assign(socket, profile_form: profile_form)}
+  end
+
+  def handle_event("update_profile", params, socket) do
+    %{"user" => user_params} = params
+    user = socket.assigns.current_scope.user
+    # Profile update doesn't strictly need elevated privileges, but we can verify session/scope
+
+    case Accounts.update_user_profile(user, user_params) do
+      {:ok, _user} ->
+        info = "Dados pessoais atualizados com sucesso."
+        {:noreply, socket |> put_flash(:info, info)}
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, :profile_form, to_form(changeset, action: :insert))}
+    end
   end
 
   @impl true

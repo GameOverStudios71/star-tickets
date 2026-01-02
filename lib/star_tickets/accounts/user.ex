@@ -147,6 +147,16 @@ defmodule StarTickets.Accounts.User do
   end
 
   @doc """
+  A user changeset for profile updates (self-service).
+  Allows changing name and phone number.
+  """
+  def profile_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:name, :phone_number])
+    |> validate_required([:name])
+  end
+
+  @doc """
   A user changeset for admin creation.
   """
   def admin_create_changeset(user, attrs) do
