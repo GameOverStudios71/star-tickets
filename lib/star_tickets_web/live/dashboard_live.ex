@@ -2,13 +2,24 @@ defmodule StarTicketsWeb.DashboardLive do
   use StarTicketsWeb, :live_view
 
   alias StarTicketsWeb.Authorization
+  alias StarTicketsWeb.Presence
   alias StarTickets.Accounts
   alias StarTickets.Accounts.Scope
+
+  @presence_topic "system:presence"
 
   def mount(_params, session, socket) do
     scope = socket.assigns.current_scope
     user = scope.user
     real_user = Scope.get_real_user(scope) || user
+
+    # Subscribe to presence updates for realtime count
+    if connected?(socket) do
+      Phoenix.PubSub.subscribe(StarTickets.PubSub, @presence_topic)
+    end
+
+    # Get initial presence count
+    online_users = get_online_users()
 
     # Check if user can impersonate
     can_impersonate = real_user.role in ["admin", "manager"]
@@ -74,8 +85,25 @@ defmodule StarTicketsWeb.DashboardLive do
        users: users,
        selected_establishment_id: establishment_for_users,
        selected_user_id: if(Scope.impersonating?(scope), do: user.id, else: nil),
-       impersonating: Scope.impersonating?(scope)
+       impersonating: Scope.impersonating?(scope),
+       online_users: online_users
      )}
+  end
+
+  # Handle presence diffs
+  def handle_info(%Phoenix.Socket.Broadcast{event: "presence_diff"}, socket) do
+    {:noreply, assign(socket, online_users: get_online_users())}
+  end
+
+  defp get_online_users do
+    Presence.list(@presence_topic)
+    |> Enum.map(fn {user_id, %{metas: metas}} ->
+      %{
+        id: user_id,
+        name: List.first(metas)[:name] || "Unknown",
+        role: List.first(metas)[:role] || "unknown"
+      }
+    end)
   end
 
   def render(assigns) do
@@ -94,6 +122,36 @@ defmodule StarTicketsWeb.DashboardLive do
 
       <%!-- Menu Grid --%>
       <div class="st-container" style="margin-top: 0;">
+        <%!-- Online Users Status Bar --%>
+        <div class="mb-6 flex justify-center">
+          <div class="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-black/40 border border-white/10 backdrop-blur-xl shadow-lg">
+            <span class="relative flex h-2.5 w-2.5">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75">
+              </span>
+              <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+            </span>
+            <span class="text-emerald-300/90 text-sm font-medium">
+              {length(@online_users)} usuário(s) online
+            </span>
+            <%!-- Avatars of online users (limit to 5) --%>
+            <div class="flex -space-x-2">
+              <%= for user <- Enum.take(@online_users, 5) do %>
+                <div
+                  class="w-7 h-7 rounded-full bg-gradient-to-br from-white/20 to-white/5 border border-white/20 flex items-center justify-center text-xs font-bold text-white"
+                  title={user.name}
+                >
+                  {String.first(user.name || "?")}
+                </div>
+              <% end %>
+              <%= if length(@online_users) > 5 do %>
+                <div class="w-7 h-7 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-xs text-white/70">
+                  +{length(@online_users) - 5}
+                </div>
+              <% end %>
+            </div>
+          </div>
+        </div>
+
         <div class="text-center mb-8">
           <h1 class="text-3xl font-bold text-white mb-2">
             Bem-vindo, {@current_scope.user.name || @current_scope.user.email}!

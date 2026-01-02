@@ -58,7 +58,8 @@ defmodule StarTicketsWeb.Router do
     live_session :require_authenticated_user,
       on_mount: [
         {StarTicketsWeb.UserAuth, :ensure_authenticated},
-        {StarTicketsWeb.AuditHook, :default}
+        {StarTicketsWeb.AuditHook, :default},
+        {StarTicketsWeb.PresenceHook, :default}
       ] do
       live("/users/settings", UserLive.Settings, :edit)
       live("/users/settings/confirm_email/:token", UserLive.Settings, :confirm_email)
@@ -80,7 +81,8 @@ defmodule StarTicketsWeb.Router do
       on_mount: [
         {StarTicketsWeb.UserAuth, :ensure_authenticated},
         {StarTicketsWeb.UserAuth, :ensure_admin_or_manager},
-        {StarTicketsWeb.AuditHook, :default}
+        {StarTicketsWeb.AuditHook, :default},
+        {StarTicketsWeb.PresenceHook, :default}
       ] do
       live("/client-register", ClientRegisterLive, :new)
       live("/admin", AdminLive)
