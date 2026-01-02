@@ -12,6 +12,8 @@ defmodule StarTickets.Application do
       StarTickets.Repo,
       {DNSCluster, query: Application.get_env(:star_tickets, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: StarTickets.PubSub},
+      # Presence System (Real-time online status)
+      StarTicketsWeb.Presence,
       # Sentinel AI Overseer (Brain)
       StarTickets.Sentinel.Overseer,
       # Start a worker by calling: StarTickets.Worker.start_link(arg)

@@ -21,6 +21,21 @@ defmodule StarTicketsWeb.TotemLive do
     # Generate session ID for tracking totem interactions
     totem_session_id = Ecto.UUID.generate()
 
+    if connected?(socket) do
+      StarTicketsWeb.Presence.track(
+        self(),
+        "system:presence",
+        "device:totem:#{totem_session_id}",
+        %{
+          type: "totem",
+          id: totem_session_id,
+          online_at: System.system_time(:second),
+          establishment_id: establishment_id,
+          printer_status: "ok"
+        }
+      )
+    end
+
     if establishment_id do
       # Load root menus for the selected establishment
       root_menus = Accounts.list_root_totem_menus(establishment_id)

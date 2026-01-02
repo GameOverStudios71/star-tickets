@@ -68,6 +68,9 @@ defmodule StarTickets.Sentinel.LoggerHandler do
     end
   end
 
+  # Ignore other log levels
+  def log(_event, _config), do: :ok
+
   # Patterns to ignore (expected Phoenix/LiveView behavior)
   defp should_ignore?(message) do
     ignored_patterns = [
@@ -79,7 +82,4 @@ defmodule StarTickets.Sentinel.LoggerHandler do
       String.contains?(message, pattern)
     end)
   end
-
-  # Ignore other log levels
-  def log(_event, _config), do: :ok
 end

@@ -67,6 +67,18 @@ defmodule StarTicketsWeb.TVLive do
       )
 
       # Subscribe to ticket events
+      StarTicketsWeb.Presence.track(
+        self(),
+        "system:presence",
+        "device:tv:#{tv_session_id}",
+        %{
+          type: "tv",
+          id: tv_session_id,
+          online_at: System.system_time(:second),
+          establishment_id: establishment_id
+        }
+      )
+
       Tickets.subscribe()
 
       # Load initial called tickets

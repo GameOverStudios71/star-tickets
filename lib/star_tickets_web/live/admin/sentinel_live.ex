@@ -1,25 +1,41 @@
 defmodule StarTicketsWeb.Admin.SentinelLive do
   use StarTicketsWeb, :live_view
   alias StarTickets.Sentinel.Overseer
+  alias StarTickets.Audit.Actions
   alias Phoenix.PubSub
+
+  import StarTicketsWeb.Components.AuditActionsFilter
 
   def mount(_params, _session, socket) do
     if connected?(socket) do
       # Subscribe to Sentinel events
       PubSub.subscribe(StarTickets.PubSub, "sentinel_events")
-      # Also subscribe to audit logs for visual feed directly?
-      # Actually Overseer broadcasts recent logs in state, so we just listen to Overseer updates
+      PubSub.subscribe(StarTickets.PubSub, "system:presence")
     end
 
     # Get initial state from Overseer
     initial_state = Overseer.get_state()
+
+    initial_presence =
+      if connected?(socket) do
+        StarTicketsWeb.Presence.list("system:presence")
+      else
+        %{}
+      end
 
     {:ok,
      socket
      |> assign(:projections, initial_state.projections)
      |> assign(:anomalies, initial_state.anomalies)
      |> assign(:recent_logs, initial_state.recent_logs)
+     |> assign(:presences, initial_presence)
+     |> assign(:ingestion_collapsed, true)
+     |> assign(:selected_actions, Actions.live_monitoring_defaults())
      |> assign(:page_title, "Sentinel AI")}
+  end
+
+  def handle_info(%{topic: "system:presence", event: "presence_diff", payload: diff}, socket) do
+    {:noreply, assign(socket, :presences, sync_presence(socket.assigns.presences, diff))}
   end
 
   def handle_info({:sentinel_update, state}, socket) do
@@ -61,8 +77,266 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
           </div>
         </div>
       </div>
+      
+    <!-- Connectivity Monitor & Operational Flow -->
+      <% connected = group_presences(@presences) %>
+      
+    <!-- Operational Flow Pipeline -->
+      <% flow_status = check_operational_flow(connected) %>
+      <div class="mb-6 bg-black/40 border border-cyan-900/30 rounded-lg p-4">
+        <h2 class="text-cyan-600 font-bold uppercase tracking-widest mb-4 flex items-center gap-2 text-sm">
+          <i class="fa-solid fa-code-branch"></i> Operational Flow
+        </h2>
 
-      <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[calc(100vh-140px)]">
+        <div class="flex items-center justify-between relative">
+          <!-- Connector Line -->
+          <div class="absolute top-1/2 left-0 w-full h-0.5 bg-cyan-900/30 -z-0"></div>
+          
+    <!-- Step 1: Totem -->
+          <div class={"relative z-10 flex flex-col items-center gap-2 #{if flow_status.totem == :ok, do: "opacity-100", else: "opacity-100"}"}>
+            <div class={"w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-500 " <>
+               if(flow_status.totem == :ok,
+                  do: "bg-cyan-950 border-cyan-500 text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.5)]",
+                  else: "bg-red-950 border-red-500 text-red-400 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]")
+             }>
+              <i class="fa-solid fa-tablet-screen-button"></i>
+            </div>
+            <div class="text-[10px] font-bold uppercase tracking-wider bg-black/80 px-2 py-0.5 rounded border border-white/10">
+              Totem
+            </div>
+            <%= if flow_status.totem != :ok do %>
+              <div class="absolute -bottom-6 text-[9px] text-red-400 font-bold whitespace-nowrap bg-black/90 px-2 py-0.5 rounded border border-red-500/30">
+                ⚠️ No Active Totems
+              </div>
+            <% end %>
+          </div>
+          
+    <!-- Step 2: Printer -->
+          <div class="relative z-10 flex flex-col items-center gap-2">
+            <div class={"w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-500 " <>
+               if(flow_status.printer == :ok,
+                  do: "bg-cyan-900/50 border-cyan-500/50 text-cyan-400",
+                  else: "bg-red-950 border-red-500 text-red-400 animate-pulse")
+             }>
+              <i class="fa-solid fa-print text-xs"></i>
+            </div>
+            <div class="text-[9px] opacity-60 bg-black/80 px-2 py-0.5 rounded">Printer</div>
+            <%= if flow_status.printer != :ok do %>
+              <div class="absolute -bottom-6 text-[9px] text-red-400 font-bold whitespace-nowrap bg-black/90 px-2 py-0.5 rounded border border-red-500/30">
+                ⚠️ Printer Error
+              </div>
+            <% end %>
+          </div>
+          
+    <!-- Step 3: Reception -->
+          <div class="relative z-10 flex flex-col items-center gap-2">
+            <div class={"w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-500 " <>
+               if(flow_status.reception == :ok,
+                  do: "bg-purple-950 border-purple-500 text-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.5)]",
+                  else: "bg-red-950 border-red-500 text-red-400 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]")
+             }>
+              <i class="fa-solid fa-desktop"></i>
+            </div>
+            <div class="text-[10px] font-bold uppercase tracking-wider bg-black/80 px-2 py-0.5 rounded border border-white/10">
+              Reception
+            </div>
+            <%= if flow_status.reception != :ok do %>
+              <div class="absolute -bottom-6 text-[9px] text-red-400 font-bold whitespace-nowrap bg-black/90 px-2 py-0.5 rounded border border-red-500/30">
+                ⚠️ No Receptionists
+              </div>
+            <% end %>
+          </div>
+          
+    <!-- Step 4: TV -->
+          <div class="relative z-10 flex flex-col items-center gap-2">
+            <div class={"w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-500 " <>
+               if(flow_status.tv == :ok,
+                  do: "bg-emerald-950 border-emerald-500 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.5)]",
+                  else: "bg-red-950 border-red-500 text-red-400 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]")
+             }>
+              <i class="fa-solid fa-tv"></i>
+            </div>
+            <div class="text-[10px] font-bold uppercase tracking-wider bg-black/80 px-2 py-0.5 rounded border border-white/10">
+              TV Panels
+            </div>
+            <%= if flow_status.tv != :ok do %>
+              <div class="absolute -bottom-6 text-[9px] text-red-400 font-bold whitespace-nowrap bg-black/90 px-2 py-0.5 rounded border border-red-500/30">
+                ⚠️ No Active Scrn
+              </div>
+            <% end %>
+          </div>
+          
+    <!-- Step 5: Professionals -->
+          <div class="relative z-10 flex flex-col items-center gap-2">
+            <div class={"w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-500 " <>
+               if(flow_status.professional == :ok,
+                  do: "bg-emerald-950 border-emerald-500 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.5)]",
+                  else: "bg-red-950 border-red-500 text-red-400 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]")
+             }>
+              <i class="fa-solid fa-user-doctor"></i>
+            </div>
+            <div class="text-[10px] font-bold uppercase tracking-wider bg-black/80 px-2 py-0.5 rounded border border-white/10">
+              Medical
+            </div>
+            <%= if flow_status.professional != :ok do %>
+              <div class="absolute -bottom-6 text-[9px] text-red-400 font-bold whitespace-nowrap bg-black/90 px-2 py-0.5 rounded border border-red-500/30">
+                {if flow_status.professional == :no_room,
+                  do: "⚠️ Staff Not in Room",
+                  else: "⚠️ No Active Staff"}
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+      
+    <!-- Connectivity Monitor -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <!-- Smart TVs -->
+        <div class="bg-black/40 border border-cyan-900/30 rounded-lg p-4 relative overflow-hidden group hover:border-cyan-500/30 transition-colors">
+          <div class="absolute inset-0 bg-cyan-500/5 group-hover:bg-cyan-500/10 transition-colors">
+          </div>
+          <div class="flex justify-between items-center mb-3 relative z-10">
+            <h3 class="font-bold text-cyan-400 uppercase tracking-widest text-xs flex items-center gap-2">
+              <i class="fa-solid fa-tv"></i> Smart TVs
+            </h3>
+            <span class="bg-cyan-900/50 text-cyan-300 px-2 py-0.5 rounded text-xs font-bold">
+              {length(connected.tvs)}
+            </span>
+          </div>
+          <div class="space-y-2 max-h-32 overflow-y-auto custom-scrollbar relative z-10">
+            <%= for tv <- connected.tvs do %>
+              <div class="flex items-center justify-between text-xs bg-black/40 p-2 rounded border border-white/5">
+                <div class="flex flex-col">
+                  <span class="text-white/80 font-bold">TV #{String.slice(tv.id, 0, 4)}</span>
+                  <span class="text-[9px] text-white/40">ID: {String.slice(tv.id, 0, 8)}...</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="text-[9px] opacity-50 font-mono">{format_duration(tv.online_at)}</span>
+                  <span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-pulse">
+                  </span>
+                </div>
+              </div>
+            <% end %>
+            <%= if Enum.empty?(connected.tvs) do %>
+              <div class="text-center py-4 text-white/20 text-xs italic">Offline</div>
+            <% end %>
+          </div>
+        </div>
+        
+    <!-- Totems -->
+        <div class="bg-black/40 border border-amber-900/30 rounded-lg p-4 relative overflow-hidden group hover:border-amber-500/30 transition-colors">
+          <div class="absolute inset-0 bg-amber-500/5 group-hover:bg-amber-500/10 transition-colors">
+          </div>
+          <div class="flex justify-between items-center mb-3 relative z-10">
+            <h3 class="font-bold text-amber-400 uppercase tracking-widest text-xs flex items-center gap-2">
+              <i class="fa-solid fa-tablet-screen-button"></i> Totems
+            </h3>
+            <span class="bg-amber-900/50 text-amber-300 px-2 py-0.5 rounded text-xs font-bold">
+              {length(connected.totems)}
+            </span>
+          </div>
+          <div class="space-y-2 max-h-32 overflow-y-auto custom-scrollbar relative z-10">
+            <%= for totem <- connected.totems do %>
+              <div class="flex items-center justify-between text-xs bg-black/40 p-2 rounded border border-white/5">
+                <div class="flex flex-col">
+                  <span class="text-white/80 font-bold">Totem #{String.slice(totem.id, 0, 4)}</span>
+                  <span class="text-[9px] text-white/40">ID: {String.slice(totem.id, 0, 8)}...</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="text-[9px] opacity-50 font-mono">
+                    {format_duration(totem.online_at)}
+                  </span>
+                  <span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-pulse">
+                  </span>
+                </div>
+              </div>
+            <% end %>
+            <%= if Enum.empty?(connected.totems) do %>
+              <div class="text-center py-4 text-white/20 text-xs italic">Offline</div>
+            <% end %>
+          </div>
+        </div>
+        
+    <!-- Reception -->
+        <div class="bg-black/40 border border-purple-900/30 rounded-lg p-4 relative overflow-hidden group hover:border-purple-500/30 transition-colors">
+          <div class="absolute inset-0 bg-purple-500/5 group-hover:bg-purple-500/10 transition-colors">
+          </div>
+          <div class="flex justify-between items-center mb-3 relative z-10">
+            <h3 class="font-bold text-purple-400 uppercase tracking-widest text-xs flex items-center gap-2">
+              <i class="fa-solid fa-desktop"></i> Reception
+            </h3>
+            <span class="bg-purple-900/50 text-purple-300 px-2 py-0.5 rounded text-xs font-bold">
+              {length(connected.reception)}
+            </span>
+          </div>
+          <div class="space-y-2 max-h-32 overflow-y-auto custom-scrollbar relative z-10">
+            <%= for user <- connected.reception do %>
+              <div class="flex items-center justify-between text-xs bg-black/40 p-2 rounded border border-white/5">
+                <div class="flex flex-col">
+                  <span class="text-white/80 font-bold truncate max-w-[120px]">{user.name}</span>
+                  <span class="text-[9px] text-white/40 truncate max-w-[120px]">{user.email}</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="text-[9px] opacity-50 font-mono">
+                    {format_duration(user.online_at)}
+                  </span>
+                  <span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-pulse">
+                  </span>
+                </div>
+              </div>
+            <% end %>
+            <%= if Enum.empty?(connected.reception) do %>
+              <div class="text-center py-4 text-white/20 text-xs italic">No active staff</div>
+            <% end %>
+          </div>
+        </div>
+        
+    <!-- Professionals -->
+        <div class="bg-black/40 border border-emerald-900/30 rounded-lg p-4 relative overflow-hidden group hover:border-emerald-500/30 transition-colors">
+          <div class="absolute inset-0 bg-emerald-500/5 group-hover:bg-emerald-500/10 transition-colors">
+          </div>
+          <div class="flex justify-between items-center mb-3 relative z-10">
+            <h3 class="font-bold text-emerald-400 uppercase tracking-widest text-xs flex items-center gap-2">
+              <i class="fa-solid fa-user-doctor"></i> Professionals
+            </h3>
+            <span class="bg-emerald-900/50 text-emerald-300 px-2 py-0.5 rounded text-xs font-bold">
+              {length(connected.professional)}
+            </span>
+          </div>
+          <div class="space-y-2 max-h-32 overflow-y-auto custom-scrollbar relative z-10">
+            <%= for user <- connected.professional do %>
+              <div class="flex items-center justify-between text-xs bg-black/40 p-2 rounded border border-white/5">
+                <div class="flex flex-col">
+                  <span class="text-white/80 font-bold truncate max-w-[120px]">{user.name}</span>
+                  <span class="text-[9px] text-white/40 truncate max-w-[120px]">{user.email}</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="text-[9px] opacity-50 font-mono">
+                    {format_duration(user.online_at)}
+                  </span>
+                  <span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-pulse">
+                  </span>
+                </div>
+              </div>
+            <% end %>
+            <%= if Enum.empty?(connected.professional) do %>
+              <div class="text-center py-4 text-white/20 text-xs italic">No active staff</div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+      
+    <!-- Live Ingestion Filter -->
+      <div class="mb-4">
+        <.live_ingestion_filter
+          id="sentinel-ingestion-filter"
+          title="Live Ingestion Filters"
+          selected_actions={@selected_actions}
+          collapsed={@ingestion_collapsed}
+        />
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[calc(100vh-220px)]">
         
     <!-- Left Column: Projections -->
         <div class="lg:col-span-3 flex flex-col gap-6">
@@ -243,7 +517,7 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
           <div class="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar min-h-0">
             <!-- Reverse order to show new at top/bottom depending on preference. Usually logs are new at bottom?
                  Actually let's render standard list. -->
-            <%= for log <- @recent_logs do %>
+            <%= for log <- Enum.filter(@recent_logs, & &1.action in @selected_actions) do %>
               <div class="border-l-2 border-cyan-800 pl-3 py-1 opacity-70 hover:opacity-100 hover:bg-cyan-900/10 transition-all">
                 <div class="flex justify-between text-[10px] text-cyan-600 mb-0.5">
                   <span>{Calendar.strftime(log.inserted_at, "%H:%M:%S")}</span>
@@ -262,6 +536,67 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
       </div>
     </div>
     """
+  end
+
+  def handle_event("toggle_ingestion_panel", _, socket) do
+    {:noreply, update(socket, :ingestion_collapsed, &(!&1))}
+  end
+
+  def handle_event("toggle_action_filter", %{"action" => action}, socket) do
+    selected = socket.assigns.selected_actions
+
+    new_selected =
+      if action in selected do
+        List.delete(selected, action)
+      else
+        [action | selected]
+      end
+
+    {:noreply, assign(socket, :selected_actions, new_selected)}
+  end
+
+  def handle_event("select_all_actions", _, socket) do
+    {:noreply, assign(socket, :selected_actions, Actions.all())}
+  end
+
+  def handle_event("clear_all_actions", _, socket) do
+    {:noreply, assign(socket, :selected_actions, [])}
+  end
+
+  def handle_event("reset_default_actions", _, socket) do
+    {:noreply, assign(socket, :selected_actions, Actions.live_monitoring_defaults())}
+  end
+
+  def handle_event("copy_anomaly_json", %{"idx" => idx_str}, socket) do
+    idx = String.to_integer(idx_str)
+    anomalies = socket.assigns.anomalies
+
+    if idx < length(anomalies) do
+      error = Enum.at(anomalies, idx)
+      json = Jason.encode!(format_anomaly_for_json(error), pretty: true)
+
+      # Push JSON to clipboard via JS hook
+      {:noreply, push_event(socket, "copy_to_clipboard", %{text: json})}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  def handle_event("dismiss_anomaly", %{"idx" => idx_str}, socket) do
+    idx = String.to_integer(idx_str)
+    anomalies = socket.assigns.anomalies
+
+    if idx < length(anomalies) do
+      # Remove the anomaly from the local list
+      new_anomalies = List.delete_at(anomalies, idx)
+
+      # Also update the Overseer state so it stays in sync
+      StarTickets.Sentinel.Overseer.dismiss_anomaly(idx)
+
+      {:noreply, assign(socket, :anomalies, new_anomalies)}
+    else
+      {:noreply, socket}
+    end
   end
 
   defp status_classes(projection) when is_map(projection) do
@@ -297,35 +632,81 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
     }
   end
 
-  def handle_event("copy_anomaly_json", %{"idx" => idx_str}, socket) do
-    idx = String.to_integer(idx_str)
-    anomalies = socket.assigns.anomalies
+  defp group_presences(presences) do
+    Enum.reduce(presences, %{tvs: [], totems: [], reception: [], professional: []}, fn {_key,
+                                                                                        data},
+                                                                                       acc ->
+      meta = List.first(data.metas)
+      type = Map.get(meta, :type) || Map.get(meta, "type")
 
-    if idx < length(anomalies) do
-      error = Enum.at(anomalies, idx)
-      json = Jason.encode!(format_anomaly_for_json(error), pretty: true)
+      case type do
+        "tv" -> Map.update!(acc, :tvs, &[meta | &1])
+        "totem" -> Map.update!(acc, :totems, &[meta | &1])
+        "reception" -> Map.update!(acc, :reception, &[meta | &1])
+        "professional" -> Map.update!(acc, :professional, &[meta | &1])
+        _ -> acc
+      end
+    end)
+  end
 
-      # Push JSON to clipboard via JS hook
-      {:noreply, push_event(socket, "copy_to_clipboard", %{text: json})}
-    else
-      {:noreply, socket}
+  defp format_duration(start_time) do
+    now = System.system_time(:second)
+    diff = now - start_time
+
+    cond do
+      diff < 60 -> "#{diff}s"
+      diff < 3600 -> "#{div(diff, 60)}m"
+      true -> "#{div(diff, 3600)}h"
     end
   end
 
-  def handle_event("dismiss_anomaly", %{"idx" => idx_str}, socket) do
-    idx = String.to_integer(idx_str)
-    anomalies = socket.assigns.anomalies
+  defp sync_presence(presences, %{joins: joins, leaves: leaves}) do
+    presences
+    |> Map.drop(Map.keys(leaves))
+    |> Map.merge(joins)
+  end
 
-    if idx < length(anomalies) do
-      # Remove the anomaly from the local list
-      new_anomalies = List.delete_at(anomalies, idx)
+  defp check_operational_flow(connected) do
+    # 1. Totem Status
+    totem_ok = if Enum.any?(connected.totems), do: :ok, else: :error
 
-      # Also update the Overseer state so it stays in sync
-      StarTickets.Sentinel.Overseer.dismiss_anomaly(idx)
+    # 2. Printer Status (Check if any active totem has printer ok)
+    # Using mock data added to TotemLive
+    printer_ok =
+      if totem_ok == :ok do
+        if Enum.any?(connected.totems, fn t -> t[:printer_status] == "ok" end),
+          do: :ok,
+          else: :error
+      else
+        :error
+      end
 
-      {:noreply, assign(socket, :anomalies, new_anomalies)}
-    else
-      {:noreply, socket}
-    end
+    # 3. Reception Status
+    reception_ok = if Enum.any?(connected.reception), do: :ok, else: :error
+
+    # 4. TV Status
+    tv_ok = if Enum.any?(connected.tvs), do: :ok, else: :error
+
+    # 5. Professional Status & Room Assignment
+    professional_status =
+      cond do
+        Enum.empty?(connected.professional) ->
+          :error
+
+        # Check if at least one professional has a room_id assigned (not nil)
+        !Enum.any?(connected.professional, fn p -> p[:room_id] && p[:room_id] != nil end) ->
+          :no_room
+
+        true ->
+          :ok
+      end
+
+    %{
+      totem: totem_ok,
+      printer: printer_ok,
+      reception: reception_ok,
+      tv: tv_ok,
+      professional: professional_status
+    }
   end
 end

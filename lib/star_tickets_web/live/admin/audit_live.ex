@@ -5,6 +5,8 @@ defmodule StarTicketsWeb.Admin.AuditLive do
   alias StarTickets.Accounts
   alias StarTicketsWeb.ImpersonationHelpers
 
+  import StarTicketsWeb.Components.AuditActionsFilter
+
   def mount(params, session, socket) do
     if connected?(socket) do
       # Subscribe to ALL audit logs
@@ -30,29 +32,7 @@ defmodule StarTicketsWeb.Admin.AuditLive do
     total_logs = Audit.count_logs(initial_filters)
     users = Accounts.list_users()
 
-    audit_actions =
-      [
-        "USER_LOGIN",
-        "USER_LOGIN_FAILED",
-        "USER_LOGOUT",
-        "TICKET_CREATED",
-        "TICKET_UPDATED",
-        "TICKET_CALLED",
-        "TICKET_FINISHED",
-        "TICKET_ASSIGNED",
-        "TICKET_SERVICES_UPDATED",
-        "TOTEM_SESSION_START",
-        "TOTEM_SERVICE_ADDED",
-        "TOTEM_SERVICE_REMOVED",
-        "TOTEM_TICKET_GENERATION_STARTED",
-        "TOTEM_TICKET_PRINTED",
-        "TV_SESSION_START",
-        "TV_TICKET_RECEIVED",
-        "TV_TICKET_DISPLAYED",
-        "PAGE_VIEW",
-        "UI_EVENT"
-      ]
-      |> Enum.sort()
+    audit_actions = StarTickets.Audit.Actions.all()
 
     {:ok,
      socket
@@ -60,6 +40,7 @@ defmodule StarTicketsWeb.Admin.AuditLive do
      |> assign(:logs, logs)
      |> assign(:users, users)
      |> assign(:audit_actions, audit_actions)
+     |> assign(:ingestion_collapsed, true)
      |> assign(:filter_form, to_form(initial_filters))
      |> assign(:filters, initial_filters)
      |> assign(:page, page)
@@ -154,6 +135,26 @@ defmodule StarTicketsWeb.Admin.AuditLive do
     {:noreply, push_patch(socket, to: ~p"/admin/audit?#{params}")}
   end
 
+  def handle_event("toggle_ingestion_panel", _, socket) do
+    {:noreply, update(socket, :ingestion_collapsed, &(!&1))}
+  end
+
+  def handle_event("select_all_actions", _, socket) do
+    all_actions = StarTickets.Audit.Actions.all() |> Enum.join(",")
+    params = Map.put(socket.assigns.filters, "action", all_actions) |> Map.put("page", 1)
+    {:noreply, push_patch(socket, to: ~p"/admin/audit?#{params}")}
+  end
+
+  def handle_event("clear_all_actions", _, socket) do
+    params = Map.put(socket.assigns.filters, "action", "") |> Map.put("page", 1)
+    {:noreply, push_patch(socket, to: ~p"/admin/audit?#{params}")}
+  end
+
+  def handle_event("reset_default_actions", _, socket) do
+    params = Map.put(socket.assigns.filters, "action", nil) |> Map.put("page", 1)
+    {:noreply, push_patch(socket, to: ~p"/admin/audit?#{params}")}
+  end
+
   def handle_event("change_page", %{"page" => page}, socket) do
     push_params = Map.merge(socket.assigns.filters, %{"page" => page})
     {:noreply, push_patch(socket, to: ~p"/admin/audit?#{push_params}")}
@@ -236,49 +237,12 @@ defmodule StarTicketsWeb.Admin.AuditLive do
             
     <!-- Multi-Action Checkbox Grid -->
             <div class="col-span-1 md:col-span-4 mt-2">
-              <details class="group bg-white/5 border border-white/10 rounded-lg open:bg-black/20 open:pb-4 transition-all">
-                <summary class="p-3 cursor-pointer list-none flex items-center justify-between text-white/70 hover:text-white font-medium select-none">
-                  <div class="flex items-center gap-2">
-                    <i class="fa-solid fa-filter text-blue-400"></i>
-                    Filtrar por Tipos de Ação
-                    <span class="text-xs bg-white/10 px-2 py-0.5 rounded-full text-white/50">
-                      {length(String.split(@filters["action"] || "", ",", trim: true))} selecionados
-                    </span>
-                  </div>
-                  <i class="fa-solid fa-chevron-down transform group-open:rotate-180 transition-transform text-xs">
-                  </i>
-                </summary>
-
-                <div class="px-4 pt-2 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 max-h-[300px] overflow-y-auto custom-scrollbar">
-                  <%= for action <- @audit_actions do %>
-                    <% is_checked = String.contains?(@filters["action"] || "", action) %>
-                    <label class={"cursor-pointer flex items-center gap-2 p-2 rounded hover:bg-white/5 transition-colors border border-transparent #{if is_checked, do: "bg-blue-500/10 border-blue-500/30", else: ""}"}>
-                      <input
-                        type="checkbox"
-                        name="action_toggle"
-                        value={action}
-                        checked={is_checked}
-                        phx-click="toggle_action_filter"
-                        phx-value-action={action}
-                        class="checkbox checkbox-xs checkbox-primary rounded-sm border-white/30"
-                      />
-                      <span class={"text-[10px] font-bold #{if is_checked, do: "text-blue-200", else: "text-white/50"}"}>
-                        {action}
-                      </span>
-                    </label>
-                  <% end %>
-                </div>
-
-                <div class="px-4 pt-4 mt-2 border-t border-white/5 flex justify-end">
-                  <button
-                    type="button"
-                    phx-click="toggle_all_actions"
-                    class="text-xs text-white/40 hover:text-white underline"
-                  >
-                    Inverter Seleção
-                  </button>
-                </div>
-              </details>
+              <.live_ingestion_filter
+                id="audit-actions-filter"
+                title="Filtrar por Tipos de Ação"
+                selected_actions={String.split(@filters["action"] || "", ",", trim: true)}
+                collapsed={@ingestion_collapsed}
+              />
             </div>
           </form>
         </div>

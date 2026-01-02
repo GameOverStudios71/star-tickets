@@ -22,6 +22,19 @@ defmodule StarTicketsWeb.ProfessionalLive do
       |> load_rooms()
 
     if connected?(socket) do
+      user = socket.assigns.current_scope.user
+
+      StarTicketsWeb.Presence.track(
+        self(),
+        "system:presence",
+        "user:professional:#{user.id}",
+        presence_metadata(
+          user,
+          socket.assigns.selected_establishment_id,
+          socket.assigns.selected_room_id
+        )
+      )
+
       Tickets.subscribe()
       # Clean up any stale occupations by this user
       Accounts.vacate_rooms_by_user(socket.assigns.current_scope.user.id)
@@ -41,6 +54,15 @@ defmodule StarTicketsWeb.ProfessionalLive do
     if socket.assigns.selected_room do
       Accounts.vacate_room(socket.assigns.selected_room)
     end
+
+    user = socket.assigns.current_scope.user
+
+    StarTicketsWeb.Presence.update(
+      self(),
+      "system:presence",
+      "user:professional:#{user.id}",
+      presence_metadata(user, socket.assigns.selected_establishment_id, nil)
+    )
 
     {:noreply,
      socket
@@ -77,6 +99,15 @@ defmodule StarTicketsWeb.ProfessionalLive do
         |> load_tickets()
         |> push_event("save_room_preference", %{id: room_id})
 
+      user = socket.assigns.current_scope.user
+
+      StarTicketsWeb.Presence.update(
+        self(),
+        "system:presence",
+        "user:professional:#{user.id}",
+        presence_metadata(user, socket.assigns.selected_establishment_id, room_id)
+      )
+
       {:noreply, socket}
     else
       {:noreply, put_flash(socket, :error, "Sala indisponível ou ocupada!")}
@@ -103,6 +134,17 @@ defmodule StarTicketsWeb.ProfessionalLive do
         |> assign(:selected_room_id, id_int)
         |> assign(:selected_room, room)
         |> load_tickets()
+
+        user = socket.assigns.current_scope.user
+
+        StarTicketsWeb.Presence.update(
+          self(),
+          "system:presence",
+          "user:professional:#{user.id}",
+          presence_metadata(user, socket.assigns.selected_establishment_id, id_int)
+        )
+
+        socket
       else
         socket
       end
@@ -249,6 +291,18 @@ defmodule StarTicketsWeb.ProfessionalLive do
       |> assign(:tickets, [])
       |> assign(:active_ticket, nil)
     end
+  end
+
+  defp presence_metadata(user, establishment_id, room_id) do
+    %{
+      type: "professional",
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      online_at: System.system_time(:second),
+      establishment_id: establishment_id,
+      room_id: room_id
+    }
   end
 
   def render(assigns) do

@@ -44,6 +44,22 @@ defmodule StarTicketsWeb.ReceptionLive do
       |> restore_attending_ticket()
 
     if connected?(socket) do
+      user = socket.assigns.current_user
+
+      StarTicketsWeb.Presence.track(
+        self(),
+        "system:presence",
+        "user:reception:#{user.id}",
+        %{
+          type: "reception",
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          online_at: System.system_time(:second),
+          establishment_id: socket.assigns.selected_establishment_id
+        }
+      )
+
       Tickets.subscribe()
       Reception.subscribe()
     end
