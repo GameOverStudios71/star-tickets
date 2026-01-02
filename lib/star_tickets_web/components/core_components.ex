@@ -102,31 +102,53 @@ defmodule StarTicketsWeb.CoreComponents do
   def offline_indicator(assigns) do
     ~H"""
     <div
-      class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm hidden phx-disconnected:flex transition-all duration-300"
+      class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-md hidden phx-disconnected:flex transition-all duration-1000"
       aria-hidden="true"
     >
-      <div class="st-card st-acrylic max-w-sm w-full mx-4 p-8 text-center animate-bounce-slight border-red-500/30 shadow-[0_0_50px_rgba(239,68,68,0.2)]">
-        <div class="mb-6 relative">
-          <div class="absolute inset-0 bg-red-500/20 blur-xl rounded-full animate-pulse"></div>
-          <.icon name="hero-wifi-solid" class="size-16 text-red-500 relative z-10 mx-auto" />
-          <div class="absolute -top-1 -right-1">
-            <.icon name="hero-exclamation-circle-solid" class="size-6 text-red-400 animate-ping" />
-          </div>
+      <div class="relative max-w-sm w-full mx-4">
+        <!-- Glow Effect behind -->
+        <div class="absolute inset-0 bg-red-600/10 blur-3xl rounded-full scale-150 animate-pulse">
         </div>
 
-        <h2 class="text-2xl font-bold text-white mb-2">Sem Conexão</h2>
-        <p class="text-white/70 mb-8 leading-relaxed">
-          Você está offline no momento. Verifique sua conexão com a internet e tente novamente.
-        </p>
+        <div class="st-card st-acrylic p-10 text-center relative overflow-hidden border-red-500/30 shadow-2xl">
+          <!-- Ping animation on top right combined with dot for status -->
+          <div class="absolute top-4 right-4 flex items-center gap-2">
+            <span class="text-[10px] text-red-200/50 font-mono tracking-widest uppercase">
+              Offline
+            </span>
+            <span class="relative flex h-2 w-2">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75">
+              </span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+            </span>
+          </div>
 
-        <button
-          onclick="window.location.reload()"
-          class="st-btn w-full bg-gradient-to-r from-red-600 to-red-800 hover:from-red-500 hover:to-red-700 border-red-500/50 shadow-lg shadow-red-900/20"
-        >
-          <span class="flex items-center justify-center gap-2">
-            <.icon name="hero-arrow-path" class="size-5" /> Tentar Novamente
-          </span>
-        </button>
+          <div class="mb-8 relative flex justify-center mt-2">
+            <!-- Heartbeat Container -->
+            <div class="st-animate-heartbeat p-6 bg-gradient-to-br from-red-500/20 to-transparent rounded-full border border-red-500/30 shadow-[0_0_40px_rgba(239,68,68,0.2)]">
+              <.icon
+                name="hero-wifi-solid"
+                class="size-16 text-red-500 drop-shadow-[0_0_10px_rgba(239,68,68,0.8)]"
+              />
+            </div>
+          </div>
+
+          <h2 class="text-2xl font-bold text-white mb-2 tracking-tight">Sinal Interrompido</h2>
+
+          <div class="space-y-6">
+            <p class="text-white/50 text-sm leading-relaxed max-w-[24ch] mx-auto">
+              A comunicação com o servidor foi encerrada inesperadamente.
+            </p>
+            
+    <!-- Status Pill -->
+            <div class="inline-flex items-center gap-3 px-5 py-3 rounded-full bg-black/40 border border-white/5 backdrop-blur-xl shadow-inner">
+              <span class="loading loading-spinner loading-xs text-red-500"></span>
+              <span class="text-red-200/90 text-xs font-mono uppercase tracking-widest">
+                Resgatando conexão...
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
     """

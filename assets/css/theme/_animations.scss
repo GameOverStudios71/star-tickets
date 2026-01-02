@@ -36,6 +36,27 @@
     }
 }
 
+@keyframes st-heartbeat {
+    0% {
+        transform: scale(1);
+    }
+    15% {
+        transform: scale(1.15);
+    }
+    30% {
+        transform: scale(1);
+    }
+    45% {
+        transform: scale(1.15);
+    }
+    60% {
+        transform: scale(1);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
 @keyframes st-shimmer {
     0% {
         background-position: 200% 0;
@@ -70,6 +91,10 @@
 
 .st-animate-pulse {
     animation: st-pulse 2s infinite;
+}
+
+.st-animate-heartbeat {
+    animation: st-heartbeat 2s infinite;
 }
 
 /* Skeleton Loading */
