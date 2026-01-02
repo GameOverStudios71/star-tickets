@@ -86,7 +86,9 @@ defmodule StarTicketsWeb.UserLive.Settings do
                     name={@profile_form[:phone_number].name}
                     value={@profile_form[:phone_number].value}
                     class="st-input"
-                    placeholder="(11) 99999-9999"
+                    placeholder="+55 (11) 99999-9999"
+                    phx-hook="PhoneMask"
+                    id="profile_phone_input"
                   />
                 </div>
               </div>

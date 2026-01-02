@@ -236,9 +236,11 @@ defmodule StarTicketsWeb.ClientRegisterLive do
                 name="admin_phone"
                 value={@form.source["admin_phone"]}
                 class="st-input"
-                placeholder="(11) 99999-9999"
+                placeholder="+55 (11) 99999-9999"
                 required
                 autocomplete="tel"
+                phx-hook="PhoneMask"
+                id="admin_phone_input"
               />
               <p class="text-xs text-amber-200/80 mt-1">
                 ⚠️ Este será o Administrador do sistema. Erros críticos e debug serão enviados para este número via WhatsApp.

@@ -53,7 +53,8 @@ defmodule StarTicketsWeb.Admin.Users.FormComponent do
               field={@form[:phone_number]}
               type="tel"
               label="WhatsApp / Celular"
-              placeholder="(11) 99999-9999"
+              placeholder="+55 (11) 99999-9999"
+              phx-hook="PhoneMask"
             />
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">

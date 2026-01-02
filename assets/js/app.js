@@ -29,12 +29,77 @@ const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute
 const PhoneMask = {
   mounted() {
     this.el.addEventListener("input", (e) => {
-      let x = e.target.value.replace(/\D/g, "")
-        .match(/(\d{0,2})(\d{0,5})(\d{0,4})/);
+      let v = e.target.value.replace(/\D/g, "");
+      // Truncate to max 13 digits (2 country + 2 area + 9 number)
+      if (v.length > 13) v = v.substring(0, 13);
 
-      e.target.value = !x[2]
-        ? x[1]
-        : "(" + x[1] + ") " + x[2] + (x[3] ? "-" + x[3] : "");
+      let formatted = "";
+
+      if (v.length > 0) {
+        formatted = "+" + v.substring(0, 2);
+      }
+      if (v.length > 2) {
+        formatted += " (" + v.substring(2, 4);
+      }
+      if (v.length > 4) {
+        formatted += ") " + v.substring(4, 9);
+      }
+      if (v.length > 9) {
+        formatted = "+" + v.substring(0, 2) + " (" + v.substring(2, 4) + ") " + v.substring(4, 9) + "-" + v.substring(9, 13);
+      }
+
+      // Simple regex approach for varying length
+      // +55 (11) 98888-8888
+      // If length is small (e.g. 12 digits total = landline), adjust?
+      // User asked for 0000-0000 (8 digits number) or 00000-0000 (9 digits).
+      // Let's stick to a robust formatter.
+
+      // Re-implementing more robust logic:
+      v = e.target.value.replace(/\D/g, "");
+      let f = "";
+
+      if (v.length > 0) f += "+" + v.substring(0, 2);
+      if (v.length > 2) f += " (" + v.substring(2, 4) + ") ";
+
+      if (v.length > 4) {
+        if (v.length < 13) {
+          // 8 digit number logic (Total 12: 2+2+8)
+          // +55 (11) 0000-0000
+          // But while typing we don't know yet.
+          // Standard approach: fill until hyphen position
+          // 12 digits: +55 (11) 9999-9999
+          // 13 digits: +55 (11) 99999-9999
+
+          if (v.length <= 9) { // Up to 5 digits in first part
+            f += v.substring(4);
+          } else {
+            // We have more than 5 digits for the number part (total > 9)
+            // Split is tricky during typing.
+            // Let's just format as XXXXX-XXXX if > 12 chars total, or XXXX-XXXX if 12.
+          }
+        }
+      }
+
+      // Simplified robust replacement for exact requested format + variant
+      // 1. DDI (2)
+      // 2. DDD (2)
+      // 3. Number (8 or 9)
+
+      v = v.substring(0, 13); // Max 13 digits (55 11 98888 8888)
+
+      if (v.length <= 2) {
+        e.target.value = "+" + v;
+      } else if (v.length <= 4) {
+        e.target.value = "+" + v.substring(0, 2) + " (" + v.substring(2);
+      } else if (v.length <= 8) {
+        e.target.value = "+" + v.substring(0, 2) + " (" + v.substring(2, 4) + ") " + v.substring(4);
+      } else if (v.length <= 12) {
+        // Landline style or incomplete mobile: +55 (11) 4444-4444
+        e.target.value = "+" + v.substring(0, 2) + " (" + v.substring(2, 4) + ") " + v.substring(4, 8) + "-" + v.substring(8);
+      } else {
+        // Mobile style: +55 (11) 98888-8888
+        e.target.value = "+" + v.substring(0, 2) + " (" + v.substring(2, 4) + ") " + v.substring(4, 9) + "-" + v.substring(9);
+      }
     });
   }
 }
