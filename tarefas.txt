@@ -1,0 +1,1 @@
+adicionar tipo de notificações que o gerente pode ver em sua caixa de mensaagem por algum painel administrativo

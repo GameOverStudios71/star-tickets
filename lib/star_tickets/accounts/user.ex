@@ -12,6 +12,7 @@ defmodule StarTickets.Accounts.User do
     # Multi-tenant fields
     field(:name, :string)
     field(:username, :string)
+    field(:phone_number, :string)
     field(:role, :string, default: "professional")
 
     belongs_to(:client, StarTickets.Accounts.Client)
@@ -150,7 +151,16 @@ defmodule StarTickets.Accounts.User do
   """
   def admin_create_changeset(user, attrs) do
     user
-    |> cast(attrs, [:name, :username, :email, :password, :role, :client_id, :establishment_id])
+    |> cast(attrs, [
+      :name,
+      :username,
+      :email,
+      :password,
+      :role,
+      :client_id,
+      :establishment_id,
+      :phone_number
+    ])
     |> validate_required([:name, :username, :email, :password, :role, :client_id])
     |> validate_email([])
     |> validate_password([])
@@ -164,7 +174,16 @@ defmodule StarTickets.Accounts.User do
   """
   def admin_update_changeset(user, attrs) do
     user
-    |> cast(attrs, [:name, :username, :email, :password, :role, :client_id, :establishment_id])
+    |> cast(attrs, [
+      :name,
+      :username,
+      :email,
+      :password,
+      :role,
+      :client_id,
+      :establishment_id,
+      :phone_number
+    ])
     |> validate_required([:name, :username, :email, :role, :client_id])
     |> validate_email(skip_email_changed_check: true)
     |> validate_inclusion(:role, ~w(reception professional manager tv totem admin))

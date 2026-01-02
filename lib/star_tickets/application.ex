@@ -14,6 +14,7 @@ defmodule StarTickets.Application do
       {Phoenix.PubSub, name: StarTickets.PubSub},
       # Presence System (Real-time online status)
       StarTicketsWeb.Presence,
+      StarTickets.Notifications.Dispatcher,
       # Sentinel AI Overseer (Brain)
       StarTickets.Sentinel.Overseer,
       # Start a worker by calling: StarTickets.Worker.start_link(arg)

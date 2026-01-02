@@ -13,6 +13,7 @@ defmodule StarTicketsWeb.ClientRegisterLive do
            "company_name" => "",
            "admin_name" => "",
            "admin_email" => "",
+           "admin_phone" => "",
            "password" => "",
            "password_confirmation" => ""
          }),
@@ -78,6 +79,7 @@ defmodule StarTicketsWeb.ClientRegisterLive do
       |> User.password_changeset(%{password: params["password"]})
       |> Ecto.Changeset.put_change(:name, params["admin_name"])
       |> Ecto.Changeset.put_change(:username, username)
+      |> Ecto.Changeset.put_change(:phone_number, params["admin_phone"])
       |> Ecto.Changeset.put_change(:role, "admin")
       |> Ecto.Changeset.put_change(:client_id, client.id)
 
@@ -225,6 +227,22 @@ defmodule StarTicketsWeb.ClientRegisterLive do
                 required
                 autocomplete="off"
               />
+            </div>
+
+            <div class="st-form-group">
+              <label>WhatsApp / Celular</label>
+              <input
+                type="tel"
+                name="admin_phone"
+                value={@form.source["admin_phone"]}
+                class="st-input"
+                placeholder="(11) 99999-9999"
+                required
+                autocomplete="tel"
+              />
+              <p class="text-xs text-amber-200/80 mt-1">
+                ⚠️ Este será o Administrador do sistema. Erros críticos e debug serão enviados para este número via WhatsApp.
+              </p>
             </div>
 
             <div class="st-form-group">

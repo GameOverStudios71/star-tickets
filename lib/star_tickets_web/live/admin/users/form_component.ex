@@ -49,6 +49,13 @@ defmodule StarTicketsWeb.Admin.Users.FormComponent do
 
             <.input field={@form[:email]} type="email" label="Email" placeholder="joao@email.com" />
 
+            <.input
+              field={@form[:phone_number]}
+              type="tel"
+              label="WhatsApp / Celular"
+              placeholder="(11) 99999-9999"
+            />
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <.input
                 field={@form[:password]}

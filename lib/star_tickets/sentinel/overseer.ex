@@ -37,8 +37,15 @@ defmodule StarTickets.Sentinel.Overseer do
     PubSub.subscribe(@pubsub, @audit_topic)
     :timer.send_interval(@tick_interval, :tick)
 
-    # State: %{projections: [Projection...], anomalies: [Log...], recent_logs: [Log...]}
-    {:ok, %{projections: [], anomalies: [], recent_logs: []}}
+    # State: %{..., previous_presences: %{}}
+    {:ok,
+     %{
+       projections: [],
+       anomalies: [],
+       recent_logs: [],
+       active_alerts: MapSet.new(),
+       previous_presences: %{tvs: [], totems: [], reception: [], professional: []}
+     }}
   end
 
   @impl true
@@ -95,7 +102,22 @@ defmodule StarTickets.Sentinel.Overseer do
       broadcast_update(new_state)
       {:noreply, new_state}
     else
-      {:noreply, state}
+      # Check connectivity every tick
+      {new_active_alerts, current_presences} =
+        check_connectivity(state.active_alerts, state.previous_presences)
+
+      new_state = %{
+        state
+        | active_alerts: new_active_alerts,
+          previous_presences: current_presences
+      }
+
+      if new_active_alerts != state.active_alerts or
+           current_presences != state.previous_presences do
+        {:noreply, new_state}
+      else
+        {:noreply, state}
+      end
     end
   end
 
@@ -243,5 +265,131 @@ defmodule StarTickets.Sentinel.Overseer do
 
   defp broadcast_update(state) do
     PubSub.broadcast(@pubsub, @sentinel_topic, {:sentinel_update, state})
+  end
+
+  defp check_connectivity(active_alerts, previous_presences) do
+    presences = StarTicketsWeb.Presence.list("system:presence")
+    grouped = group_presences(presences)
+
+    # 1. Global/Group Checks (All Offline)
+    group_checks = [
+      {:totems, "SYSTEM_ALERT_TOTEM_OFFLINE", "Todos os Totems estão offline!", :error},
+      {:reception, "SYSTEM_ALERT_RECEPTION_OFFLINE", "Nenhuma Recepção ativa!", :warning},
+      {:tvs, "SYSTEM_ALERT_TV_OFFLINE", "Nenhuma TV conectada!", :warning},
+      {:professional, "SYSTEM_ALERT_PROFESSIONAL_OFFLINE", "Nenhum Profissional conectado!",
+       :warning}
+    ]
+
+    active_alerts =
+      Enum.reduce(group_checks, active_alerts, fn {key, alert_key, message, severity}, acc ->
+        is_empty = Enum.empty?(Map.get(grouped, key, []))
+
+        if is_empty do
+          if MapSet.member?(acc, alert_key) do
+            acc
+          else
+            create_audit_log(alert_key, message, severity)
+            MapSet.put(acc, alert_key)
+          end
+        else
+          if MapSet.member?(acc, alert_key) do
+            create_audit_log(
+              String.replace(alert_key, "ALERT", "INFO") |> String.replace("OFFLINE", "ONLINE"),
+              "Serviço recuperado: #{key} está online novamente.",
+              :info
+            )
+
+            MapSet.delete(acc, alert_key)
+          else
+            acc
+          end
+        end
+      end)
+
+    # 2. Individual Drop Checks
+    # For Users (Reception/Professional): Track ID loss consistently
+    # For Devices (Totem/TV): Track COUNT loss to avoid refresh spam
+    monitor_individual(active_alerts, grouped, previous_presences, :reception, "user")
+    |> monitor_individual(grouped, previous_presences, :professional, "user")
+    |> monitor_count_drop(grouped, previous_presences, :totems, "Totem")
+    |> monitor_count_drop(grouped, previous_presences, :tvs, "TV")
+    |> then(fn alerts -> {alerts, grouped} end)
+  end
+
+  # Monitor specific IDs leaving (User based)
+  defp monitor_individual(active_alerts, current, previous, key, _type_label) do
+    cur_list = Map.get(current, key, [])
+    prev_list = Map.get(previous, key, [])
+
+    cur_ids = MapSet.new(Enum.map(cur_list, &(&1.id || &1["id"])))
+    prev_ids = MapSet.new(Enum.map(prev_list, &(&1.id || &1["id"])))
+
+    # Find IDs that were present but are now gone
+    lost_ids = MapSet.difference(prev_ids, cur_ids)
+
+    Enum.reduce(lost_ids, active_alerts, fn id, acc ->
+      # Try to find name for better log
+      lost_meta = Enum.find(prev_list, fn m -> (m.id || m["id"]) == id end)
+      name = lost_meta[:name] || lost_meta["name"] || "ID #{id}"
+
+      create_audit_log(
+        "SYSTEM_WARNING_#{String.upcase(to_string(key))}_DISCONNECT",
+        "#{name} desconectou-se do sistema.",
+        :warning
+      )
+
+      # We don't persist "individual" active alerts in the MapSet because they are events, not states
+      # Unless we want to track "User X is offline" state.
+      # User asked for "Notification" (Alert). Event log is sufficient.
+      acc
+    end)
+  end
+
+  # Monitor count drops (Device based)
+  defp monitor_count_drop(active_alerts, current, previous, key, device_label) do
+    cur_count = length(Map.get(current, key, []))
+    prev_count = length(Map.get(previous, key, []))
+
+    if cur_count < prev_count do
+      dropped = prev_count - cur_count
+
+      create_audit_log(
+        "SYSTEM_WARNING_#{String.upcase(to_string(key))}_DROP",
+        "#{dropped} unidade(s) de #{device_label} desconectada(s) (Total: #{cur_count}).",
+        :warning
+      )
+    end
+
+    active_alerts
+  end
+
+  defp group_presences(presences) do
+    Enum.reduce(presences, %{tvs: [], totems: [], reception: [], professional: []}, fn {_key,
+                                                                                        data},
+                                                                                       acc ->
+      meta = List.first(data.metas)
+      type = Map.get(meta, :type) || Map.get(meta, "type")
+
+      case type do
+        "tv" -> Map.update!(acc, :tvs, &[meta | &1])
+        "totem" -> Map.update!(acc, :totems, &[meta | &1])
+        "reception" -> Map.update!(acc, :reception, &[meta | &1])
+        "professional" -> Map.update!(acc, :professional, &[meta | &1])
+        _ -> acc
+      end
+    end)
+  end
+
+  defp create_audit_log(action, details_text, severity) do
+    StarTickets.Audit.log_action(
+      action,
+      %{
+        resource_type: "System",
+        resource_id: "Overseer",
+        details: %{message: details_text},
+        metadata: %{severity: to_string(severity)},
+        user_id: 1
+      }
+    )
   end
 end

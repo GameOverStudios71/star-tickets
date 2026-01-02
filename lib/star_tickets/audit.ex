@@ -228,5 +228,14 @@ defmodule StarTickets.Audit do
     )
   end
 
+  defp filter_by_severity(query, %{"severity" => "alerts"}) do
+    where(
+      query,
+      [q],
+      ilike(q.action, "%ERROR%") or ilike(q.action, "%FAILED%") or ilike(q.action, "%CRITICAL%") or
+        ilike(q.action, "%WARNING%") or ilike(q.action, "%ALERT%")
+    )
+  end
+
   defp filter_by_severity(query, _), do: query
 end

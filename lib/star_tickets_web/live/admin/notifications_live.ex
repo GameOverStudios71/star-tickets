@@ -13,7 +13,7 @@ defmodule StarTicketsWeb.NotificationsLive do
       |> assign(impersonation_assigns)
       |> assign(:page_title, "Centro de Notificações")
       # Filter defaults
-      |> assign(:severity, "all")
+      |> assign(:severity, "alerts")
       |> assign(:search, "")
       |> assign(:loading, false)
 
@@ -21,7 +21,7 @@ defmodule StarTicketsWeb.NotificationsLive do
   end
 
   def handle_params(params, _url, socket) do
-    severity = params["severity"] || "all"
+    severity = params["severity"] || "alerts"
     search = params["search"] || ""
 
     socket =
@@ -98,10 +98,10 @@ defmodule StarTicketsWeb.NotificationsLive do
             <div class="flex gap-2">
               <button
                 phx-click="filter_severity"
-                phx-value-severity="all"
-                class={"px-4 py-2 rounded-lg text-sm font-bold transition-all " <> if(@severity == "all", do: "bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.3)]", else: "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white")}
+                phx-value-severity="alerts"
+                class={"px-4 py-2 rounded-lg text-sm font-bold transition-all " <> if(@severity == "alerts", do: "bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.3)]", else: "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white")}
               >
-                Todas
+                Alertas
               </button>
               <button
                 phx-click="filter_severity"
@@ -116,6 +116,13 @@ defmodule StarTicketsWeb.NotificationsLive do
                 class={"px-4 py-2 rounded-lg text-sm font-bold transition-all " <> if(@severity == "warning", do: "bg-amber-500 text-black shadow-[0_0_15px_rgba(245,158,11,0.5)]", else: "bg-white/5 text-amber-400/60 hover:bg-amber-950/50 hover:text-amber-400")}
               >
                 Avisos
+              </button>
+              <button
+                phx-click="filter_severity"
+                phx-value-severity="all"
+                class={"px-4 py-2 rounded-lg text-sm font-bold transition-all " <> if(@severity == "all", do: "bg-cyan-900/50 text-cyan-200 border border-cyan-700/50", else: "bg-white/5 text-white/40 hover:bg-white/10 hover:text-white")}
+              >
+                <i class="fa-solid fa-list-ul mr-1"></i> Todos
               </button>
             </div>
             
