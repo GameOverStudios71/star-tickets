@@ -95,7 +95,13 @@ defmodule StarTicketsWeb.Admin.TotemMenusLive do
                   <% end %>
                 </div>
 
-                <.form for={@form} phx-change="validate" phx-submit="save" class="space-y-6">
+                <.form
+                  for={@form}
+                  phx-change="validate"
+                  phx-submit="save"
+                  class="space-y-6"
+                  phx-debounce="300"
+                >
                   <div class="grid grid-cols-1 gap-6">
                     <div>
                       <label class="label text-white/90 font-medium mb-2">
@@ -163,14 +169,14 @@ defmodule StarTicketsWeb.Admin.TotemMenusLive do
                     <div class="bg-black/20 rounded p-4 max-h-80 overflow-y-auto border border-white/10 space-y-4">
                       <!-- Service Rows -->
                       <%= for service <- @services do %>
-                        <% link = find_service_link(@selected_node.totem_menu_services, service.id) %>
+                        <% service_state = get_service_state(@services_state, service.id) %>
                         <div class="p-3 rounded border border-white/10 bg-white/5">
                           <label class="flex items-center gap-3 cursor-pointer group">
                             <input
                               type="checkbox"
                               name={"services[#{service.id}][enabled]"}
                               value="true"
-                              checked={link != nil}
+                              checked={service_state["enabled"] == "true"}
                               class="checkbox checkbox-sm checkbox-primary border-white/30"
                             />
                             <span class="text-white font-medium group-hover:text-orange-400 transition-colors">
@@ -182,14 +188,14 @@ defmodule StarTicketsWeb.Admin.TotemMenusLive do
                               type="text"
                               name={"services[#{service.id}][icon_class]"}
                               placeholder="Ícone (ex: fa-solid fa-vial)"
-                              value={link && link.icon_class}
+                              value={service_state["icon_class"]}
                               class="input input-sm input-bordered bg-white/5 border-white/10 text-white placeholder-white/30 w-full focus:outline-none focus:border-orange-500/50 transition-colors"
                             />
                             <input
                               type="text"
                               name={"services[#{service.id}][description]"}
                               placeholder="Descrição breve..."
-                              value={link && link.description}
+                              value={service_state["description"]}
                               class="input input-sm input-bordered bg-white/5 border-white/10 text-white placeholder-white/30 w-full focus:outline-none focus:border-orange-500/50 transition-colors"
                             />
                           </div>
@@ -333,27 +339,58 @@ defmodule StarTicketsWeb.Admin.TotemMenusLive do
         type: :tag
       })
 
-    {:noreply, assign(socket, selected_node: %TotemMenu{}, form: to_form(changeset))}
+    {:noreply,
+     socket
+     |> assign(selected_node: %TotemMenu{}, form: to_form(changeset))
+     |> assign(:services_state, %{})}
   end
 
   def handle_event("edit_node", %{"id" => id}, socket) do
     menu = Enum.find(socket.assigns.menus, &(&1.id == String.to_integer(id)))
     changeset = TotemMenu.changeset(menu, %{})
-    {:noreply, assign(socket, selected_node: menu, form: to_form(changeset))}
+
+    # Initialize services state from existing node data
+    services_state =
+      if menu.totem_menu_services do
+        Enum.into(menu.totem_menu_services, %{}, fn link ->
+          {to_string(link.service_id),
+           %{
+             "enabled" => "true",
+             "icon_class" => link.icon_class,
+             "description" => link.description
+           }}
+        end)
+      else
+        %{}
+      end
+
+    {:noreply,
+     socket
+     |> assign(selected_node: menu, form: to_form(changeset))
+     |> assign(:services_state, services_state)}
   end
 
-  def handle_event("validate", %{"totem_menu" => params}, socket) do
+  def handle_event("validate", params, socket) do
+    menu_params = params["totem_menu"] || %{}
+    services_params = params["services"] || %{}
+
+    # We trust services_params as the source of truth for the UI state
+    # (Since all inputs are present in the form, even unchecked boxes imply absence of 'enabled')
+
     changeset =
       if socket.assigns.selected_node.id do
-        TotemMenu.changeset(socket.assigns.selected_node, params)
+        TotemMenu.changeset(socket.assigns.selected_node, menu_params)
       else
         %TotemMenu{}
         |> TotemMenu.changeset(
-          Map.merge(params, %{"establishment_id" => socket.assigns.establishment.id})
+          Map.merge(menu_params, %{"establishment_id" => socket.assigns.establishment.id})
         )
       end
 
-    {:noreply, assign(socket, form: to_form(changeset, action: :validate))}
+    {:noreply,
+     socket
+     |> assign(form: to_form(changeset, action: :validate))
+     |> assign(:services_state, services_params)}
   end
 
   def handle_event("add_child", %{"parent_id" => parent_id}, socket) do
@@ -366,7 +403,10 @@ defmodule StarTicketsWeb.Admin.TotemMenusLive do
         type: :tag
       })
 
-    {:noreply, assign(socket, selected_node: new_node, form: to_form(changeset))}
+    {:noreply,
+     socket
+     |> assign(selected_node: new_node, form: to_form(changeset))
+     |> assign(:services_state, %{})}
   end
 
   def handle_event("delete_node", %{"id" => id}, socket) do
@@ -384,7 +424,7 @@ defmodule StarTicketsWeb.Admin.TotemMenusLive do
 
   def handle_event("save", params, socket) do
     menu_params = params["totem_menu"] || %{}
-    services_params = params["services"]
+    services_params = params["services"] || %{}
 
     # Add parent_id if it exists on current node
     menu_params =
@@ -395,19 +435,15 @@ defmodule StarTicketsWeb.Admin.TotemMenusLive do
       end
 
     # Process services data if present
-    menu_params =
-      if services_params do
-        services_data =
-          services_params
-          |> Enum.filter(fn {_id, p} -> p["enabled"] == "true" end)
-          |> Enum.map(fn {id, p} ->
-            %{service_id: id, description: p["description"], icon_class: p["icon_class"]}
-          end)
+    # We use services_params which comes from the form submission (reliable)
+    services_data =
+      services_params
+      |> Enum.filter(fn {_id, p} -> p["enabled"] == "true" end)
+      |> Enum.map(fn {id, p} ->
+        %{"service_id" => id, "description" => p["description"], "icon_class" => p["icon_class"]}
+      end)
 
-        Map.put(menu_params, :services_data, services_data)
-      else
-        menu_params
-      end
+    menu_params = Map.put(menu_params, "services_data", services_data)
 
     case save_menu(socket.assigns.selected_node, menu_params, socket.assigns.establishment.id) do
       {:ok, _menu} ->
@@ -417,7 +453,8 @@ defmodule StarTicketsWeb.Admin.TotemMenusLive do
          socket
          |> assign(:menus, menus)
          |> put_flash(:info, "Salvo com sucesso!")
-         |> assign(:selected_node, nil)}
+         |> assign(:selected_node, nil)
+         |> assign(:services_state, %{})}
 
       {:error, changeset} ->
         {:noreply, assign(socket, form: to_form(changeset))}
@@ -470,7 +507,7 @@ defmodule StarTicketsWeb.Admin.TotemMenusLive do
     end
   end
 
-  defp find_service_link(totem_menu_services, service_id) do
-    Enum.find(totem_menu_services, fn link -> link.service_id == service_id end)
+  defp get_service_state(services_state, service_id) do
+    services_state[to_string(service_id)] || %{}
   end
 end

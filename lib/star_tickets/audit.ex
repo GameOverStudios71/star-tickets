@@ -105,8 +105,17 @@ defmodule StarTickets.Audit do
   end
 
   defp truncate_state(struct) do
-    # Just a helper to avoid huge blobs if necessary, for now full map
-    Map.from_struct(struct) |> Map.drop([:__meta__, :services, :user, :room])
+    # Remove __meta__ and all associations (loaded or not) to avoid JSON encoding issues
+    struct
+    |> Map.from_struct()
+    |> Map.drop([:__meta__])
+    |> Enum.reject(fn {_k, v} ->
+      # Reject associations that are NotLoaded or are lists of structs
+      match?(%Ecto.Association.NotLoaded{}, v) or
+        is_struct(v) or
+        (is_list(v) and length(v) > 0 and is_struct(hd(v)))
+    end)
+    |> Map.new()
   end
 
   @doc """

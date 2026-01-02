@@ -98,7 +98,7 @@ defmodule StarTicketsWeb.TVLive do
               status: ticket.status
             }
           },
-          socket.assigns[:current_scope][:user]
+          get_current_user(socket)
         )
 
         socket = add_incoming_call(socket, ticket)
@@ -117,7 +117,7 @@ defmodule StarTicketsWeb.TVLive do
               reason: "room_filter"
             }
           },
-          socket.assigns[:current_scope][:user]
+          get_current_user(socket)
         )
 
         {:noreply, socket}
@@ -193,13 +193,13 @@ defmodule StarTicketsWeb.TVLive do
             resource_id: socket.assigns.tv_session_id,
             details: %{
               ticket_id: ticket.id,
-              ticket_code: ticket.code,
+              ticket_code: ticket.display_code,
               room_name: ticket.room_name,
               display_mode: "incoming_with_tts",
               speech_text: build_speech_text(ticket)
             }
           },
-          socket.assigns[:current_scope][:user]
+          get_current_user(socket)
         )
 
         socket
@@ -224,14 +224,14 @@ defmodule StarTicketsWeb.TVLive do
             resource_id: socket.assigns.tv_session_id,
             details: %{
               ticket_id: ticket.id,
-              ticket_code: ticket.code,
+              ticket_code: ticket.display_code,
               room_name: ticket.room_name,
               display_mode: "rotation",
               rotation_index: index,
               queue_size: length(rotation_queue)
             }
           },
-          socket.assigns[:current_scope][:user]
+          get_current_user(socket)
         )
 
         socket
@@ -355,6 +355,13 @@ defmodule StarTicketsWeb.TVLive do
           news_enabled: tv.news_enabled || false,
           news_url: tv.news_url
         }
+    end
+  end
+
+  defp get_current_user(socket) do
+    case socket.assigns[:current_scope] do
+      nil -> nil
+      scope -> scope.user
     end
   end
 

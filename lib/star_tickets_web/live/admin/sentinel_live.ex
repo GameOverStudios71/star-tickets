@@ -1,0 +1,331 @@
+defmodule StarTicketsWeb.Admin.SentinelLive do
+  use StarTicketsWeb, :live_view
+  alias StarTickets.Sentinel.Overseer
+  alias Phoenix.PubSub
+
+  def mount(_params, _session, socket) do
+    if connected?(socket) do
+      # Subscribe to Sentinel events
+      PubSub.subscribe(StarTickets.PubSub, "sentinel_events")
+      # Also subscribe to audit logs for visual feed directly?
+      # Actually Overseer broadcasts recent logs in state, so we just listen to Overseer updates
+    end
+
+    # Get initial state from Overseer
+    initial_state = Overseer.get_state()
+
+    {:ok,
+     socket
+     |> assign(:projections, initial_state.projections)
+     |> assign(:anomalies, initial_state.anomalies)
+     |> assign(:recent_logs, initial_state.recent_logs)
+     |> assign(:page_title, "Sentinel AI")}
+  end
+
+  def handle_info({:sentinel_update, state}, socket) do
+    {:noreply,
+     socket
+     |> assign(:projections, state.projections)
+     |> assign(:anomalies, state.anomalies)
+     |> assign(:recent_logs, state.recent_logs)}
+  end
+
+  def render(assigns) do
+    ~H"""
+    <div class="min-h-screen bg-gray-950 text-white font-mono p-4">
+      <!-- Header -->
+      <div class="flex items-center justify-between mb-8 border-b border-cyan-900/50 pb-4">
+        <div class="flex items-center gap-4">
+          <div class="relative w-12 h-12 flex items-center justify-center">
+            <div class="absolute inset-0 bg-cyan-500 blur-xl opacity-20 animate-pulse"></div>
+            <div class="relative w-full h-full border-2 border-cyan-400 rounded-full flex items-center justify-center bg-black">
+              <i class="fa-solid fa-eye text-cyan-400 text-xl animate-pulse"></i>
+            </div>
+          </div>
+          <div>
+            <h1 class="text-2xl font-bold tracking-widest text-cyan-400">SENTINEL_AI</h1>
+            <p class="text-xs text-cyan-700 uppercase tracking-[0.3em]">
+              System Monitoring & Projection Engine
+            </p>
+          </div>
+        </div>
+
+        <div class="flex gap-4 text-xs">
+          <div class="flex flex-col items-end">
+            <span class="text-cyan-700">STATUS</span>
+            <span class="text-emerald-400 font-bold">ONLINE</span>
+          </div>
+          <div class="flex flex-col items-end">
+            <span class="text-cyan-700">UPTIME</span>
+            <span class="text-white">00:14:23</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[calc(100vh-140px)]">
+        
+    <!-- Left Column: Projections -->
+        <div class="lg:col-span-3 flex flex-col gap-6">
+          
+    <!-- Anomalies (Errors) -->
+          <%= if length(@anomalies) > 0 do %>
+            <div class="border border-red-500/50 bg-red-950/20 rounded-lg p-4 relative overflow-hidden">
+              <div class="absolute inset-0 bg-red-500/5 animate-pulse"></div>
+              <h2 class="text-red-500 font-bold uppercase tracking-widest mb-4 flex items-center gap-2 relative z-10">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                Detected Anomalies
+                <span class="text-xs font-normal text-red-400/70">Click to expand details</span>
+              </h2>
+              <div class="grid grid-cols-1 gap-2 relative z-10 max-h-60 overflow-y-auto custom-scrollbar">
+                <%= for {error, idx} <- Enum.with_index(Enum.take(@anomalies, 10)) do %>
+                  <details class="group bg-red-900/40 rounded border border-red-500/30">
+                    <summary class="p-3 cursor-pointer list-none flex items-start gap-3 hover:bg-red-800/40 transition-colors">
+                      <i class="fa-solid fa-bug text-red-400 mt-0.5"></i>
+                      <div class="flex-1">
+                        <p class="text-xs text-red-200 font-bold">{to_string(error.action)}</p>
+                        <p class="text-[10px] text-red-300/70">
+                          {Calendar.strftime(error.inserted_at, "%H:%M:%S")} · {error.resource_type}
+                        </p>
+                      </div>
+                      <i class="fa-solid fa-chevron-down text-red-400/50 group-open:rotate-180 transition-transform text-xs">
+                      </i>
+                    </summary>
+                    <div class="p-3 border-t border-red-500/20 bg-black/40">
+                      <div class="flex justify-between items-center mb-2">
+                        <span class="text-[10px] text-red-400 uppercase font-bold">
+                          Full JSON (Copy for debugging)
+                        </span>
+                        <div class="flex gap-2">
+                          <button
+                            phx-click="copy_anomaly_json"
+                            phx-value-idx={idx}
+                            class="text-[10px] bg-red-500/20 hover:bg-red-500/40 text-red-300 px-2 py-1 rounded transition-colors"
+                          >
+                            <i class="fa-solid fa-copy mr-1"></i> Copy
+                          </button>
+                          <button
+                            phx-click="dismiss_anomaly"
+                            phx-value-idx={idx}
+                            class="text-[10px] bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-300 px-2 py-1 rounded transition-colors"
+                          >
+                            <i class="fa-solid fa-check mr-1"></i> Corrected
+                          </button>
+                        </div>
+                      </div>
+                      <pre class="text-[9px] text-red-200/80 bg-black/60 p-2 rounded overflow-x-auto max-h-40 overflow-y-auto whitespace-pre-wrap break-all font-mono custom-scrollbar">{Jason.encode!(format_anomaly_for_json(error), pretty: true)}</pre>
+                    </div>
+                  </details>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+          
+    <!-- Projections Grid -->
+          <div class="bg-black/40 border border-cyan-900/30 rounded-lg p-4 flex-1 overflow-hidden flex flex-col">
+            <h2 class="text-cyan-600 font-bold uppercase tracking-widest mb-4 flex items-center gap-2 text-sm">
+              <i class="fa-solid fa-timeline"></i>
+              Active Projections
+              <span class="bg-cyan-900/50 text-cyan-300 px-2 py-0.5 rounded text-xs">
+                {length(@projections)}
+              </span>
+            </h2>
+
+            <div class="flex-1 overflow-y-auto max-h-[600px] grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 content-start pr-2 custom-scrollbar">
+              <%= for proj <- @projections do %>
+                <div class={"border rounded-lg p-4 relative overflow-hidden transition-all duration-500 min-h-[180px] #{status_classes(proj)}"}>
+                  <div class="flex justify-between items-start mb-2 relative z-10">
+                    <span class="text-[10px] uppercase font-bold tracking-wider opacity-70">
+                      ID: {String.slice(proj.id, 0, 8)}
+                    </span>
+                    <span class="text-xs font-bold px-2 py-0.5 rounded bg-black/30 backdrop-blur-sm">
+                      {proj.status}
+                    </span>
+                  </div>
+
+                  <h3 class="font-bold text-sm mb-1 relative z-10">{proj.name}</h3>
+                  <p class="text-xs opacity-70 mb-3 relative z-10">{proj.description}</p>
+                  
+    <!-- Ticket Details Section -->
+                  <%= if proj.trigger_event.details do %>
+                    <div class="text-[10px] mb-3 relative z-10 space-y-1 bg-black/20 rounded p-2">
+                      <%= if proj.trigger_event.details["customer_name"] || proj.trigger_event.details[:customer_name] do %>
+                        <div class="flex items-center gap-1">
+                          <i class="fa-solid fa-user opacity-50 w-3"></i>
+                          <span class="opacity-70">Cliente:</span>
+                          <span class="font-bold">
+                            {proj.trigger_event.details["customer_name"] ||
+                              proj.trigger_event.details[:customer_name]}
+                          </span>
+                        </div>
+                      <% end %>
+                      <%= if proj.trigger_event.details["code"] || proj.trigger_event.details[:code] || proj.trigger_event.details["ticket_code"] do %>
+                        <div class="flex items-center gap-1">
+                          <i class="fa-solid fa-ticket opacity-50 w-3"></i>
+                          <span class="opacity-70">Senha:</span>
+                          <span class="font-bold font-mono">
+                            {proj.trigger_event.details["code"] || proj.trigger_event.details[:code] ||
+                              proj.trigger_event.details["ticket_code"]}
+                          </span>
+                        </div>
+                      <% end %>
+                      <%= if proj.trigger_event.details["services"] do %>
+                        <div class="flex items-start gap-1">
+                          <i class="fa-solid fa-list-check opacity-50 w-3 mt-0.5"></i>
+                          <span class="opacity-70">Serviços:</span>
+                          <span class="font-bold">{proj.trigger_event.details["services"]}</span>
+                        </div>
+                      <% end %>
+                      <%= if proj.trigger_event.details["reception_user"] do %>
+                        <div class="flex items-center gap-1">
+                          <i class="fa-solid fa-desktop opacity-50 w-3"></i>
+                          <span class="opacity-70">Recepção:</span>
+                          <span class="font-bold">
+                            {proj.trigger_event.details["reception_user"]}
+                          </span>
+                        </div>
+                      <% end %>
+                      <%= if proj.trigger_event.details["professional_user"] do %>
+                        <div class="flex items-center gap-1">
+                          <i class="fa-solid fa-user-doctor opacity-50 w-3"></i>
+                          <span class="opacity-70">Profissional:</span>
+                          <span class="font-bold">
+                            {proj.trigger_event.details["professional_user"]}
+                          </span>
+                        </div>
+                      <% end %>
+                    </div>
+                  <% end %>
+
+                  <div class="flex items-center gap-2 text-[10px] relative z-10">
+                    <div class="flex flex-col">
+                      <span class="opacity-50 uppercase">Trigger</span>
+                      <span class="font-bold">{proj.trigger_event.action}</span>
+                    </div>
+                    <i class="fa-solid fa-arrow-right opacity-50"></i>
+                    <div class="flex flex-col">
+                      <span class="opacity-50 uppercase">Waiting For</span>
+                      <span class="font-bold">{proj.expected_action}</span>
+                    </div>
+                  </div>
+
+                  <%= if proj.status == :pending do %>
+                    <div class="mt-4 w-full bg-black/30 h-1 rounded-full overflow-hidden relative z-10">
+                      <div class="h-full bg-current opacity-50 w-full animate-progress origin-left">
+                      </div>
+                    </div>
+                    <div class="text-[9px] text-right mt-1 opacity-50 relative z-10">
+                      Expires: {Calendar.strftime(proj.deadline, "%H:%M:%S")}
+                    </div>
+                  <% end %>
+                  
+    <!-- Background Icon -->
+                  <i class={"fa-solid #{status_icon(proj.status)} absolute -bottom-4 -right-4 text-8xl opacity-5 pointer-events-none"}>
+                  </i>
+                </div>
+              <% end %>
+
+              <%= if Enum.empty?(@projections) do %>
+                <div class="col-span-full flex flex-col items-center justify-center text-cyan-900 py-12">
+                  <i class="fa-solid fa-brain text-4xl mb-2 animate-pulse"></i>
+                  <p>No active projections. Waiting for events...</p>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        </div>
+        
+    <!-- Right Column: Live Feed -->
+        <div class="lg:col-span-1 bg-black/60 border-l border-cyan-900/30 p-4 font-mono text-xs flex flex-col h-full overflow-hidden">
+          <h2 class="text-cyan-600 font-bold uppercase tracking-widest mb-4 flex items-center gap-2 text-sm shrink-0">
+            <i class="fa-solid fa-satellite-dish animate-pulse"></i> Live Ingestion
+          </h2>
+
+          <div class="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar min-h-0">
+            <!-- Reverse order to show new at top/bottom depending on preference. Usually logs are new at bottom?
+                 Actually let's render standard list. -->
+            <%= for log <- @recent_logs do %>
+              <div class="border-l-2 border-cyan-800 pl-3 py-1 opacity-70 hover:opacity-100 hover:bg-cyan-900/10 transition-all">
+                <div class="flex justify-between text-[10px] text-cyan-600 mb-0.5">
+                  <span>{Calendar.strftime(log.inserted_at, "%H:%M:%S")}</span>
+                  <span>#{log.resource_id}</span>
+                </div>
+                <div class="text-cyan-300 font-bold truncate">
+                  {log.action}
+                </div>
+                <div class="text-cyan-500/50 truncate text-[10px]">
+                  {log.user && log.user.email}
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  defp status_classes(projection) when is_map(projection) do
+    status = projection.status
+    expected_action = projection.expected_action
+
+    # WebCheckin failures should be yellow (warning), not red (error)
+    is_webcheckin = expected_action in ["WEBCHECKIN_STARTED", "WEBCHECKIN_COMPLETED"]
+
+    cond do
+      status == :pending -> "bg-cyan-950/30 border-cyan-500/30 text-cyan-100"
+      status == :verified -> "bg-emerald-950/30 border-emerald-500/30 text-emerald-100"
+      status == :failed and is_webcheckin -> "bg-amber-950/30 border-amber-500/30 text-amber-100"
+      status == :failed -> "bg-red-950/30 border-red-500/30 text-red-100"
+      true -> "bg-cyan-950/30 border-cyan-500/30 text-cyan-100"
+    end
+  end
+
+  defp status_icon(:pending), do: "fa-hourglass-start"
+  defp status_icon(:verified), do: "fa-check-circle"
+  defp status_icon(:failed), do: "fa-circle-xmark"
+
+  defp format_anomaly_for_json(error) do
+    %{
+      id: error[:id] || error.id,
+      action: to_string(error.action),
+      resource_type: error.resource_type,
+      resource_id: error.resource_id,
+      details: error.details,
+      metadata: error[:metadata] || %{},
+      timestamp: error.inserted_at,
+      user: if(error[:user], do: %{id: error.user.id, email: error.user.email}, else: nil)
+    }
+  end
+
+  def handle_event("copy_anomaly_json", %{"idx" => idx_str}, socket) do
+    idx = String.to_integer(idx_str)
+    anomalies = socket.assigns.anomalies
+
+    if idx < length(anomalies) do
+      error = Enum.at(anomalies, idx)
+      json = Jason.encode!(format_anomaly_for_json(error), pretty: true)
+
+      # Push JSON to clipboard via JS hook
+      {:noreply, push_event(socket, "copy_to_clipboard", %{text: json})}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  def handle_event("dismiss_anomaly", %{"idx" => idx_str}, socket) do
+    idx = String.to_integer(idx_str)
+    anomalies = socket.assigns.anomalies
+
+    if idx < length(anomalies) do
+      # Remove the anomaly from the local list
+      new_anomalies = List.delete_at(anomalies, idx)
+
+      # Also update the Overseer state so it stays in sync
+      StarTickets.Sentinel.Overseer.dismiss_anomaly(idx)
+
+      {:noreply, assign(socket, :anomalies, new_anomalies)}
+    else
+      {:noreply, socket}
+    end
+  end
+end

@@ -2,6 +2,18 @@ defmodule StarTickets.Accounts.Establishment do
   use Ecto.Schema
   import Ecto.Changeset
 
+  @derive {Jason.Encoder,
+           only: [
+             :id,
+             :name,
+             :code,
+             :address,
+             :phone,
+             :is_active,
+             :client_id,
+             :inserted_at,
+             :updated_at
+           ]}
   schema "establishments" do
     field(:name, :string)
     field(:code, :string)

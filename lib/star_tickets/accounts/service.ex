@@ -2,6 +2,17 @@ defmodule StarTickets.Accounts.Service do
   use Ecto.Schema
   import Ecto.Changeset
 
+  @derive {Jason.Encoder,
+           only: [
+             :id,
+             :name,
+             :description,
+             :duration,
+             :client_id,
+             :form_template_id,
+             :inserted_at,
+             :updated_at
+           ]}
   schema "services" do
     field(:name, :string)
     field(:description, :string)

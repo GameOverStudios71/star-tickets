@@ -86,7 +86,8 @@ defmodule StarTicketsWeb.Router do
       live("/admin", AdminLive)
 
       live("/admin/users", Admin.UsersLive, :index)
-      live("/admin/audit", Admin.AuditLive)
+      live("/admin/audit", Admin.AuditLive, :index)
+      live("/admin/sentinel", Admin.SentinelLive, :index)
       live("/admin/users/new", Admin.UsersLive, :new)
       live("/admin/users/:id/edit", Admin.UsersLive, :edit)
 

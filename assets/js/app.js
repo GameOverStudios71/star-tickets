@@ -295,6 +295,16 @@ window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
 // connect if there are any LiveViews on the page
 liveSocket.connect()
 
+// Sentinel AI - Copy to clipboard helper
+window.addEventListener("phx:copy_to_clipboard", (e) => {
+  const text = e.detail.text;
+  navigator.clipboard.writeText(text).then(() => {
+    console.log("[Sentinel] JSON copied to clipboard!");
+  }).catch(err => {
+    console.error("[Sentinel] Failed to copy:", err);
+  });
+});
+
 // expose liveSocket on window for web console debug logs and latency simulation:
 // >> liveSocket.enableDebug()
 // >> liveSocket.enableLatencySim(1000)  // enabled for duration of browser session

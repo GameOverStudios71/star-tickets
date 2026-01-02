@@ -20,7 +20,10 @@ defmodule StarTicketsWeb.Public.WebCheckinLive do
     ticket =
       Repo.preload(
         ticket,
-        [services: [form_template: [form_fields: fields_query, form_sections: sections_query]]],
+        [
+          :tags,
+          services: [form_template: [form_fields: fields_query, form_sections: sections_query]]
+        ],
         force: true
       )
 
@@ -87,6 +90,13 @@ defmodule StarTicketsWeb.Public.WebCheckinLive do
           webcheckin_status: "IN_PROGRESS",
           webcheckin_started_at: DateTime.utc_now()
         })
+
+      # Log for Sentinel AI monitoring
+      StarTickets.Audit.log_action("WEBCHECKIN_STARTED", %{
+        resource_type: "Ticket",
+        resource_id: to_string(updated_ticket.id),
+        details: %{customer_name: name, ticket_code: updated_ticket.display_code}
+      })
 
       {:noreply, socket |> assign(ticket: updated_ticket, current_step: :forms)}
     end
@@ -182,6 +192,17 @@ defmodule StarTicketsWeb.Public.WebCheckinLive do
         webcheckin_status: "COMPLETED",
         webcheckin_completed_at: DateTime.utc_now()
       })
+
+    # Log for Sentinel AI monitoring
+    StarTickets.Audit.log_action("WEBCHECKIN_COMPLETED", %{
+      resource_type: "Ticket",
+      resource_id: to_string(ticket.id),
+      details: %{
+        ticket_code: ticket.display_code,
+        customer_name: ticket.customer_name,
+        responses_count: length(responses)
+      }
+    })
 
     {:noreply, push_navigate(socket, to: ~p"/ticket/#{ticket.token}")}
   end

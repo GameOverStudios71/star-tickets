@@ -2,6 +2,19 @@ defmodule StarTickets.Accounts.TotemMenu do
   use Ecto.Schema
   import Ecto.Changeset
 
+  @derive {Jason.Encoder,
+           only: [
+             :id,
+             :name,
+             :description,
+             :icon_class,
+             :position,
+             :is_taggable,
+             :establishment_id,
+             :parent_id,
+             :inserted_at,
+             :updated_at
+           ]}
   schema "totem_menus" do
     field(:name, :string)
     field(:description, :string)

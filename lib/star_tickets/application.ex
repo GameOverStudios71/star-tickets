@@ -12,6 +12,8 @@ defmodule StarTickets.Application do
       StarTickets.Repo,
       {DNSCluster, query: Application.get_env(:star_tickets, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: StarTickets.PubSub},
+      # Sentinel AI Overseer (Brain)
+      StarTickets.Sentinel.Overseer,
       # Start a worker by calling: StarTickets.Worker.start_link(arg)
       # {StarTickets.Worker, arg},
       # Start to serve requests, typically the last entry
@@ -22,6 +24,9 @@ defmodule StarTickets.Application do
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: StarTickets.Supervisor]
     result = Supervisor.start_link(children, opts)
+
+    # Attach Sentinel Logger Handler to capture system errors
+    StarTickets.Sentinel.LoggerHandler.attach()
 
     # Executar migrações pendentes após iniciar o Repo (apenas em dev)
     if Application.get_env(:star_tickets, :auto_migrate, false) do

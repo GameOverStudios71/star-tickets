@@ -2,6 +2,24 @@ defmodule StarTickets.Tickets.Ticket do
   use Ecto.Schema
   import Ecto.Changeset
 
+  @derive {Jason.Encoder,
+           only: [
+             :id,
+             :display_code,
+             :status,
+             :token,
+             :customer_name,
+             :is_priority,
+             :health_insurance_name,
+             :webcheckin_status,
+             :webcheckin_started_at,
+             :webcheckin_completed_at,
+             :establishment_id,
+             :user_id,
+             :room_id,
+             :inserted_at,
+             :updated_at
+           ]}
   schema "tickets" do
     field(:display_code, :string)
     field(:status, :string, default: "WAITING_RECEPTION")

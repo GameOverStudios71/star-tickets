@@ -79,12 +79,15 @@ defmodule StarTickets.Tickets do
     Ecto.Multi.new()
     |> Ecto.Multi.insert(:ticket, changeset)
     |> Ecto.Multi.run(:log, fn _repo, %{ticket: ticket} ->
+      # Check if any service has a form template
+      has_forms = Enum.any?(services, fn s -> s.form_template_id != nil end)
+
       Audit.log_action(
         "TICKET_CREATED",
         %{
           resource_type: "Ticket",
           resource_id: to_string(ticket.id),
-          details: %{code: ticket.display_code}
+          details: %{code: ticket.display_code, has_forms: has_forms}
         },
         actor
       )

@@ -48,6 +48,7 @@ defmodule StarTicketsWeb.AuditHook do
   end
 
   defp audit_handle_info({:audit_log_created, _}, socket), do: {:cont, socket}
+  defp audit_handle_info({:sentinel_update, _}, socket), do: {:cont, socket}
 
   defp audit_handle_info(msg, socket) do
     # Log PubSub messages or internal infos
