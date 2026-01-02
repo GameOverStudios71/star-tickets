@@ -429,6 +429,7 @@ admin =
     role: "admin",
     client_id: client.id,
     establishment_id: freguesia && freguesia.id,
+    phone_number: "11999999999",
     confirmed_at: DateTime.utc_now() |> DateTime.truncate(:second)
   })
   |> Repo.insert!()

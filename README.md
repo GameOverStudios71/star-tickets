@@ -32,6 +32,8 @@ O **StarTickets** é uma solução multi-tenant para gestão de filas de atendim
 - **Web check-in** para pacientes preencherem formulários antes do atendimento
 - **Formulários dinâmicos** para anamnese ocupacional
 - **Gestão completa** de estabelecimentos, usuários, salas e serviços
+- **Sentinel AI**: Inteligência artificial para monitoramento preditivo e detecção de anomalias
+- **Notificações em Tempo Real**: Alertas via WhatsApp para administradores em caso de falhas críticas
 
 ---
 
@@ -137,6 +139,28 @@ O **StarTickets** é uma solução multi-tenant para gestão de filas de atendim
 - Builder visual de formulários
 - Vinculação a serviços específicos
 
+### 🤖 Sentinel AI (Sistema de Inteligência)
+
+O StarTickets agora conta com um "cérebro" autônomo chamado **Overseer** que monitora o sistema 24/7.
+
+| Recurso | Descrição |
+|---------|-----------|
+| **Monitoramento de Conectividade** | Detecta instantaneamente se Totems, TVs ou Recepção ficam offline. |
+| **Projeções Futuras** | Prevê próximos passos (ex: "Ticket criado deve ser chamado em 30min") e alerta se o prazo expirar. |
+| **Detecção de Anomalias** | Identifica falhas críticas e desvios de fluxo operacional. |
+| **Dispatcher Automático** | Envia alertas em tempo real para o WhatsApp dos administradores. |
+
+### 🔔 Centro de Alertas & WhatsApp
+
+Sistema avançado de notificação para garantir alta disponibilidade.
+
+- **Painel de Notificações**: Nova tela `/admin/notifications` focada em alertas críticos (Erros e Avisos).
+- **Integração WhatsApp**:
+  - Cadastro obrigatório de celular para administradores.
+  - Envio automático de mensagens em caso de Crash, Erro de Debug ou Queda de Conexão.
+  - Alertas nominais (ex: "Totem da Recepção 2 caiu").
+- **Auditoria Completa**: Logs detalhados de todas as ações ("Paranoid Mode") para rastreabilidade total.
+
 ### 🔐 Autenticação e Autorização
 
 | Recurso | Descrição |
@@ -156,6 +180,8 @@ O **StarTickets** é uma solução multi-tenant para gestão de filas de atendim
 - **Real-time**: Atualizações instantâneas via Phoenix PubSub
 - **Responsivo**: Interface adaptável a diferentes dispositivos
 - **Acessível**: Suporte a atendimento preferencial
+
+- **Audit Logs**: Rastreabilidade completa de ações e diffs de dados
 
 ---
 
@@ -186,11 +212,13 @@ O **StarTickets** é uma solução multi-tenant para gestão de filas de atendim
 │ (Roles:     │  │ (Salas e    │      │   (Anamnese)    │
 │ admin, etc.)│  │  Mesas)     │      └─────────────────┘
 └─────────────┘  └─────────────┘               │
-                        │                      ▼
-┌───────────────────────┴───────────────────────────┐
-│                      TICKET                        │
-│  (Senha com status, serviços, tags, formulários)  │
-└───────────────────────────────────────────────────┘
+       ▲                │                      ▼
+       │ (Alerts)┌───────────────────────┴───────────────────────────┐
+       │         │                      TICKET                        │
+┌─────────────┐  │  (Senha com status, serviços, tags, formulários)  │
+│  OVERSEER   │◄─┤                                                   │
+│ (Sentinel)  │  └───────────────────────────────────────────────────┘
+└─────────────┘             (Monitors Events via PubSub)
 ```
 
 ### Status do Ticket
@@ -307,6 +335,8 @@ Após rodar `mix setup`, os seguintes usuários estarão disponíveis:
 | `/reception` | Painel da recepção | Autenticado (reception+) |
 | `/professional` | Painel do profissional | Autenticado |
 | `/tv` | Painel de chamadas TV | Autenticado (tv) |
+| `/sentinel` | Painel de Monitoramento AI | Admin |
+| `/admin/notifications` | Centro de Alertas | Admin |
 | `/dashboard` | Dashboard geral | Autenticado |
 | `/admin/*` | Área administrativa | Admin/Manager |
 | `/ticket/:token` | Status do ticket | Público |
