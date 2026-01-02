@@ -1,0 +1,1235 @@
+1
+00:00:00,199 --> 00:00:01,719
+Imagina só que você é um engenheiro
+
+2
+00:00:01,719 --> 00:00:03,800
+responsável pelo banco de dados da Caixa
+
+3
+00:00:03,800 --> 00:00:07,080
+no dia 31 de dezembro de 2025. Aí você
+
+4
+00:00:07,080 --> 00:00:09,080
+já tá lá trabalhando, tá ligado? Puto da
+
+5
+00:00:09,080 --> 00:00:10,719
+vida, porque você tá de plantão, você tá
+
+6
+00:00:10,719 --> 00:00:12,400
+trabalhando presencial e ainda bebendo
+
+7
+00:00:12,400 --> 00:00:14,440
+um cafezinho frio. De repente do nada o
+
+8
+00:00:14,440 --> 00:00:16,560
+monitoramento ele sobe de 5.000 para
+
+9
+00:00:16,560 --> 00:00:19,320
+120.000 transações por segundo. Se olha
+
+10
+00:00:19,320 --> 00:00:21,240
+para um lado, o começa a gritar. Se olha
+
+11
+00:00:21,240 --> 00:00:24,000
+pro outro, rapq. E o Pix, hein? Pix é
+
+12
+00:00:24,000 --> 00:00:26,080
+descópico. O Pix debitou, mas a aposta
+
+13
+00:00:26,080 --> 00:00:28,720
+de milhares de pessoas não efetivou.
+
+14
+00:00:28,720 --> 00:00:32,000
+Bem-vindo ao inferno da concorrência e
+
+15
+00:00:32,000 --> 00:00:33,760
+do race condition. Se você não tá no
+
+16
+00:00:33,760 --> 00:00:35,520
+reveillon em carneiros bebendo espumante
+
+17
+00:00:35,520 --> 00:00:36,800
+junto com a tropinha do cabelinho para
+
+18
+00:00:36,800 --> 00:00:38,239
+trás, você já deve est sabendo que a
+
+19
+00:00:38,239 --> 00:00:40,000
+internet ela tá pegando fogo. A Mega da
+
+20
+00:00:40,000 --> 00:00:42,000
+Virada esse ano ela sorteou R 1 bilhão
+
+21
+00:00:42,000 --> 00:00:43,680
+deais. Aí o que aconteceu, cara? O
+
+22
+00:00:43,680 --> 00:00:46,520
+sorteio atrasou, o site caiu, o Pixu e
+
+23
+00:00:46,520 --> 00:00:48,039
+agora tá todo mundo no grupo da família
+
+24
+00:00:48,039 --> 00:00:49,600
+gritando aí falando que foi fraude, tá
+
+25
+00:00:49,600 --> 00:00:51,480
+ligado? Eu, papo reto, não sou perodo
+
+26
+00:00:51,480 --> 00:00:53,719
+criminal, nem advogado. Eu sou só um
+
+27
+00:00:53,719 --> 00:00:55,800
+dev, chorume cansado que tô apanhando na
+
+28
+00:00:55,800 --> 00:00:57,399
+área aí tem 20 anos mais ou menos. Aí
+
+29
+00:00:57,399 --> 00:00:58,800
+quando eu olho esse cenário, cara, eu
+
+30
+00:00:58,800 --> 00:01:00,840
+não vejo nenhum planozinho Illuminati do
+
+31
+00:01:00,840 --> 00:01:02,359
+Lully, tá ligado? Eu simplesmente eu
+
+32
+00:01:02,359 --> 00:01:04,040
+vejo, sei lá, tipo, uma dívida técnica
+
+33
+00:01:04,040 --> 00:01:06,240
+gigante que venceu no dia 31 de dezembro
+
+34
+00:01:06,240 --> 00:01:08,320
+de 2025. Que aconteceu ali, papo reto,
+
+35
+00:01:08,320 --> 00:01:09,920
+cara, foi um clássico problema de
+
+36
+00:01:09,920 --> 00:01:11,560
+sistema distribuído que a gente ignora
+
+37
+00:01:11,560 --> 00:01:13,320
+todo dia fazendo crudezinho e nude. A
+
+38
+00:01:13,320 --> 00:01:15,119
+gente teve três cavaleiros do
+
+39
+00:01:15,119 --> 00:01:17,880
+apocalipse. O primeiro foi a falha no
+
+40
+00:01:17,880 --> 00:01:19,360
+back pressure. Basicamente o sistema ele
+
+41
+00:01:19,360 --> 00:01:21,320
+não soube dizer não, ele faleceu e
+
+42
+00:01:21,320 --> 00:01:22,720
+quando a galera olhou achava que ele só
+
+43
+00:01:22,720 --> 00:01:24,560
+tava tirando cochilo. O segundo, quebra
+
+44
+00:01:24,560 --> 00:01:27,320
+de atomicidade. Basicamente o PIC saiu e
+
+45
+00:01:27,320 --> 00:01:29,759
+a aposta sumiu. O terceiro DDOS
+
+46
+00:01:29,759 --> 00:01:32,119
+autoinfligido por conta de 50 milhões de
+
+47
+00:01:32,119 --> 00:01:33,759
+apostadores procrastinadores que
+
+48
+00:01:33,759 --> 00:01:35,600
+decidiram acessar a mesma história
+
+49
+00:01:35,600 --> 00:01:37,200
+procedury ao mesmo tempo. Hoje eu vou
+
+50
+00:01:37,200 --> 00:01:38,920
+explicar tecnicamente porque o seu Pix
+
+51
+00:01:38,920 --> 00:01:40,360
+sumiu e porque isso é muito mais
+
+52
+00:01:40,360 --> 00:01:41,880
+assustador que receber o invite de
+
+53
+00:01:41,880 --> 00:01:43,320
+reunião do nada numa sexta-feira à
+
+54
+00:01:43,320 --> 00:01:45,200
+tarde. Então paizão, já deixa o like aí,
+
+55
+00:01:45,200 --> 00:01:46,840
+se inscreve nesse canal para fortalecer
+
+56
+00:01:46,840 --> 00:01:48,680
+o vídeo e o YouTube entregar esse
+
+57
+00:01:48,680 --> 00:01:50,399
+conteúdo pra galera que acha que
+
+58
+00:01:50,399 --> 00:01:52,159
+engenharia de software é só jogar prompt
+
+59
+00:01:52,159 --> 00:01:53,600
+dentro de uma IAR. Bora lá. Para
+
+60
+00:01:53,600 --> 00:01:54,759
+entender a merda que deu, a gente
+
+61
+00:01:54,759 --> 00:01:56,520
+precisa desenhar a arquitetura provável
+
+62
+00:01:56,520 --> 00:01:58,200
+desse monstro. Ninguém tem um diagrama
+
+63
+00:01:58,200 --> 00:01:59,680
+oficial, mas quem já trabalhou com
+
+64
+00:01:59,680 --> 00:02:01,280
+código legado já sente o cheiro da
+
+65
+00:02:01,280 --> 00:02:03,560
+madeira antiga de longe lá. Ele tudo
+
+66
+00:02:03,560 --> 00:02:07,680
+começa aqui, 12.000 1000 transações por
+
+67
+00:02:07,680 --> 00:02:09,360
+segundo. Isso não é tráfico orgânico,
+
+68
+00:02:09,360 --> 00:02:11,280
+isso é um ataque DDOS coordenado pela
+
+69
+00:02:11,280 --> 00:02:13,200
+cultura nacional, onde todos querem
+
+70
+00:02:13,200 --> 00:02:14,560
+ficar milionários o início do ano e
+
+71
+00:02:14,560 --> 00:02:16,040
+mandar aquele gerente [ __ ] se
+
+72
+00:02:16,040 --> 00:02:17,640
+aquele appinho feio da caixa,
+
+73
+00:02:17,640 --> 00:02:19,480
+provavelmente ele é um wapper, vulgo, um
+
+74
+00:02:19,480 --> 00:02:21,319
+navegador disfarçado que deve estar
+
+75
+00:02:21,319 --> 00:02:23,680
+rodando, sei lá, um Angula, um React mal
+
+76
+00:02:23,680 --> 00:02:24,959
+otimizado. E papo reto, aquele
+
+77
+00:02:24,959 --> 00:02:26,239
+aplicativo ele é tão ruim, cara, que ele
+
+78
+00:02:26,239 --> 00:02:27,840
+deve baixar, sei lá, uns 15 m de
+
+79
+00:02:27,840 --> 00:02:29,440
+JavaScript só para renderizar, sei lá,
+
+80
+00:02:29,440 --> 00:02:31,200
+um botãozinho. Aí do outro lado tem um
+
+81
+00:02:31,200 --> 00:02:32,640
+usuário. Usuário tá na praia, tá
+
+82
+00:02:32,640 --> 00:02:34,640
+tranquilo, tá usando um 4G de merda,
+
+83
+00:02:34,640 --> 00:02:35,840
+cara, que a internet do Brasil é uma
+
+84
+00:02:35,840 --> 00:02:38,360
+bosta, a rede oscilando para caramba. Aí
+
+85
+00:02:38,360 --> 00:02:39,920
+esse usuário tranquilamente, ele vai lá,
+
+86
+00:02:39,920 --> 00:02:41,840
+fez a aposta dele e clica em apostar. Aí
+
+87
+00:02:41,840 --> 00:02:43,280
+o que que acontece? O spinner começa a
+
+88
+00:02:43,280 --> 00:02:44,560
+rodar, ele olha, fala assim: "Oi,
+
+89
+00:02:44,560 --> 00:02:46,040
+aconteceu nada, acontece". Aí ele vai e
+
+90
+00:02:46,040 --> 00:02:48,440
+clica de novo. Aí nada, de novo, de
+
+91
+00:02:48,440 --> 00:02:50,080
+novo, de novo, de novo. Vai clicando
+
+92
+00:02:50,080 --> 00:02:51,879
+para sempre. Parabéns, cara. Parabéns.
+
+93
+00:02:51,879 --> 00:02:53,280
+Quanto mais você clica, você tá
+
+94
+00:02:53,280 --> 00:02:55,560
+triplicando, quadriplicando a carga do
+
+95
+00:02:55,560 --> 00:02:58,120
+servidor. O clientas requisições,
+
+96
+00:02:58,120 --> 00:02:59,680
+provavelmente ele não tem um exponente
+
+97
+00:02:59,680 --> 00:03:01,879
+backof implementado. V esperar e tentar
+
+98
+00:03:01,879 --> 00:03:03,400
+de novo. E quanto o usuário ele vai
+
+99
+00:03:03,400 --> 00:03:04,840
+clicando, cara, isso vai marretando o
+
+100
+00:03:04,840 --> 00:03:06,319
+servidor de uma forma absurda. Aí
+
+101
+00:03:06,319 --> 00:03:08,720
+botaram uma fila de espera. A ideia é um
+
+102
+00:03:08,720 --> 00:03:10,840
+back pressure pr proteger o back end
+
+103
+00:03:10,840 --> 00:03:12,319
+morrer. Só que tem um detalhe técnico
+
+104
+00:03:12,319 --> 00:03:14,200
+maravilhoso nisso aqui. Geralmente essas
+
+105
+00:03:14,200 --> 00:03:15,879
+filas, cara, ela protege a entrada,
+
+106
+00:03:15,879 --> 00:03:17,400
+protege geralmente tela de login, tela
+
+107
+00:03:17,400 --> 00:03:19,560
+de home. Ela raramente vai proteger, sei
+
+108
+00:03:19,560 --> 00:03:21,000
+lá, transação de negócio lá no fundo,
+
+109
+00:03:21,000 --> 00:03:22,599
+mano. Lá ele de novo é igual segurança
+
+110
+00:03:22,599 --> 00:03:24,360
+de balada, mano. Segurança de balada que
+
+111
+00:03:24,360 --> 00:03:25,799
+vai e barra a gente lá na porta, mas
+
+112
+00:03:25,799 --> 00:03:27,400
+quem tá lá dentro, mano, tá saindo na
+
+113
+00:03:27,400 --> 00:03:29,080
+porrada se batendo por conta, sei lá,
+
+114
+00:03:29,080 --> 00:03:30,080
+talvez de um combo de whisky
+
+115
+00:03:30,080 --> 00:03:32,319
+falsificado. O usuário passava 40
+
+116
+00:03:32,319 --> 00:03:33,959
+minutos na fila. O token de sessão
+
+117
+00:03:33,959 --> 00:03:35,560
+deleirava enquanto ele esperava. E
+
+118
+00:03:35,560 --> 00:03:37,760
+quando ele finalmente entrava, o backend
+
+119
+00:03:37,760 --> 00:03:39,280
+putz, já tava pegando fogo, mano. A a
+
+120
+00:03:39,280 --> 00:03:41,200
+aquele sistema de fila, ele deu uma
+
+121
+00:03:41,200 --> 00:03:43,040
+falsa sensação de segurança, tá ligado?
+
+122
+00:03:43,040 --> 00:03:44,560
+Aí do nada você percebe, mano, que você
+
+123
+00:03:44,560 --> 00:03:46,120
+não entrou no sistema, tipo, você entrou
+
+124
+00:03:46,120 --> 00:03:47,920
+no era o sistema, era, sei lá, talvez um
+
+125
+00:03:47,920 --> 00:03:49,599
+sagão do Titanic, enquanto, sei lá, o
+
+126
+00:03:49,599 --> 00:03:50,879
+Titanic tá afundando, você tá lá no
+
+127
+00:03:50,879 --> 00:03:52,720
+saguão tranquilo e ouvindo a orquestra
+
+128
+00:03:52,720 --> 00:03:55,239
+tocar. Aí aqui é onde gerou toda a
+
+129
+00:03:55,239 --> 00:03:56,720
+teoria da conspiração. Presta sua
+
+130
+00:03:56,720 --> 00:03:58,400
+atenção. Para uma aposta via Pix
+
+131
+00:03:58,400 --> 00:03:59,879
+funcionar, você tem uma transação
+
+132
+00:03:59,879 --> 00:04:01,599
+distribuída de dois bancos de dados
+
+133
+00:04:01,599 --> 00:04:03,599
+diferente. A do banco, que é onde o
+
+134
+00:04:03,599 --> 00:04:05,879
+dinheiro tá, e a da loteria, que é onde
+
+135
+00:04:05,879 --> 00:04:07,640
+a aposta ela tá armazenada. Para isso
+
+136
+00:04:07,640 --> 00:04:09,519
+ser perfeito, cara, basicamente
+
+137
+00:04:09,519 --> 00:04:11,400
+precisaria de um AC, mas como a gente,
+
+138
+00:04:11,400 --> 00:04:13,159
+sei lá, programador web, então já que tá
+
+139
+00:04:13,159 --> 00:04:14,519
+na web, tá tudo certo, a gente usa um
+
+140
+00:04:14,519 --> 00:04:16,440
+base mesmo. O fluxo, na minha
+
+141
+00:04:16,440 --> 00:04:18,040
+imaginação, provavelmente foi isso aqui,
+
+142
+00:04:18,040 --> 00:04:19,239
+cara. O sistema ele vai lá, chama o
+
+143
+00:04:19,239 --> 00:04:21,320
+Banco Central e fala assim: "Cobra R$ 30
+
+144
+00:04:21,320 --> 00:04:23,120
+desse cara". O Bass que é moderno, ele
+
+145
+00:04:23,120 --> 00:04:25,120
+responde, sei lá, em 200 milsegundos e
+
+146
+00:04:25,120 --> 00:04:26,360
+fala assim: "Cobrado, o dinheiro saiu da
+
+147
+00:04:26,360 --> 00:04:28,080
+conta". Aí o sistema ele vira pro cor da
+
+148
+00:04:28,080 --> 00:04:29,639
+loteria e fala assim, ó: "Grava essa
+
+149
+00:04:29,639 --> 00:04:31,479
+aposta aí". O cor da loteria, cara, ele
+
+150
+00:04:31,479 --> 00:04:33,240
+simplesmente tá morto. Ele não responde,
+
+151
+00:04:33,240 --> 00:04:34,720
+ele não faz nada, cara. Ele não age. O
+
+152
+00:04:34,720 --> 00:04:36,280
+Gateway, que é o porteiro da PI, ele tem
+
+153
+00:04:36,280 --> 00:04:38,320
+um time out, digamos, sei lá, de 29
+
+154
+00:04:38,320 --> 00:04:40,240
+segundos. Passou 29 segundos, cara, o
+
+155
+00:04:40,240 --> 00:04:42,360
+Gateway simplesmente ele corta a conexão
+
+156
+00:04:42,360 --> 00:04:45,320
+e devolve pro usuário erro 504 gateway
+
+157
+00:04:45,320 --> 00:04:47,000
+time out. Aí o usuário vai ver o erro, o
+
+158
+00:04:47,000 --> 00:04:48,560
+banco do usuário vê sucesso. Aí,
+
+159
+00:04:48,560 --> 00:04:50,280
+parabéns, o sistema entrou num estado de
+
+160
+00:04:50,280 --> 00:04:51,880
+inconsistência absurda. O dinheiro foi
+
+161
+00:04:51,880 --> 00:04:53,639
+pro limbo, mas não foi roubo, tá ligado?
+
+162
+00:04:53,639 --> 00:04:55,160
+Não foi roubo, foi simplesmente uma
+
+163
+00:04:55,160 --> 00:04:57,320
+falha da implementação do saga pattern.
+
+164
+00:04:57,320 --> 00:04:58,440
+Eu acho, sei lá, talvez faltou um
+
+165
+00:04:58,440 --> 00:05:00,400
+rollback automático ou sei lá, o o
+
+166
+00:05:00,400 --> 00:05:02,280
+sistema de compensação tava tão lento
+
+167
+00:05:02,280 --> 00:05:03,440
+quanto a aposta. Aí você vai me
+
+168
+00:05:03,440 --> 00:05:05,320
+perguntar: "E, papai, mas por que que a
+
+169
+00:05:05,320 --> 00:05:07,120
+aposta demorou tanto para gravar, mano?"
+
+170
+00:05:07,120 --> 00:05:08,759
+Porque lá no fundo, embaixo de 50
+
+171
+00:05:08,759 --> 00:05:10,479
+camadas de cubernetes e microsserviços
+
+172
+00:05:10,479 --> 00:05:12,520
+em Java, existe uma parada chamada banco
+
+173
+00:05:12,520 --> 00:05:13,919
+de dados relacional monolítico,
+
+174
+00:05:13,919 --> 00:05:16,440
+provavelmente um com DB2 gigantesco, tá
+
+175
+00:05:16,440 --> 00:05:17,880
+ligado? E os bancos relacionais, ele tem
+
+176
+00:05:17,880 --> 00:05:19,400
+um limite físico chamado Connection
+
+177
+00:05:19,400 --> 00:05:21,120
+Pool. Digamos que, sei lá, esse banco
+
+178
+00:05:21,120 --> 00:05:23,199
+aguenta, sei lá, 5.000 conexões
+
+179
+00:05:23,199 --> 00:05:25,400
+simultâneas. Chegaram 120.000, papai. Aí
+
+180
+00:05:25,400 --> 00:05:26,840
+o que que acontece? Vai lá e rola um
+
+181
+00:05:26,840 --> 00:05:28,639
+lock de tabela, tá ligado? Um row lock.
+
+182
+00:05:28,639 --> 00:05:29,960
+O banco de dados fala assim: "Calma que
+
+183
+00:05:29,960 --> 00:05:31,800
+eu tô escrevendo a aposta do Zé". Aí o
+
+184
+00:05:31,800 --> 00:05:33,520
+servidor da aplicação fala assim: "Tem
+
+185
+00:05:33,520 --> 00:05:35,560
+mais 100.000 Zés aqui". Aí o banco
+
+186
+00:05:35,560 --> 00:05:38,600
+trava, a CPU ela vai lá em 100% e o DBA
+
+187
+00:05:38,600 --> 00:05:39,919
+tá lá chorando em posição fetal dentro
+
+188
+00:05:39,919 --> 00:05:41,319
+do banheiro. Aí paizão, não adianta ter
+
+189
+00:05:41,319 --> 00:05:42,919
+nuvem, não adianta ter dock, mano. Se o
+
+190
+00:05:42,919 --> 00:05:44,240
+Gargalo é o banco relacional único, você
+
+191
+00:05:44,240 --> 00:05:45,479
+pode colocar, sei lá, até o servidor da
+
+192
+00:05:45,479 --> 00:05:46,960
+NASA. Aí vai vir aquele gerente
+
+193
+00:05:46,960 --> 00:05:48,600
+emocionado, tá ligado? vai falar assim:
+
+194
+00:05:48,600 --> 00:05:51,080
+"Pô, mas nós migramos para a nuvem.
+
+195
+00:05:51,080 --> 00:05:52,360
+Grandes merdas essa nuvem, cara. Você
+
+196
+00:05:52,360 --> 00:05:53,840
+acreditou em papo, sei lá, de vendedor
+
+197
+00:05:53,840 --> 00:05:55,720
+de cloud. Se seu código, pensa comigo,
+
+198
+00:05:55,720 --> 00:05:57,720
+se ele faz um select asterisco, aposta
+
+199
+00:05:57,720 --> 00:05:59,840
+for update travando a tabela inteira só
+
+200
+00:05:59,840 --> 00:06:01,479
+para garantir que o número de aposta é
+
+201
+00:06:01,479 --> 00:06:03,880
+único, cara, você derruba fácil uma WS
+
+202
+00:06:03,880 --> 00:06:05,120
+inteira só com essa K. Para mim, a
+
+203
+00:06:05,120 --> 00:06:06,440
+arquitetura do governo, ela falhou
+
+204
+00:06:06,440 --> 00:06:07,680
+porque ela tentou, sei lá, escalar
+
+205
+00:06:07,680 --> 00:06:09,319
+verticalmente. Vugo compra uma máquina
+
+206
+00:06:09,319 --> 00:06:10,680
+maior, geralmente assim, não, aumenta a
+
+207
+00:06:10,680 --> 00:06:11,840
+máquina, aumenta a máquina que vai dar
+
+208
+00:06:11,840 --> 00:06:13,639
+bom. Se me hipótese tiver certa, cara,
+
+209
+00:06:13,639 --> 00:06:14,840
+deveria implementar uma espécie de
+
+210
+00:06:14,840 --> 00:06:16,319
+Sherging. É basicamente dividir o banco
+
+211
+00:06:16,319 --> 00:06:18,120
+de dados em pedaços. Mas eu como
+
+212
+00:06:18,120 --> 00:06:20,319
+programador Shorum, condolências a
+
+213
+00:06:20,319 --> 00:06:21,720
+outros programadores Shorume, a gente
+
+214
+00:06:21,720 --> 00:06:23,520
+sabe cara que é humanamente impossível
+
+215
+00:06:23,520 --> 00:06:25,199
+você refaturar, sei lá, um legado que
+
+216
+00:06:25,199 --> 00:06:28,080
+tem 20 anos justamente na semana do ano
+
+217
+00:06:28,080 --> 00:06:31,400
+novo. Agora vamos falar da fraude.
+
+218
+00:06:31,400 --> 00:06:33,360
+Mano, Davin, essa parada foi armada,
+
+219
+00:06:33,360 --> 00:06:34,919
+cara. O sistema caiu de propósito só pro
+
+220
+00:06:34,919 --> 00:06:36,599
+governo roubar o Pix, sei lá, manipular
+
+221
+00:06:36,599 --> 00:06:38,479
+o sorteio. Você tá de sacanagem, né,
+
+222
+00:06:38,479 --> 00:06:39,800
+cara? Você acha mesmo uma instituição
+
+223
+00:06:39,800 --> 00:06:41,039
+que não consegue configurar um círculo
+
+224
+00:06:41,039 --> 00:06:42,400
+de break implementar uma chave de
+
+225
+00:06:42,400 --> 00:06:44,319
+indepotência básica no Pix? Você acha
+
+226
+00:06:44,319 --> 00:06:46,280
+mesmo que essa galera tem capacidade
+
+227
+00:06:46,280 --> 00:06:47,919
+técnica, sei lá, de orquestrar uma
+
+228
+00:06:47,919 --> 00:06:49,919
+fraude digital indetectável, sei lá,
+
+229
+00:06:49,919 --> 00:06:52,319
+manipulando bolinhas físicas em tempo
+
+230
+00:06:52,319 --> 00:06:54,280
+real na TV aberta? [ __ ], tem uma frase
+
+231
+00:06:54,280 --> 00:06:55,479
+que eu gosto muito, que é a seguinte:
+
+232
+00:06:55,479 --> 00:06:57,319
+"Cara, nunca atribua a malícia o que
+
+233
+00:06:57,319 --> 00:06:59,479
+pode ser adequadamente explicado pela
+
+234
+00:06:59,479 --> 00:07:01,479
+estupidez". Ou no nosso caso, por dívida
+
+235
+00:07:01,479 --> 00:07:03,360
+técnica, né? Papo reto, para fazer uma
+
+236
+00:07:03,360 --> 00:07:04,960
+fralude desse nível, você precisaria,
+
+237
+00:07:04,960 --> 00:07:06,800
+sei lá, de uma equipe [ __ ] de gênio do
+
+238
+00:07:06,800 --> 00:07:08,680
+mal. O que a gente viu no dia 31, cara,
+
+239
+00:07:08,680 --> 00:07:10,080
+foi oposto realidade, mano. Foi a
+
+240
+00:07:10,080 --> 00:07:11,840
+vitória, sei lá, do código espaguetti.
+
+241
+00:07:11,840 --> 00:07:13,479
+Foi o triunfo do, na minha máquina
+
+242
+00:07:13,479 --> 00:07:15,080
+funciona. E dizer que isso tudo aí foi
+
+243
+00:07:15,080 --> 00:07:16,560
+fraude, elogiar a competência deles.
+
+244
+00:07:16,560 --> 00:07:17,759
+Aquilo lá não foi crime organizado não,
+
+245
+00:07:17,759 --> 00:07:19,199
+paizão. Aquilo ali foi desorganização
+
+246
+00:07:19,199 --> 00:07:20,680
+criminosa. Pode ficar de boa aí, fica
+
+247
+00:07:20,680 --> 00:07:21,960
+tranquilo aí que o chefe da caixa não
+
+248
+00:07:21,960 --> 00:07:23,440
+roubou seu dinheiro aí para comprar, sei
+
+249
+00:07:23,440 --> 00:07:25,240
+lá, um IAT Mônaco. O dia ele tá lá preso
+
+250
+00:07:25,240 --> 00:07:26,759
+numa tabela temporária esperando um
+
+251
+00:07:26,759 --> 00:07:28,520
+jobcobol rodar e fazer esse estorno
+
+252
+00:07:28,520 --> 00:07:30,680
+manual. Aí resumindo essa ópera técnica
+
+253
+00:07:30,680 --> 00:07:31,800
+aqui, cara, o que que a gente pode
+
+254
+00:07:31,800 --> 00:07:33,120
+aprender, talvez para não passar
+
+255
+00:07:33,120 --> 00:07:34,360
+vergonha no nosso trabalho? Acho que a
+
+256
+00:07:34,360 --> 00:07:36,039
+primeira primeiro aprendizado, mano, é
+
+257
+00:07:36,039 --> 00:07:37,800
+separa a leitura da escrita. O site de
+
+258
+00:07:37,800 --> 00:07:39,280
+ver o resultado, ele não pode cair junto
+
+259
+00:07:39,280 --> 00:07:40,800
+com o site de apostar, mano. É fluxo
+
+260
+00:07:40,800 --> 00:07:42,039
+diferente, mano. É só isolar os
+
+261
+00:07:42,039 --> 00:07:44,759
+domínios. Segundo e de potência vida. Se
+
+262
+00:07:44,759 --> 00:07:47,000
+o usuário no desespero clicar no botão
+
+263
+00:07:47,000 --> 00:07:49,560
+pagar 50 vezes o seu sistema, ele cobra
+
+264
+00:07:49,560 --> 00:07:51,440
+50 vezes ou entende que é a mesma ação.
+
+265
+00:07:51,440 --> 00:07:53,199
+Se você não souber responder isso,
+
+266
+00:07:53,199 --> 00:07:55,360
+calma, calma, não sobe nada em produção
+
+267
+00:07:55,360 --> 00:07:56,960
+ainda. Terceiro cara que eu gosto para
+
+268
+00:07:56,960 --> 00:07:59,280
+caramba é o feio fest. É o fale rápido.
+
+269
+00:07:59,280 --> 00:08:01,000
+Pensa comigo, se o banco de dados ele tá
+
+270
+00:08:01,000 --> 00:08:02,680
+morrendo, rejeita a conexão em 10
+
+271
+00:08:02,680 --> 00:08:04,080
+msundos, cara. Não deixa o usuário
+
+272
+00:08:04,080 --> 00:08:06,000
+pendurado, sei lá, por 30 segundos até
+
+273
+00:08:06,000 --> 00:08:07,759
+tomar um time out na cara. Papo reto, é
+
+274
+00:08:07,759 --> 00:08:09,560
+melhor você ter um erro rápido, tipo de
+
+275
+00:08:09,560 --> 00:08:11,759
+tente mais tarde, do que um load eterno
+
+276
+00:08:11,759 --> 00:08:13,520
+que come o dinheiro do usuário. Mano, a
+
+277
+00:08:13,520 --> 00:08:14,960
+galera de XX, que eu sacaneio pr
+
+278
+00:08:14,960 --> 00:08:16,199
+caramba, mano, eles tm uma parada que
+
+279
+00:08:16,199 --> 00:08:17,639
+você tem que respeitar o tempo do seu
+
+280
+00:08:17,639 --> 00:08:19,080
+usuário, mano. E, pô, trazendo pra back
+
+281
+00:08:19,080 --> 00:08:21,159
+end, cara, isso é pura realidade, tá
+
+282
+00:08:21,159 --> 00:08:22,960
+ligado? Para você que é apostador comum,
+
+283
+00:08:22,960 --> 00:08:25,280
+a única arquitetura que é 100% a prova
+
+284
+00:08:25,280 --> 00:08:28,000
+de falhas na Mega da Virada se chama-se
+
+285
+00:08:28,000 --> 00:08:30,599
+lotérica física. Rejeite a modernidade,
+
+286
+00:08:30,599 --> 00:08:33,399
+cara. Porque o protocolo TCP da tia da
+
+287
+00:08:33,399 --> 00:08:35,399
+lotérica, ele pode ser lento. A latência
+
+288
+00:08:35,399 --> 00:08:37,000
+da filha é alta para caramba, tá ligado?
+
+289
+00:08:37,000 --> 00:08:38,440
+Mas pensa comigo, cara, o recibe em
+
+290
+00:08:38,440 --> 00:08:40,360
+papel, ele tem 100% de durabilidade e
+
+291
+00:08:40,360 --> 00:08:42,479
+zero chance de dar erro 504. Se você não
+
+292
+00:08:42,479 --> 00:08:43,839
+curtiu esse formato de vídeo, deixe seu
+
+293
+00:08:43,839 --> 00:08:45,560
+feedback nos comentários. Cara, agora em
+
+294
+00:08:45,560 --> 00:08:47,040
+2026 eu tô querendo equilibrar mais o
+
+295
+00:08:47,040 --> 00:08:49,320
+canal, tá ligado? 50% droga e 50%
+
+296
+00:08:49,320 --> 00:08:50,959
+salada. Mas para eu poder fazer isso, eu
+
+297
+00:08:50,959 --> 00:08:52,519
+preciso saber se a galera quer salada ou
+
+298
+00:08:52,519 --> 00:08:54,320
+quer só mesmo Leo dias da bolha técnica.
+
+299
+00:08:54,320 --> 00:08:55,600
+E já aproveita e assiste esse vídeo
+
+300
+00:08:55,600 --> 00:08:57,160
+aqui, cara. essa recomendação aqui muito
+
+301
+00:08:57,160 --> 00:08:58,760
+braba que eu falo sobre o pesadelo
+
+302
+00:08:58,760 --> 00:09:00,680
+técnico que o Nubank vai passar agora em
+
+303
+00:09:00,680 --> 00:09:02,560
+2026. Ele vai deixar de ser uma fintec e
+
+304
+00:09:02,560 --> 00:09:04,040
+vai virar banco de verdade. Então se
+
+305
+00:09:04,040 --> 00:09:05,240
+você não é inscrito, se inscreve. Se não
+
+306
+00:09:05,240 --> 00:09:08,240
+deixou o like, deixa o like e qu em 2026
+
+307
+00:09:08,240 --> 00:09:10,320
+a gente não seja leofado e a gente
+
+308
+00:09:10,320 --> 00:09:11,839
+consiga, sei lá, triplicar o nosso
+
+309
+00:09:11,839 --> 00:09:14,240
+salário.

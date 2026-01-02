@@ -346,10 +346,66 @@ const TVSound = {
   }
 }
 
+// Debounce Submit Hook - Prevents multiple clicks on action buttons
+// Usage: <button phx-hook="DebounceSubmit" phx-click="some_action">...
+const DebounceSubmit = {
+  mounted() {
+    this.originalContent = this.el.innerHTML;
+    this.originalClasses = this.el.className;
+
+    this.el.addEventListener("click", (e) => {
+      // If already disabled, prevent action
+      if (this.el.dataset.loading === "true") {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+
+      // Disable and show loading state
+      this.el.dataset.loading = "true";
+      this.el.classList.add("opacity-50", "cursor-not-allowed", "pointer-events-none");
+
+      // Add spinner if it's a button with text
+      if (this.el.querySelector("span") || this.el.innerText.trim()) {
+        const spinner = '<span class="loading loading-spinner loading-xs mr-2"></span>';
+        if (!this.el.innerHTML.includes("loading-spinner")) {
+          this.el.innerHTML = spinner + this.el.innerHTML;
+        }
+      }
+    });
+
+    // Re-enable when server responds (via LiveView event or generic)
+    this.handleEvent("enable_button", () => this.enableButton());
+    this.handleEvent("operation_complete", () => this.enableButton());
+
+    // Also reset on any phx update (means server responded)
+    // We use a timeout to auto-reset after 10s as fallback
+    this.timeout = null;
+    this.el.addEventListener("click", () => {
+      if (this.timeout) clearTimeout(this.timeout);
+      this.timeout = setTimeout(() => this.enableButton(), 10000);
+    });
+  },
+
+  updated() {
+    // Reset on any DOM update from server
+    this.enableButton();
+  },
+
+  enableButton() {
+    if (this.timeout) clearTimeout(this.timeout);
+    this.el.dataset.loading = "false";
+    this.el.classList.remove("opacity-50", "cursor-not-allowed", "pointer-events-none");
+    // Remove spinner if added
+    const spinner = this.el.querySelector(".loading-spinner");
+    if (spinner) spinner.parentElement.remove();
+  }
+}
+
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: { _csrf_token: csrfToken },
-  hooks: { ...colocatedHooks, PhoneMask, AutoClearFlash, TotemSounds, DeskPreference, RoomPreference, AutoFocus, TVSound },
+  hooks: { ...colocatedHooks, PhoneMask, AutoClearFlash, TotemSounds, DeskPreference, RoomPreference, AutoFocus, TVSound, DebounceSubmit },
 })
 
 // Show progress bar on live navigation and form submits

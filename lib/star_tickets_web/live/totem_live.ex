@@ -330,6 +330,8 @@ defmodule StarTicketsWeb.TotemLive do
     <!-- Buttons -->
         <div class="flex flex-col gap-4">
           <button
+            id="generate-ticket-btn"
+            phx-hook="DebounceSubmit"
             phx-click="generate_ticket"
             class="w-full py-6 rounded-2xl text-2xl font-bold text-white
                    bg-gradient-to-r from-green-600 to-emerald-600
