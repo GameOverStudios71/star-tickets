@@ -33,8 +33,13 @@ defmodule StarTicketsWeb.Router do
     plug(StarTicketsWeb.Plugs.RateLimiter, limit: 100, period: 60_000)
   end
 
+  pipeline :rate_limit_public do
+    # Lighter limit for public pages (60 req/min)
+    plug(StarTicketsWeb.Plugs.RateLimiter, limit: 60, period: 60_000)
+  end
+
   scope "/", StarTicketsWeb do
-    pipe_through(:browser)
+    pipe_through([:browser, :rate_limit_public])
 
     live("/", LandingLive, :index)
 
