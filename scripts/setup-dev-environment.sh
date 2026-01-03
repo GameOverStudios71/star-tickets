@@ -169,8 +169,24 @@ print_step "Installing Elixir ${ELIXIR_VERSION}..."
 if asdf list elixir | grep -q "${ELIXIR_VERSION}"; then
     print_warning "Elixir ${ELIXIR_VERSION} already installed"
 else
-    asdf install elixir ${ELIXIR_VERSION}
-    print_success "Elixir ${ELIXIR_VERSION} installed"
+    if ! asdf install elixir ${ELIXIR_VERSION}; then
+        print_warning "Standard ASDF install failed. Attempting manual download..."
+        
+        # Manual install fallback
+        ELIXIR_ZIP="elixir-otp-27.zip"
+        DOWNLOAD_URL="https://github.com/elixir-lang/elixir/releases/download/v1.18.1/${ELIXIR_ZIP}"
+        INSTALL_PATH="$HOME/.asdf/installs/elixir/${ELIXIR_VERSION}"
+        
+        wget "$DOWNLOAD_URL" -O "$ELIXIR_ZIP"
+        mkdir -p "$INSTALL_PATH"
+        unzip -o "$ELIXIR_ZIP" -d "$INSTALL_PATH"
+        rm "$ELIXIR_ZIP"
+        
+        asdf reshim elixir
+        print_success "Elixir installed manually via wget fallback."
+    else
+        print_success "Elixir ${ELIXIR_VERSION} installed via ASDF"
+    fi
 fi
 
 echo ""
