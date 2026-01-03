@@ -61,10 +61,10 @@ defmodule StarTickets.Notifications.Dispatcher do
   end
 
   defp list_admins_with_phone do
-    # This query might belong in Accounts context, but inline for now is fine for this specific purpose
+    # Notify ALL admins AND managers that have a phone number
     StarTickets.Repo.all(
       from u in Accounts.User,
-        where: u.role == "admin" and not is_nil(u.phone_number),
+        where: u.role in ["admin", "manager"] and not is_nil(u.phone_number),
         select: u
     )
   end

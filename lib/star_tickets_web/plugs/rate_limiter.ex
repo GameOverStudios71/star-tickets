@@ -24,11 +24,37 @@ defmodule StarTicketsWeb.Plugs.RateLimiter do
         conn
 
       {:deny, _limit} ->
+        # Log the rate limit violation as a critical event
+        log_rate_limit_violation(conn, limit, period)
+
         conn
         |> put_resp_content_type("application/json")
         |> send_resp(429, Jason.encode!(%{error: "Too many requests. Please wait."}))
         |> halt()
     end
+  end
+
+  defp log_rate_limit_violation(conn, limit, period) do
+    ip = get_client_ip(conn)
+    path = conn.request_path
+
+    # Log as audit event - this will trigger notification dispatcher
+    StarTickets.Audit.log_action(
+      "SYSTEM_ALERT_RATE_LIMIT_EXCEEDED",
+      %{
+        resource_type: "Security",
+        resource_id: ip,
+        details: %{
+          message: "Rate limit exceeded: #{limit} requests in #{div(period, 1000)}s",
+          ip: ip,
+          path: path,
+          method: conn.method
+        },
+        metadata: %{severity: "warning"},
+        # System user
+        user_id: 1
+      }
+    )
   end
 
   defp rate_limit_key(conn) do
