@@ -141,14 +141,16 @@ O **StarTickets** é uma solução multi-tenant para gestão de filas de atendim
 
 ### 🤖 Sentinel AI (Sistema de Inteligência)
 
-O StarTickets agora conta com um "cérebro" autônomo chamado **Overseer** que monitora o sistema 24/7.
+O StarTickets conta com um "cérebro" autônomo chamado **Overseer** que monitora o sistema em tempo real.
 
 | Recurso | Descrição |
 |---------|-----------|
+| **Serviço On-Demand** | Ativa automaticamente quando a página Sentinel é aberta, desativa quando fecha. Zero consumo em standby. |
 | **Monitoramento de Conectividade** | Detecta instantaneamente se Totems, TVs ou Recepção ficam offline. |
 | **Projeções Futuras** | Prevê próximos passos (ex: "Ticket criado deve ser chamado em 30min") e alerta se o prazo expirar. |
 | **Detecção de Anomalias** | Identifica falhas críticas e desvios de fluxo operacional. |
 | **Dispatcher Automático** | Envia alertas em tempo real para o WhatsApp dos administradores. |
+| **Indicador de Status** | Header mostra ACTIVE/STANDBY com animação visual em tempo real. |
 
 ### 🔔 Centro de Alertas & WhatsApp
 
