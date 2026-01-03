@@ -234,7 +234,12 @@ echo ""
 # =============================================================================
 print_step "Installing Hex and Rebar..."
 
-mix local.hex --force
+# Try standard Hex install, fallback to GitHub if it fails (network issues)
+if ! mix local.hex --force; then
+    print_warning "Standard Hex install failed. Attempting install from GitHub..."
+    mix archive.install github hexpm/hex branch latest --force || print_error "Failed to install Hex from GitHub"
+fi
+
 mix local.rebar --force
 
 print_success "Hex and Rebar installed"
