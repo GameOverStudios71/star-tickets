@@ -21,7 +21,7 @@ defmodule StarTicketsWeb.Components.AuditActionsFilter do
     assigns = assign(assigns, :grouped_actions, grouped_actions)
 
     ~H"""
-    <div class="bg-black/20 border border-white/10 rounded-lg overflow-hidden">
+    <div class="st-card st-acrylic rounded-lg overflow-hidden shadow-lg border border-white/10">
       <button
         type="button"
         phx-click="toggle_ingestion_panel"

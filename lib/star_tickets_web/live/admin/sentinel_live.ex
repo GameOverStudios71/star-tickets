@@ -121,7 +121,7 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
       
     <!-- Operational Flow Pipeline -->
       <% flow_status = check_operational_flow(connected) %>
-      <div class="mb-6 bg-black/30 backdrop-blur-md border border-white/10 rounded-xl p-6 shadow-2xl">
+      <div class="mb-6 mt-6 bg-black/30 backdrop-blur-md border border-white/10 rounded-xl p-6 shadow-2xl">
         <h2 class="text-cyan-600 font-bold uppercase tracking-widest mb-4 flex items-center gap-2 text-sm">
           <i class="fa-solid fa-code-branch"></i> Operational Flow
         </h2>
@@ -553,13 +553,6 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
     <!-- Right Column: Live Feed -->
         <div class="lg:col-span-1 flex flex-col h-full gap-4">
           <div class="st-card st-acrylic p-4 flex-1 flex flex-col h-full overflow-hidden shadow-2xl">
-            <!-- Action Filters -->
-            <.live_ingestion_filter
-              id="live-ingestion-filter"
-              selected_actions={@selected_actions}
-              collapsed={@ingestion_collapsed}
-            />
-
             <h2 class="text-cyan-600 font-bold uppercase tracking-widest mb-4 flex items-center gap-2 text-sm shrink-0 mt-4">
               <i class="fa-solid fa-satellite-dish animate-pulse"></i> Live Ingestion
             </h2>
