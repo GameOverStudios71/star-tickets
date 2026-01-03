@@ -35,7 +35,21 @@ defmodule StarTicketsWeb.Admin.NotificationSettingsLive do
      |> assign(:page_title, "Configuração de Notificações")
      |> assign(:grouped_settings, grouped_settings)
      |> assign(:system_types, system_types)
-     |> assign(:audit_groups, audit_groups)}
+     |> assign(:audit_groups, audit_groups)
+     |> assign(:expanded_sections, MapSet.new())}
+  end
+
+  def handle_event("toggle_section", %{"section" => section}, socket) do
+    expanded = socket.assigns.expanded_sections
+
+    new_expanded =
+      if MapSet.member?(expanded, section) do
+        MapSet.delete(expanded, section)
+      else
+        MapSet.put(expanded, section)
+      end
+
+    {:noreply, assign(socket, :expanded_sections, new_expanded)}
   end
 
   def handle_event("toggle_whatsapp", %{"type" => type, "role" => role}, socket) do
@@ -113,96 +127,58 @@ defmodule StarTicketsWeb.Admin.NotificationSettingsLive do
             %{label: "Notificações"}
           ]}
         >
-          <div class="mt-8 space-y-8">
+          <div class="mt-8 space-y-4">
             <!-- Section 1: System Alerts -->
-            <div>
-              <h3 class="text-white/70 font-bold uppercase tracking-widest text-xs mb-4 flex items-center gap-2">
-                <i class="fa-solid fa-triangle-exclamation text-yellow-500"></i>
-                Alertas Críticos (Sistema)
-              </h3>
-              <div class="overflow-x-auto rounded-lg border border-white/10">
-                <table class="w-full text-left border-collapse bg-black/20">
-                  <thead class="bg-white/5">
-                    <tr class="border-b border-white/10 text-white/50 text-sm uppercase tracking-wider">
-                      <th class="p-4">Tipo de Alerta</th>
-                      <th class="p-4 text-center w-32">WhatsApp Admin</th>
-                      <th class="p-4 text-center w-32">WhatsApp Manager</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-white/5">
-                    <%= for type <- @system_types do %>
-                      <tr class="hover:bg-white/5 transition-colors">
-                        <td class="p-4">
-                          <div class="flex items-center gap-3">
-                            <div class={"w-2 h-2 rounded-full " <> get_type_color(type)}></div>
-                            <span class="font-bold text-white">{format_type(type)}</span>
-                          </div>
-                          <p class="text-xs text-white/50 mt-1 pl-5">{get_type_description(type)}</p>
-                        </td>
-
-                        <td class="p-4 text-center">
-                          <.toggle_switch
-                            enabled={get_setting(@grouped_settings, type, "admin")}
-                            type={type}
-                            role="admin"
-                          />
-                        </td>
-
-                        <td class="p-4 text-center">
-                          <.toggle_switch
-                            enabled={get_setting(@grouped_settings, type, "manager")}
-                            type={type}
-                            role="manager"
-                          />
-                        </td>
-                      </tr>
-                    <% end %>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            
-    <!-- Section 2: Operational Audit -->
-            <%= for {category, actions} <- @audit_groups do %>
-              <div>
-                <h3 class="text-white/70 font-bold uppercase tracking-widest text-xs mb-4 flex items-center gap-2">
-                  <i class="fa-solid fa-list-check text-cyan-500"></i> {category}
+            <div class="border border-white/10 rounded-lg bg-black/20 overflow-hidden">
+              <button
+                phx-click="toggle_section"
+                phx-value-section="system"
+                class="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors text-left"
+              >
+                <h3 class="text-white/70 font-bold uppercase tracking-widest text-xs flex items-center gap-2">
+                  <i class="fa-solid fa-triangle-exclamation text-yellow-500 w-5 text-center"></i>
+                  Alertas Críticos (Sistema)
                 </h3>
-                <div class="overflow-x-auto rounded-lg border border-white/10">
-                  <table class="w-full text-left border-collapse bg-black/20">
+                <i class={"fa-solid fa-chevron-down transition-transform duration-200 text-white/50 " <> if(MapSet.member?(@expanded_sections, "system"), do: "rotate-180", else: "")}>
+                </i>
+              </button>
+
+              <%= if MapSet.member?(@expanded_sections, "system") do %>
+                <div class="border-t border-white/10 overflow-x-auto">
+                  <table class="w-full text-left border-collapse">
                     <thead class="bg-white/5">
                       <tr class="border-b border-white/10 text-white/50 text-sm uppercase tracking-wider">
-                        <th class="p-4">Ação</th>
+                        <th class="p-4">Tipo de Alerta</th>
                         <th class="p-4 text-center w-32">WhatsApp Admin</th>
                         <th class="p-4 text-center w-32">WhatsApp Manager</th>
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-white/5">
-                      <%= for action <- actions do %>
+                      <%= for type <- @system_types do %>
                         <tr class="hover:bg-white/5 transition-colors">
                           <td class="p-4">
                             <div class="flex items-center gap-3">
-                              <i class={"fa-solid #{Actions.icon_for(action)} text-white/40 w-5 text-center"}>
-                              </i>
-                              <span class="font-bold text-white">{action}</span>
+                              <div class={"w-2 h-2 rounded-full " <> get_type_color(type)}></div>
+                              <span class="font-bold text-white">{format_type(type)}</span>
                             </div>
+                            <p class="text-xs text-white/50 mt-1 pl-5">
+                              {get_type_description(type)}
+                            </p>
                           </td>
 
                           <td class="p-4 text-center">
                             <.toggle_switch
-                              enabled={get_setting(@grouped_settings, action, "admin")}
-                              type={action}
+                              enabled={get_setting(@grouped_settings, type, "admin")}
+                              type={type}
                               role="admin"
-                              enabled_style="bg-cyan-600"
                             />
                           </td>
 
                           <td class="p-4 text-center">
                             <.toggle_switch
-                              enabled={get_setting(@grouped_settings, action, "manager")}
-                              type={action}
+                              enabled={get_setting(@grouped_settings, type, "manager")}
+                              type={type}
                               role="manager"
-                              enabled_style="bg-cyan-600"
                             />
                           </td>
                         </tr>
@@ -210,6 +186,69 @@ defmodule StarTicketsWeb.Admin.NotificationSettingsLive do
                     </tbody>
                   </table>
                 </div>
+              <% end %>
+            </div>
+            
+    <!-- Section 2: Operational Audit -->
+            <%= for {category, actions} <- @audit_groups do %>
+              <div class="border border-white/10 rounded-lg bg-black/20 overflow-hidden">
+                <button
+                  phx-click="toggle_section"
+                  phx-value-section={category}
+                  class="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors text-left"
+                >
+                  <h3 class="text-white/70 font-bold uppercase tracking-widest text-xs flex items-center gap-2">
+                    <i class="fa-solid fa-list-check text-cyan-500 w-5 text-center"></i>
+                    {category}
+                  </h3>
+                  <i class={"fa-solid fa-chevron-down transition-transform duration-200 text-white/50 " <> if(MapSet.member?(@expanded_sections, category), do: "rotate-180", else: "")}>
+                  </i>
+                </button>
+
+                <%= if MapSet.member?(@expanded_sections, category) do %>
+                  <div class="border-t border-white/10 overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                      <thead class="bg-white/5">
+                        <tr class="border-b border-white/10 text-white/50 text-sm uppercase tracking-wider">
+                          <th class="p-4">Ação</th>
+                          <th class="p-4 text-center w-32">WhatsApp Admin</th>
+                          <th class="p-4 text-center w-32">WhatsApp Manager</th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-white/5">
+                        <%= for action <- actions do %>
+                          <tr class="hover:bg-white/5 transition-colors">
+                            <td class="p-4">
+                              <div class="flex items-center gap-3">
+                                <i class={"fa-solid #{Actions.icon_for(action)} text-white/40 w-5 text-center"}>
+                                </i>
+                                <span class="font-bold text-white">{action}</span>
+                              </div>
+                            </td>
+
+                            <td class="p-4 text-center">
+                              <.toggle_switch
+                                enabled={get_setting(@grouped_settings, action, "admin")}
+                                type={action}
+                                role="admin"
+                                enabled_style="bg-cyan-600"
+                              />
+                            </td>
+
+                            <td class="p-4 text-center">
+                              <.toggle_switch
+                                enabled={get_setting(@grouped_settings, action, "manager")}
+                                type={action}
+                                role="manager"
+                                enabled_style="bg-cyan-600"
+                              />
+                            </td>
+                          </tr>
+                        <% end %>
+                      </tbody>
+                    </table>
+                  </div>
+                <% end %>
               </div>
             <% end %>
           </div>
