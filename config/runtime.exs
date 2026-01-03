@@ -138,3 +138,9 @@ end
 if from_address = System.get_env("EMAIL_FROM_ADDRESS") do
   config :star_tickets, :email_from_address, from_address
 end
+
+# Evolution API Configuration (WhatsApp)
+config :star_tickets, :evolution_api,
+  url: System.get_env("EVOLUTION_API_URL"),
+  api_key: System.get_env("EVOLUTION_API_KEY"),
+  instance_name: System.get_env("EVOLUTION_INSTANCE_NAME") || "StarTickets"

@@ -50,6 +50,7 @@ sudo apt-get install -y \
     build-essential \
     autoconf \
     inotify-tools \
+    watchman \
     m4 \
     libncurses5-dev \
     libncurses-dev \

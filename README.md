@@ -378,7 +378,13 @@ SECRET_KEY_BASE="sua-chave-secreta-64-chars"
 SMTP_HOST="smtp.exemplo.com"
 SMTP_PORT="587"
 SMTP_USERNAME="usuario"
+SMTP_USERNAME="usuario"
 SMTP_PASSWORD="senha"
+
+# WhatsApp (Evolution API)
+EVOLUTION_API_URL="http://seu-servidor-evolution:8080"
+EVOLUTION_API_KEY="sua-global-api-key"
+EVOLUTION_INSTANCE_NAME="StarTickets" # Opcional, default: StarTickets
 ```
 
 ### Desenvolvimento
