@@ -70,13 +70,17 @@ echo "n" | ./scripts/setup-dev-environment.sh
 # 4. Install Evolution API
 echo ""
 echo "💬 Step 4: Installing Evolution API..."
-mkdir -p evolution
+
+# Ensuring .env exists in evolution/src if needed (install_evolution handles copy from base to src)
+# We just need to make sure project .env is available to install_evolution
+# install_evolution.sh copies from evolution/.env to evolution/src/.env
+# So we update evolution/.env
 if [ -f "$PROJECT_DIR/.env" ]; then
-    cp "$PROJECT_DIR/.env" "evolution/.env"
+    cp "$PROJECT_DIR/.env" "$PROJECT_DIR/evolution/.env"
 fi
 
 chmod +x ./scripts/install_evolution.sh
-# install_evolution.sh expects to be run from project root and installs into ./evolution
+# install_evolution.sh expects to be run from project root
 ./scripts/install_evolution.sh
 
 # 5. Setup StarTickets Application

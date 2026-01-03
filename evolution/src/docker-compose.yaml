@@ -44,8 +44,8 @@ services:
       dokploy-network:
         aliases:
           - evolution-redis
-    ports:
-      - "6379:6379"
+    expose:
+      - "6379"
 
   evolution-postgres:
     container_name: evolution_postgres
@@ -68,14 +68,13 @@ services:
     networks:
       - evolution-net
       - dokploy-network
-    ports:
-      - "5432:5432"
+    expose:
+      - "5432"
 
 volumes:
   evolution_instances:
   evolution_redis:
   postgres_data:
-
 
 networks:
   evolution-net:

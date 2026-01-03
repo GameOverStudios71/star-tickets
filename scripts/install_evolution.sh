@@ -45,18 +45,14 @@ SRC_DIR="$BASE_DIR/src"
 
 echo "📂 Setup directory structure..."
 
-# 4. Clone Repository
-if [ -d "$SRC_DIR/.git" ]; then
-  echo "✅ Repository already cloned."
+# 4. Checking for Evolution API source
+echo "📂 Checking Evolution API source..."
+if [ -d "$SRC_DIR" ] && [ "$(ls -A $SRC_DIR)" ]; then
+  echo "✅ Evolution API source found in $SRC_DIR"
 else
-  # If dir exists but no .git, it's likely a failed install or artifact. Clean it.
-  if [ -d "$SRC_DIR" ]; then
-    echo "⚠️ removing existing non-repo directory $SRC_DIR to allow clone..."
-    rm -rf "$SRC_DIR"
-  fi
-
-  echo "⬇️ Cloning Evolution API..."
-  git clone https://github.com/EvolutionAPI/evolution-api.git "$SRC_DIR"
+  echo "❌ Error: Evolution API source not found in $SRC_DIR!"
+  echo "   Please ensure the 'evolution/src' directory is populated."
+  exit 1
 fi
 
 # 5. Configure Environment & Tools

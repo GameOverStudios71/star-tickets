@@ -17,5 +17,4 @@ export default defineConfig({
     '.json': 'file',
     '.yml': 'file',
   },
-  noExternal: ['@figuro/chatwoot-sdk'],
 });
