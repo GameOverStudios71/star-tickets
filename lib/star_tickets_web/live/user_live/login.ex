@@ -81,15 +81,24 @@ defmodule StarTicketsWeb.UserLive.Login do
           </div>
 
           <button
+            id="login-remember-btn"
             type="submit"
             name={@form[:remember_me].name}
             value="true"
             class="st-btn st-btn-large w-full"
+            phx-disable-with="🔄 Entrando..."
+            phx-hook="DebounceSubmit"
           >
             🔑 Entrar e Manter Conectado
           </button>
 
-          <button type="submit" class="st-btn st-btn-acrylic st-btn-large w-full">
+          <button
+            id="login-now-btn"
+            type="submit"
+            class="st-btn st-btn-acrylic st-btn-large w-full"
+            phx-disable-with="🔄 Entrando..."
+            phx-hook="DebounceSubmit"
+          >
             Entrar Apenas Agora
           </button>
         </.form>
