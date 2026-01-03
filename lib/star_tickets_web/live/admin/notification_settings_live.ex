@@ -1,8 +1,12 @@
 defmodule StarTicketsWeb.Admin.NotificationSettingsLive do
   use StarTicketsWeb, :live_view
   alias StarTickets.Notifications.Setting
+  alias StarTicketsWeb.ImpersonationHelpers
 
-  def mount(_params, _session, socket) do
+  def mount(_params, session, socket) do
+    impersonation_assigns =
+      ImpersonationHelpers.load_impersonation_assigns(socket.assigns.current_scope, session)
+
     # Ensure default settings exist for all types
     ensure_defaults()
 
@@ -22,6 +26,7 @@ defmodule StarTicketsWeb.Admin.NotificationSettingsLive do
 
     {:ok,
      socket
+     |> assign(impersonation_assigns)
      |> assign(:page_title, "Configuração de Notificações")
      |> assign(:grouped_settings, grouped_settings)
      |> assign(:notification_types, notification_types)}
@@ -30,8 +35,24 @@ defmodule StarTicketsWeb.Admin.NotificationSettingsLive do
   def handle_event("toggle_whatsapp", %{"type" => type, "role" => role}, socket) do
     {:ok, setting} = Setting.get_or_create_setting(type, role)
 
-    {:ok, _updated_setting} =
+    {:ok, updated_setting} =
       Setting.update_setting(setting, %{whatsapp_enabled: !setting.whatsapp_enabled})
+
+    # Paranoid Mode Logging
+    StarTickets.Audit.log_action(
+      "NOTIFICATION_SETTING_UPDATE",
+      %{
+        resource_type: "NotificationSetting",
+        resource_id: "#{type}|#{role}",
+        details: %{
+          notification_type: type,
+          role: role,
+          whatsapp_enabled: updated_setting.whatsapp_enabled,
+          old_value: setting.whatsapp_enabled
+        },
+        user_id: socket.assigns.current_scope.user.id
+      }
+    )
 
     # Refresh settings
     settings = Setting.list_settings()

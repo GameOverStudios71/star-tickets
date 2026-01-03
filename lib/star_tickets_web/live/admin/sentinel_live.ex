@@ -545,28 +545,35 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
         </div>
         
     <!-- Right Column: Live Feed -->
-        <div class="lg:col-span-1 bg-black/60 backdrop-blur-xl border-l border-white/10 p-4 font-mono text-xs flex flex-col h-full overflow-hidden shadow-2xl">
-          <h2 class="text-cyan-600 font-bold uppercase tracking-widest mb-4 flex items-center gap-2 text-sm shrink-0">
-            <i class="fa-solid fa-satellite-dish animate-pulse"></i> Live Ingestion
-          </h2>
+        <div class="lg:col-span-1 flex flex-col h-full gap-4">
+          <div class="st-card st-acrylic p-4 flex-1 flex flex-col h-full overflow-hidden shadow-2xl">
+            <!-- Action Filters -->
+            <.live_ingestion_filter
+              id="live-ingestion-filter"
+              selected_actions={@selected_actions}
+              collapsed={@ingestion_collapsed}
+            />
 
-          <div class="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar min-h-0">
-            <!-- Reverse order to show new at top/bottom depending on preference. Usually logs are new at bottom?
-                 Actually let's render standard list. -->
-            <%= for log <- Enum.filter(@recent_logs, & &1.action in @selected_actions) do %>
-              <div class="border-l-2 border-cyan-800 pl-3 py-1 opacity-70 hover:opacity-100 hover:bg-cyan-900/10 transition-all">
-                <div class="flex justify-between text-[10px] text-cyan-600 mb-0.5">
-                  <span>{Calendar.strftime(log.inserted_at, "%H:%M:%S")}</span>
-                  <span>#{log.resource_id}</span>
+            <h2 class="text-cyan-600 font-bold uppercase tracking-widest mb-4 flex items-center gap-2 text-sm shrink-0 mt-4">
+              <i class="fa-solid fa-satellite-dish animate-pulse"></i> Live Ingestion
+            </h2>
+
+            <div class="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar min-h-0">
+              <%= for log <- Enum.filter(@recent_logs, & &1.action in @selected_actions) do %>
+                <div class="border-l-2 border-cyan-800 pl-3 py-1 opacity-70 hover:opacity-100 hover:bg-cyan-900/10 transition-all">
+                  <div class="flex justify-between text-[10px] text-cyan-600 mb-0.5">
+                    <span>{Calendar.strftime(log.inserted_at, "%H:%M:%S")}</span>
+                    <span>#{log.resource_id}</span>
+                  </div>
+                  <div class="text-cyan-300 font-bold truncate">
+                    {log.action}
+                  </div>
+                  <div class="text-cyan-500/50 truncate text-[10px]">
+                    {log.user && log.user.email}
+                  </div>
                 </div>
-                <div class="text-cyan-300 font-bold truncate">
-                  {log.action}
-                </div>
-                <div class="text-cyan-500/50 truncate text-[10px]">
-                  {log.user && log.user.email}
-                </div>
-              </div>
-            <% end %>
+              <% end %>
+            </div>
           </div>
         </div>
       </div>
