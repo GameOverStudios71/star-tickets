@@ -200,6 +200,14 @@ defmodule StarTickets.Sentinel.Overseer do
     {:noreply, new_state}
   end
 
+  @impl true
+  def handle_cast({:dismiss_anomaly, idx}, state) do
+    new_anomalies = List.delete_at(state.anomalies, idx)
+    new_state = %{state | anomalies: new_anomalies}
+    broadcast_update(new_state)
+    {:noreply, new_state}
+  end
+
   # Activation/Deactivation helpers
 
   defp activate_sentinel(state) do
@@ -214,14 +222,6 @@ defmodule StarTickets.Sentinel.Overseer do
     PubSub.unsubscribe(@pubsub, @audit_topic)
     if state.timer_ref, do: :timer.cancel(state.timer_ref)
     %{state | active: false, timer_ref: nil}
-  end
-
-  @impl true
-  def handle_cast({:dismiss_anomaly, idx}, state) do
-    new_anomalies = List.delete_at(state.anomalies, idx)
-    new_state = %{state | anomalies: new_anomalies}
-    broadcast_update(new_state)
-    {:noreply, new_state}
   end
 
   # Helpers
