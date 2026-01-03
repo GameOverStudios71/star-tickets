@@ -234,6 +234,9 @@ echo ""
 # =============================================================================
 print_step "Installing Hex and Rebar..."
 
+# Temporarily disable exit-on-error to allow fallbacks to work
+set +e
+
 # Try standard Hex install, fallback to manual wget if it fails
 if ! mix local.hex --force; then
     print_warning "Standard Hex install failed. Attempting manual download..."
@@ -252,6 +255,9 @@ if ! mix local.rebar --force; then
     mix local.rebar ./rebar3 --force
     rm rebar3
 fi
+
+# Re-enable exit-on-error
+set -e
 
 print_success "Hex and Rebar installed"
 echo ""
