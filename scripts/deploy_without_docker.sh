@@ -7,7 +7,11 @@ set -e
 # on a fresh Debian/Ubuntu server without Docker.
 
 USER_HOME=$(eval echo ~$USER)
-PROJECT_DIR="$(pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Configure script to always run from project root
+cd "$PROJECT_DIR"
 
 echo "🚀 Starting Bare Metal Deployment..."
 echo "📂 Project Directory: $PROJECT_DIR"
