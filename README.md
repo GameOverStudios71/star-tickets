@@ -156,11 +156,12 @@ O StarTickets conta com um "cérebro" autônomo chamado **Overseer** que monitor
 
 Sistema avançado de notificação para garantir alta disponibilidade.
 
-- **Painel de Notificações**: Nova tela `/admin/notifications` focada em alertas críticos (Erros e Avisos).
+- **Painel de Notificações**: Tela `/admin/notifications` com todos os alertas críticos (Erros e Avisos).
 - **Integração WhatsApp**:
-  - Cadastro obrigatório de celular para administradores.
-  - Envio automático de mensagens em caso de Crash, Erro de Debug ou Queda de Conexão.
+  - Envio automático para **Admins e Managers** com telefone cadastrado.
+  - Alertas de Crash, Erro de Debug, Queda de Conexão e **Rate Limit Excedido**.
   - Alertas nominais (ex: "Totem da Recepção 2 caiu").
+- **Sincronização Total**: Tudo que é enviado por WhatsApp também aparece na caixa de notificações.
 - **Auditoria Completa**: Logs detalhados de todas as ações ("Paranoid Mode") para rastreabilidade total.
 
 ### 🔐 Autenticação e Autorização
@@ -208,6 +209,7 @@ O StarTickets implementa um conjunto completo de medidas de resiliência inspira
 
 | Pipeline | Limite | Rotas |
 |----------|--------|-------|
+| `rate_limit_public` | 60 req/min | Landing, TicketStatus, WebCheckin |
 | `rate_limit_auth` | 30 req/min | Login, Registro |
 | `rate_limit_general` | 100 req/min | Dashboard, Admin, Reception, Professional |
 | `rate_limit_totem` | 20 req/min | Totem (disponível para uso) |
@@ -216,6 +218,7 @@ O StarTickets implementa um conjunto completo de medidas de resiliência inspira
 - **Hammer** library com backend ETS para contagem de requisições
 - **Plug customizado** `StarTicketsWeb.Plugs.RateLimiter`
 - Resposta HTTP 429 com JSON de erro quando limite é excedido
+- **Notificação automática** via WhatsApp para admins/managers quando limite é excedido
 
 #### Connection Pool Tuning
 
