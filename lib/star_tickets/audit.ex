@@ -131,6 +131,7 @@ defmodule StarTickets.Audit do
     |> filter_by_date(params)
     |> filter_by_user(params)
     |> filter_by_action(params)
+    |> filter_by_allowed_actions(params)
     |> filter_by_resource(params)
     |> filter_by_severity(params)
     |> limit(^page_size)
@@ -205,6 +206,29 @@ defmodule StarTickets.Audit do
   end
 
   defp filter_by_resource(query, _), do: query
+
+  defp filter_by_allowed_actions(query, %{"allowed_actions" => actions}) when is_list(actions) do
+    # Check if we should include system errors
+    include_errors = "SYSTEM_ERROR" in actions
+
+    # Filter out "SYSTEM_ERROR" from exact matches since actual logs don't use it
+    exact_matches = List.delete(actions, "SYSTEM_ERROR")
+
+    if include_errors do
+      where(
+        query,
+        [q],
+        q.action in ^exact_matches or
+          ilike(q.action, "%ERROR%") or
+          ilike(q.action, "%FAILED%") or
+          ilike(q.action, "%CRITICAL%")
+      )
+    else
+      where(query, [q], q.action in ^exact_matches)
+    end
+  end
+
+  defp filter_by_allowed_actions(query, _), do: query
 
   defp filter_by_severity(query, %{"severity" => "error"}) do
     where(

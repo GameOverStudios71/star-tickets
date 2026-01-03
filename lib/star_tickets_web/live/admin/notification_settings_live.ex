@@ -52,6 +52,24 @@ defmodule StarTicketsWeb.Admin.NotificationSettingsLive do
     {:noreply, assign(socket, :expanded_sections, new_expanded)}
   end
 
+  def handle_event("toggle_inbox", %{"type" => type, "role" => role}, socket) do
+    # Toggle logic for inbox
+    case Setting.get_setting(type, role) do
+      nil ->
+        {:noreply, socket}
+
+      setting ->
+        {:ok, _updated} =
+          Setting.update_setting(setting, %{inbox_enabled: !setting.inbox_enabled})
+
+        # Refresh
+        settings = Setting.list_settings()
+        grouped_settings = Enum.group_by(settings, & &1.notification_type)
+
+        {:noreply, assign(socket, :grouped_settings, grouped_settings)}
+    end
+  end
+
   def handle_event("toggle_whatsapp", %{"type" => type, "role" => role}, socket) do
     {:ok, setting} = Setting.get_or_create_setting(type, role)
 
@@ -151,6 +169,7 @@ defmodule StarTicketsWeb.Admin.NotificationSettingsLive do
                         <th class="p-4">Tipo de Alerta</th>
                         <th class="p-4 text-center w-32">WhatsApp Admin</th>
                         <th class="p-4 text-center w-32">WhatsApp Manager</th>
+                        <th class="p-4 text-center w-32">Inbox (Gerente)</th>
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-white/5">
@@ -168,7 +187,9 @@ defmodule StarTicketsWeb.Admin.NotificationSettingsLive do
 
                           <td class="p-4 text-center">
                             <.toggle_switch
-                              enabled={get_setting(@grouped_settings, type, "admin")}
+                              enabled={
+                                get_setting_value(@grouped_settings, type, "admin", :whatsapp_enabled)
+                              }
                               type={type}
                               role="admin"
                             />
@@ -176,9 +197,28 @@ defmodule StarTicketsWeb.Admin.NotificationSettingsLive do
 
                           <td class="p-4 text-center">
                             <.toggle_switch
-                              enabled={get_setting(@grouped_settings, type, "manager")}
+                              enabled={
+                                get_setting_value(
+                                  @grouped_settings,
+                                  type,
+                                  "manager",
+                                  :whatsapp_enabled
+                                )
+                              }
                               type={type}
                               role="manager"
+                            />
+                          </td>
+
+                          <td class="p-4 text-center">
+                            <.toggle_switch
+                              enabled={
+                                get_setting_value(@grouped_settings, type, "manager", :inbox_enabled)
+                              }
+                              type={type}
+                              role="manager"
+                              click="toggle_inbox"
+                              enabled_style="bg-blue-600"
                             />
                           </td>
                         </tr>
@@ -213,6 +253,7 @@ defmodule StarTicketsWeb.Admin.NotificationSettingsLive do
                           <th class="p-4">Ação</th>
                           <th class="p-4 text-center w-32">WhatsApp Admin</th>
                           <th class="p-4 text-center w-32">WhatsApp Manager</th>
+                          <th class="p-4 text-center w-32">Inbox (Gerente)</th>
                         </tr>
                       </thead>
                       <tbody class="divide-y divide-white/5">
@@ -228,7 +269,14 @@ defmodule StarTicketsWeb.Admin.NotificationSettingsLive do
 
                             <td class="p-4 text-center">
                               <.toggle_switch
-                                enabled={get_setting(@grouped_settings, action, "admin")}
+                                enabled={
+                                  get_setting_value(
+                                    @grouped_settings,
+                                    action,
+                                    "admin",
+                                    :whatsapp_enabled
+                                  )
+                                }
                                 type={action}
                                 role="admin"
                                 enabled_style="bg-cyan-600"
@@ -237,10 +285,34 @@ defmodule StarTicketsWeb.Admin.NotificationSettingsLive do
 
                             <td class="p-4 text-center">
                               <.toggle_switch
-                                enabled={get_setting(@grouped_settings, action, "manager")}
+                                enabled={
+                                  get_setting_value(
+                                    @grouped_settings,
+                                    action,
+                                    "manager",
+                                    :whatsapp_enabled
+                                  )
+                                }
                                 type={action}
                                 role="manager"
                                 enabled_style="bg-cyan-600"
+                              />
+                            </td>
+
+                            <td class="p-4 text-center">
+                              <.toggle_switch
+                                enabled={
+                                  get_setting_value(
+                                    @grouped_settings,
+                                    action,
+                                    "manager",
+                                    :inbox_enabled
+                                  )
+                                }
+                                type={action}
+                                role="manager"
+                                click="toggle_inbox"
+                                enabled_style="bg-blue-600"
                               />
                             </td>
                           </tr>
@@ -270,13 +342,13 @@ defmodule StarTicketsWeb.Admin.NotificationSettingsLive do
     """
   end
 
-  defp get_setting(grouped, type, role) do
+  defp get_setting_value(grouped, type, role, field) do
     settings = Map.get(grouped, type, [])
 
     case Enum.find(settings, &(&1.role == role)) do
-      # Default true
+      # Default true for everything
       nil -> true
-      s -> s.whatsapp_enabled
+      s -> Map.get(s, field)
     end
   end
 

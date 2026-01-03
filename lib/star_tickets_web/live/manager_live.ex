@@ -106,7 +106,7 @@ defmodule StarTicketsWeb.ManagerLive do
 
                 <%= if Enum.empty?(@anomalies) do %>
                   <p class="text-white/60 text-sm group-hover:text-white/80">
-                    Histórico de alertas e notificações
+                    alertas e notificações
                   </p>
                 <% else %>
                   <!-- Mini Inbox List (Compact) -->

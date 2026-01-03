@@ -60,4 +60,12 @@ defmodule StarTickets.Notifications.Setting do
       setting -> setting.whatsapp_enabled
     end
   end
+
+  def list_inbox_enabled_types(role) do
+    from(s in __MODULE__,
+      where: s.role == ^role and s.inbox_enabled == true,
+      select: s.notification_type
+    )
+    |> Repo.all()
+  end
 end
