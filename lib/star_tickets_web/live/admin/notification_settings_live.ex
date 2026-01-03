@@ -124,18 +124,16 @@ defmodule StarTicketsWeb.Admin.NotificationSettingsLive do
                     <td class="p-4 text-center">
                       <.toggle_switch
                         enabled={get_setting(@grouped_settings, type, "admin")}
-                        phx-click="toggle_whatsapp"
-                        phx-value-type={type}
-                        phx-value-role="admin"
+                        type={type}
+                        role="admin"
                       />
                     </td>
 
                     <td class="p-4 text-center">
                       <.toggle_switch
                         enabled={get_setting(@grouped_settings, type, "manager")}
-                        phx-click="toggle_whatsapp"
-                        phx-value-type={type}
-                        phx-value-role="manager"
+                        type={type}
+                        role="manager"
                       />
                     </td>
                   </tr>
@@ -196,16 +194,20 @@ defmodule StarTicketsWeb.Admin.NotificationSettingsLive do
 
   defp get_type_description("SYSTEM_ERROR"), do: "Erros críticos de código (crashes, exceptions)."
 
+  attr :type, :string, required: true
+  attr :role, :string, required: true
+  attr :enabled, :boolean, required: true
+  attr :click, :string, default: "toggle_whatsapp"
+
   def toggle_switch(assigns) do
     ~H"""
     <button
-      id={"toggle-#{String.downcase(@values[:type])}-#{@values[:role]}"}
+      id={"toggle-#{String.downcase(@type)}-#{@role}"}
       phx-click={@click}
-      phx-value-type={@values[:type]}
-      phx-value-role={@values[:role]}
+      phx-value-type={@type}
+      phx-value-role={@role}
       phx-hook="DebounceSubmit"
       class={"relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 " <> if(@enabled, do: "bg-emerald-500", else: "bg-gray-700")}
-      {@rest}
     >
       <span class={"inline-block h-4 w-4 transform rounded-full bg-white transition-transform " <> if(@enabled, do: "translate-x-6", else: "translate-x-1")} />
     </button>
