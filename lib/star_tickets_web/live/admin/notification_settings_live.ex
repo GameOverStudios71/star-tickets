@@ -145,6 +145,8 @@ defmodule StarTicketsWeb.Admin.NotificationSettingsLive do
             %{label: "Notificações"}
           ]}
         >
+          <hr class="my-6 border-white/500 opacity-40 border-dashed" />
+
           <div class="mt-8 space-y-4">
             <!-- Section 1: System Alerts -->
             <div class="border border-white/10 rounded-lg bg-black/20 overflow-hidden">

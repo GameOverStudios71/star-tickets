@@ -23,13 +23,14 @@ defmodule StarTicketsWeb.ManagerLive do
     socket =
       socket
       |> assign(impersonation_assigns)
-      |> assign(:anomalies, initial_anomalies)
+      |> assign(impersonation_assigns)
+      |> assign(:anomalies, filter_anomalies(initial_anomalies))
 
     {:ok, socket}
   end
 
   def handle_info({:sentinel_update, state}, socket) do
-    {:noreply, assign(socket, :anomalies, state.anomalies)}
+    {:noreply, assign(socket, :anomalies, filter_anomalies(state.anomalies))}
   end
 
   def render(assigns) do
@@ -85,19 +86,17 @@ defmodule StarTicketsWeb.ManagerLive do
               navigate={~p"/admin/notifications"}
               class="st-card st-nav-card group relative overflow-hidden bg-gradient-to-br from-gray-900 to-black border border-white/10 cursor-pointer flex flex-col"
             >
-              <div class="flex justify-between items-start relative z-10 shrink-0">
-                <span class="st-icon transition-transform group-hover:scale-110">
-                  📬
-                </span>
-
+              <div class="absolute top-4 right-4 z-20">
                 <%= if length(@anomalies) > 0 do %>
-                  <div class="flex flex-col items-end">
-                    <span class="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse shadow-lg shadow-red-500/50 mb-1">
-                      {length(@anomalies)}
-                    </span>
-                  </div>
+                  <span class="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse shadow-lg shadow-red-500/50">
+                    {length(@anomalies)}
+                  </span>
                 <% end %>
               </div>
+
+              <span class="st-icon transition-transform group-hover:scale-110 relative z-10">
+                📬
+              </span>
 
               <div class="relative z-10 flex-1 min-h-0 flex flex-col">
                 <h2 class="text-white group-hover:text-emerald-300 transition-colors mb-1 shrink-0">
@@ -158,5 +157,31 @@ defmodule StarTicketsWeb.ManagerLive do
       </div>
     </div>
     """
+  end
+
+  defp filter_anomalies(anomalies) do
+    # Get enabled types for manager
+    allowed_types = StarTickets.Notifications.Setting.list_inbox_enabled_types("manager")
+
+    # Handle wildcard for System Error
+    include_errors = "SYSTEM_ERROR" in allowed_types
+    # Remove wildcard from exact match list
+    exact_types = List.delete(allowed_types, "SYSTEM_ERROR")
+
+    Enum.filter(anomalies, fn anomaly ->
+      action = anomaly.action
+
+      # Check exact match
+      match_exact = action in exact_types
+
+      # Check error wildcard
+      match_error =
+        include_errors and
+          (String.contains?(action, "ERROR") or
+             String.contains?(action, "FAILED") or
+             String.contains?(action, "CRITICAL"))
+
+      match_exact or match_error
+    end)
   end
 end
