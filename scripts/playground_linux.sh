@@ -1,7 +1,8 @@
 curl -sf https://labs.iximiuz.com/cli/install.sh | sh
 
 export PATH=$PATH:/home/crash/.iximiuz/labctl/bin
-source ~/.bashrc 
+
+source ~/.bashrc
 
 labctl auth login
 labctl playground start docker
