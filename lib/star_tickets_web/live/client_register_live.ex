@@ -281,7 +281,13 @@ defmodule StarTicketsWeb.ClientRegisterLive do
               </div>
             <% end %>
 
-            <button type="submit" class="st-btn st-btn-large w-full">
+            <button
+              id="register-submit-btn"
+              type="submit"
+              class="st-btn st-btn-large w-full"
+              phx-disable-with="🔄 Criando conta..."
+              phx-hook="DebounceSubmit"
+            >
               🚀 Criar Minha Conta
             </button>
           </.form>
