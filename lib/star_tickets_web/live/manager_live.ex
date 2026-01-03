@@ -135,6 +135,17 @@ defmodule StarTicketsWeb.ManagerLive do
               <div class="absolute -bottom-4 -right-4 w-24 h-24 bg-emerald-500/10 blur-2xl rounded-full group-hover:bg-emerald-500/20 transition-all">
               </div>
             </.link>
+            <!-- Notification Settings -->
+            <.link
+              navigate={~p"/admin/notification-settings"}
+              class="st-card st-nav-card group relative overflow-hidden bg-gradient-to-br from-slate-900 to-black border border-white/10 cursor-pointer"
+            >
+              <div class="absolute inset-0 bg-blue-500/5 group-hover:bg-blue-500/10 transition-colors">
+              </div>
+              <span class="st-icon group-hover:rotate-90 transition-transform duration-700">⚙️</span>
+              <h2 class="group-hover:text-blue-300 transition-colors">Painel de Controle</h2>
+              <p class="text-white/60 group-hover:text-white/80">Configurar alertas e notificações</p>
+            </.link>
             
     <!-- Placeholder for other manager tasks -->
             <.link navigate={~p"/dashboard"} class="st-card st-nav-card opacity-50 cursor-not-allowed">

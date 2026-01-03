@@ -55,9 +55,27 @@ defmodule StarTickets.Notifications.Dispatcher do
 
     message = format_whatsapp_message(log)
 
-    Enum.each(admins, fn admin ->
-      WhatsApp.send_message(admin.phone_number, message)
+    Enum.each(admins, fn recipient ->
+      # Check if this recipient's role has WhatsApp enabled for this notification type
+      # We map log action to notification type roughly, or use action directly
+      notification_type = categorize_action(log.action)
+
+      if StarTickets.Notifications.Setting.whatsapp_enabled?(notification_type, recipient.role) do
+        WhatsApp.send_message(recipient.phone_number, message)
+      end
     end)
+  end
+
+  defp categorize_action(action) do
+    cond do
+      String.contains?(action, "TOTEM_OFFLINE") -> "TOTEM_OFFLINE"
+      String.contains?(action, "RECEPTION_OFFLINE") -> "RECEPTION_OFFLINE"
+      String.contains?(action, "TV_OFFLINE") -> "TV_OFFLINE"
+      String.contains?(action, "PROFESSIONAL_OFFLINE") -> "PROFESSIONAL_OFFLINE"
+      String.contains?(action, "RATE_LIMIT") -> "RATE_LIMIT"
+      String.contains?(action, "ERROR") -> "SYSTEM_ERROR"
+      true -> "OTHER_ALERT"
+    end
   end
 
   defp list_admins_with_phone do
