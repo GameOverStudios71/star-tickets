@@ -149,6 +149,9 @@ O StarTickets conta com um "cérebro" autônomo chamado **Overseer** que monitor
 | **Monitoramento de Conectividade** | Detecta instantaneamente se Totems, TVs ou Recepção ficam offline. |
 | **Projeções Futuras** | Prevê próximos passos (ex: "Ticket criado deve ser chamado em 30min") e alerta se o prazo expirar. |
 | **Detecção de Anomalias** | Identifica falhas críticas e desvios de fluxo operacional. |
+| **Auto-Correction** | Identifica a recuperação de dispositivos (reconexão) e remove anomalias automaticamente (Auto-Dismiss). |
+| **Grid View (Quad)** | Dashboard de monitoramento unificado 4-em-1 (Totem, TV, Recepção, Profissional) para centros de comando. |
+| **Intelligent Warnings** | Diferencia alertas técnicos (Amber) de falhas críticas (Red) para priorização eficiente. |
 | **Dispatcher Automático** | Envia alertas em tempo real para o WhatsApp dos administradores. |
 | **Indicador de Status** | Header mostra ACTIVE/STANDBY com animação visual em tempo real. |
 
@@ -426,6 +429,7 @@ Após rodar `mix setup`, os seguintes usuários estarão disponíveis:
 | `/professional` | Painel do profissional | Autenticado |
 | `/tv` | Painel de chamadas TV | Autenticado (tv) |
 | `/sentinel` | Painel de Monitoramento AI | Admin |
+| `/admin/sentinel/grid` | Sentinel Grid 4x1 (Full Monitor) | Admin |
 | `/admin/notifications` | Centro de Alertas | Admin |
 | `/dashboard` | Dashboard geral | Autenticado |
 | `/admin/*` | Área administrativa | Admin/Manager |
