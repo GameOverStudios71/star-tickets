@@ -64,7 +64,14 @@ defmodule StarTicketsWeb.Admin.TotemMenusLive do
                 <h2 class="text-lg font-bold text-white tracking-tight">Menu de Navegação</h2>
                 <p class="text-xs text-white/50 font-medium">{@establishment.name}</p>
               </div>
-              <button phx-click="new_root" class="btn btn-xs btn-primary">+ Raiz</button>
+              <button
+                id="new-root-btn"
+                phx-hook="DebounceSubmit"
+                phx-click="new_root"
+                class="btn btn-xs btn-primary"
+              >
+                + Raiz
+              </button>
             </div>
             <hr class="my-4 border-white/10 border-dashed" />
 
@@ -85,6 +92,8 @@ defmodule StarTicketsWeb.Admin.TotemMenusLive do
                   </h2>
                   <%= if @selected_node.id do %>
                     <button
+                      id={"delete-node-#{@selected_node.id}"}
+                      phx-hook="DebounceSubmit"
                       phx-click="delete_node"
                       phx-value-id={@selected_node.id}
                       data-confirm="Tem certeza? Isso apagará todos os filhos!"
@@ -239,6 +248,8 @@ defmodule StarTicketsWeb.Admin.TotemMenusLive do
 
                   <div class="grid grid-cols-2 gap-4">
                     <div
+                      id={"add-child-#{@selected_node.id}"}
+                      phx-hook="DebounceSubmit"
                       class="p-4 rounded border border-white/10 bg-white/5 hover:bg-white/10 hover:border-orange-500/50 transition cursor-pointer"
                       phx-click="add_child"
                       phx-value-parent_id={@selected_node.id}
@@ -249,6 +260,8 @@ defmodule StarTicketsWeb.Admin.TotemMenusLive do
                       </div>
                     </div>
                     <div
+                      id={"duplicate-tree-#{@selected_node.id}"}
+                      phx-hook="DebounceSubmit"
                       class="p-4 rounded border border-white/10 bg-white/5 hover:bg-white/10 hover:border-orange-500/50 transition cursor-pointer"
                       phx-click="duplicate_tree"
                       phx-value-id={@selected_node.id}

@@ -103,6 +103,8 @@ defmodule StarTicketsWeb.Admin.FormBuilderLive do
                           <.icon name="hero-pencil" class="size-4" />
                         </button>
                         <button
+                          id={"delete-field-#{field.id}"}
+                          phx-hook="DebounceSubmit"
                           phx-click="delete_field"
                           phx-value-id={field.id}
                           class="p-1 hover:text-red-400"
