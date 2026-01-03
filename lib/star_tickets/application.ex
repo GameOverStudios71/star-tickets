@@ -12,6 +12,15 @@ defmodule StarTickets.Application do
       StarTickets.Repo,
       {DNSCluster, query: Application.get_env(:star_tickets, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: StarTickets.PubSub},
+      # Rate Limiting Backend (ETS-based)
+      {Hammer.Backend.ETS,
+       [
+         ets_table_name: :hammer_ets,
+         # 2 hours cleanup
+         expiry_ms: 60_000 * 60 * 2,
+         # 10 min cleanup
+         cleanup_interval_ms: 60_000 * 10
+       ]},
       # Presence System (Real-time online status)
       StarTicketsWeb.Presence,
       StarTickets.Notifications.Dispatcher,

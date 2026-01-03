@@ -68,7 +68,9 @@ defmodule StarTickets.MixProject do
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
       {:eqrcode, "~> 0.1.10"},
-      {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      # Rate limiting for resilience
+      {:hammer, "~> 6.1"}
     ]
   end
 

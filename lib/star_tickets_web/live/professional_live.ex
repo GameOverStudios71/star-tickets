@@ -457,6 +457,8 @@ defmodule StarTicketsWeb.ProfessionalLive do
                   <div class="grid grid-cols-1 gap-4 mb-8 mt-12">
                     <%= if @active_ticket.status == "CALLED_PROFESSIONAL" do %>
                       <button
+                        id={"prof-start-#{@active_ticket.id}"}
+                        phx-hook="DebounceSubmit"
                         phx-click="start_attendance"
                         phx-value-id={@active_ticket.id}
                         class="w-full py-5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-2xl rounded-xl shadow-lg transition-transform hover:scale-[1.01] active:scale-[0.99] border border-white/20"
@@ -465,6 +467,8 @@ defmodule StarTicketsWeb.ProfessionalLive do
                       </button>
                     <% else %>
                       <button
+                        id={"prof-finish-#{@active_ticket.id}"}
+                        phx-hook="DebounceSubmit"
                         phx-click="finish_attendance"
                         phx-value-id={@active_ticket.id}
                         class="w-full py-5 bg-orange-600 hover:bg-orange-500 text-white font-bold text-2xl rounded-xl shadow-lg transition-transform hover:scale-[1.01] active:scale-[0.99] border border-white/20"
@@ -522,6 +526,8 @@ defmodule StarTicketsWeb.ProfessionalLive do
                     <div class="mb-6">
                       <%= if @tab != "finished" do %>
                         <button
+                          id={"prof-call-#{@selected_ticket.id}"}
+                          phx-hook="DebounceSubmit"
                           phx-click="call_ticket"
                           phx-value-id={@selected_ticket.id}
                           class="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xl rounded-xl transition-all border border-white/20 shadow-lg shadow-blue-500/20"

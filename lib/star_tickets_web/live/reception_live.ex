@@ -1187,6 +1187,8 @@ defmodule StarTicketsWeb.ReceptionLive do
               <%= cond do %>
                 <% @selected_ticket.status == "WAITING_RECEPTION" -> %>
                   <button
+                    id={"call-ticket-#{@selected_ticket.id}"}
+                    phx-hook="DebounceSubmit"
                     class="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xl rounded-xl shadow-lg shadow-blue-900/30 transition-all active:scale-[0.98] border border-white/20"
                     phx-click="call_ticket"
                     phx-value-id={@selected_ticket.id}
@@ -1195,6 +1197,8 @@ defmodule StarTicketsWeb.ReceptionLive do
                   </button>
                 <% @selected_ticket.status == "CALLED_RECEPTION" -> %>
                   <button
+                    id={"start-attendance-#{@selected_ticket.id}"}
+                    phx-hook="DebounceSubmit"
                     class="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xl rounded-xl shadow-lg shadow-emerald-900/30 transition-all active:scale-[0.98] border border-white/20"
                     phx-click="start_attendance"
                     phx-value-id={@selected_ticket.id}
@@ -1203,6 +1207,8 @@ defmodule StarTicketsWeb.ReceptionLive do
                   </button>
                 <% @selected_ticket.status == "IN_RECEPTION" -> %>
                   <button
+                    id={"finish-ticket-#{@selected_ticket.id}"}
+                    phx-hook="DebounceSubmit"
                     class="w-full py-4 bg-orange-600 hover:bg-orange-500 text-white font-bold text-xl rounded-xl shadow-lg shadow-orange-900/30 transition-all active:scale-[0.98] border border-white/20"
                     phx-click="finish_ticket"
                     phx-value-id={@selected_ticket.id}

@@ -88,6 +88,8 @@ defmodule StarTicketsWeb.UserLive.Devices do
               </div>
               <%= if length(@devices) > 1 do %>
                 <button
+                  id="revoke-all-devices"
+                  phx-hook="DebounceSubmit"
                   phx-click="revoke_all"
                   data-confirm="Deseja desconectar todos os outros dispositivos?"
                   class="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg border border-red-500/30 transition-all"
@@ -178,6 +180,8 @@ defmodule StarTicketsWeb.UserLive.Devices do
                   <%!-- Actions --%>
                   <%= unless is_current do %>
                     <button
+                      id={"revoke-device-#{device.id}"}
+                      phx-hook="DebounceSubmit"
                       phx-click="revoke_device"
                       phx-value-id={device.id}
                       data-confirm="Deseja desconectar este dispositivo?"
