@@ -2,6 +2,7 @@ defmodule StarTicketsWeb.Admin.NotificationSettingsLive do
   use StarTicketsWeb, :live_view
   alias StarTickets.Notifications.Setting
   alias StarTicketsWeb.ImpersonationHelpers
+  alias StarTickets.Audit.Actions
 
   def mount(_params, session, socket) do
     impersonation_assigns =
@@ -15,7 +16,8 @@ defmodule StarTicketsWeb.Admin.NotificationSettingsLive do
     # Organize by type for easier display
     grouped_settings = Enum.group_by(settings, & &1.notification_type)
 
-    notification_types = [
+    # Static System Alerts
+    system_types = [
       "TOTEM_OFFLINE",
       "RECEPTION_OFFLINE",
       "TV_OFFLINE",
@@ -24,12 +26,16 @@ defmodule StarTicketsWeb.Admin.NotificationSettingsLive do
       "SYSTEM_ERROR"
     ]
 
+    # Audit Groups for Dynamic Section
+    audit_groups = Actions.all_grouped()
+
     {:ok,
      socket
      |> assign(impersonation_assigns)
      |> assign(:page_title, "Configuração de Notificações")
      |> assign(:grouped_settings, grouped_settings)
-     |> assign(:notification_types, notification_types)}
+     |> assign(:system_types, system_types)
+     |> assign(:audit_groups, audit_groups)}
   end
 
   def handle_event("toggle_whatsapp", %{"type" => type, "role" => role}, socket) do
@@ -63,7 +69,7 @@ defmodule StarTicketsWeb.Admin.NotificationSettingsLive do
 
   defp ensure_defaults do
     # Create defaults if they don't exist
-    types = [
+    system_types = [
       "TOTEM_OFFLINE",
       "RECEPTION_OFFLINE",
       "TV_OFFLINE",
@@ -72,9 +78,15 @@ defmodule StarTicketsWeb.Admin.NotificationSettingsLive do
       "SYSTEM_ERROR"
     ]
 
+    # Audit actions
+    audit_types = Actions.all()
+
+    # Combine all
+    all_types = system_types ++ audit_types
+
     roles = ["admin", "manager"]
 
-    for type <- types, role <- roles do
+    for type <- all_types, role <- roles do
       Setting.get_or_create_setting(type, role)
     end
   end
@@ -101,45 +113,105 @@ defmodule StarTicketsWeb.Admin.NotificationSettingsLive do
             %{label: "Notificações"}
           ]}
         >
-          <div class="mt-8 overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-              <thead>
-                <tr class="border-b border-white/10 text-white/50 text-sm uppercase tracking-wider">
-                  <th class="p-4">Tipo de Alerta</th>
-                  <th class="p-4 text-center">WhatsApp Admin</th>
-                  <th class="p-4 text-center">WhatsApp Manager</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-white/5">
-                <%= for type <- @notification_types do %>
-                  <tr class="hover:bg-white/5 transition-colors">
-                    <td class="p-4">
-                      <div class="flex items-center gap-3">
-                        <div class={"w-2 h-2 rounded-full " <> get_type_color(type)}></div>
-                        <span class="font-bold text-white">{format_type(type)}</span>
-                      </div>
-                      <p class="text-xs text-white/50 mt-1 pl-5">{get_type_description(type)}</p>
-                    </td>
+          <div class="mt-8 space-y-8">
+            <!-- Section 1: System Alerts -->
+            <div>
+              <h3 class="text-white/70 font-bold uppercase tracking-widest text-xs mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-triangle-exclamation text-yellow-500"></i>
+                Alertas Críticos (Sistema)
+              </h3>
+              <div class="overflow-x-auto rounded-lg border border-white/10">
+                <table class="w-full text-left border-collapse bg-black/20">
+                  <thead class="bg-white/5">
+                    <tr class="border-b border-white/10 text-white/50 text-sm uppercase tracking-wider">
+                      <th class="p-4">Tipo de Alerta</th>
+                      <th class="p-4 text-center w-32">WhatsApp Admin</th>
+                      <th class="p-4 text-center w-32">WhatsApp Manager</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-white/5">
+                    <%= for type <- @system_types do %>
+                      <tr class="hover:bg-white/5 transition-colors">
+                        <td class="p-4">
+                          <div class="flex items-center gap-3">
+                            <div class={"w-2 h-2 rounded-full " <> get_type_color(type)}></div>
+                            <span class="font-bold text-white">{format_type(type)}</span>
+                          </div>
+                          <p class="text-xs text-white/50 mt-1 pl-5">{get_type_description(type)}</p>
+                        </td>
 
-                    <td class="p-4 text-center">
-                      <.toggle_switch
-                        enabled={get_setting(@grouped_settings, type, "admin")}
-                        type={type}
-                        role="admin"
-                      />
-                    </td>
+                        <td class="p-4 text-center">
+                          <.toggle_switch
+                            enabled={get_setting(@grouped_settings, type, "admin")}
+                            type={type}
+                            role="admin"
+                          />
+                        </td>
 
-                    <td class="p-4 text-center">
-                      <.toggle_switch
-                        enabled={get_setting(@grouped_settings, type, "manager")}
-                        type={type}
-                        role="manager"
-                      />
-                    </td>
-                  </tr>
-                <% end %>
-              </tbody>
-            </table>
+                        <td class="p-4 text-center">
+                          <.toggle_switch
+                            enabled={get_setting(@grouped_settings, type, "manager")}
+                            type={type}
+                            role="manager"
+                          />
+                        </td>
+                      </tr>
+                    <% end %>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+    <!-- Section 2: Operational Audit -->
+            <%= for {category, actions} <- @audit_groups do %>
+              <div>
+                <h3 class="text-white/70 font-bold uppercase tracking-widest text-xs mb-4 flex items-center gap-2">
+                  <i class="fa-solid fa-list-check text-cyan-500"></i> {category}
+                </h3>
+                <div class="overflow-x-auto rounded-lg border border-white/10">
+                  <table class="w-full text-left border-collapse bg-black/20">
+                    <thead class="bg-white/5">
+                      <tr class="border-b border-white/10 text-white/50 text-sm uppercase tracking-wider">
+                        <th class="p-4">Ação</th>
+                        <th class="p-4 text-center w-32">WhatsApp Admin</th>
+                        <th class="p-4 text-center w-32">WhatsApp Manager</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white/5">
+                      <%= for action <- actions do %>
+                        <tr class="hover:bg-white/5 transition-colors">
+                          <td class="p-4">
+                            <div class="flex items-center gap-3">
+                              <i class={"fa-solid #{Actions.icon_for(action)} text-white/40 w-5 text-center"}>
+                              </i>
+                              <span class="font-bold text-white">{action}</span>
+                            </div>
+                          </td>
+
+                          <td class="p-4 text-center">
+                            <.toggle_switch
+                              enabled={get_setting(@grouped_settings, action, "admin")}
+                              type={action}
+                              role="admin"
+                              enabled_style="bg-cyan-600"
+                            />
+                          </td>
+
+                          <td class="p-4 text-center">
+                            <.toggle_switch
+                              enabled={get_setting(@grouped_settings, action, "manager")}
+                              type={action}
+                              role="manager"
+                              enabled_style="bg-cyan-600"
+                            />
+                          </td>
+                        </tr>
+                      <% end %>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            <% end %>
           </div>
 
           <div class="mt-8 p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-start gap-4">
@@ -198,6 +270,7 @@ defmodule StarTicketsWeb.Admin.NotificationSettingsLive do
   attr :role, :string, required: true
   attr :enabled, :boolean, required: true
   attr :click, :string, default: "toggle_whatsapp"
+  attr :enabled_style, :string, default: "bg-emerald-500"
 
   def toggle_switch(assigns) do
     ~H"""
@@ -207,7 +280,7 @@ defmodule StarTicketsWeb.Admin.NotificationSettingsLive do
       phx-value-type={@type}
       phx-value-role={@role}
       phx-hook="DebounceSubmit"
-      class={"relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 " <> if(@enabled, do: "bg-emerald-500", else: "bg-gray-700")}
+      class={"relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 " <> if(@enabled, do: @enabled_style, else: "bg-gray-700")}
     >
       <span class={"inline-block h-4 w-4 transform rounded-full bg-white transition-transform " <> if(@enabled, do: "translate-x-6", else: "translate-x-1")} />
     </button>

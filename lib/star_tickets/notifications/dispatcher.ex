@@ -22,30 +22,17 @@ defmodule StarTickets.Notifications.Dispatcher do
 
   @impl true
   def handle_info({:audit_log_created, log}, state) do
-    if is_critical?(log) do
-      send_critical_alert(log)
-    end
+    # All logs are candidates for notification if configured
+    dispatch_alert(log)
 
     {:noreply, state}
   end
 
-  defp is_critical?(log) do
-    action = to_string(log.action)
-    metadata = log.metadata || %{}
-    severity = Map.get(metadata, "severity") || Map.get(metadata, :severity)
+  # Removed is_critical? as we now rely on user settings completely
+  # We can still filter out purely technical debug logs if needed, but
+  # log_action usually implies importance.
 
-    cond do
-      # explicit severity
-      severity in ["error", "critical", "alert"] -> true
-      # logic based on action name
-      String.contains?(action, "ERROR") -> true
-      String.contains?(action, "CRITICAL") -> true
-      String.contains?(action, "ALERT") -> true
-      true -> false
-    end
-  end
-
-  defp send_critical_alert(log) do
+  defp dispatch_alert(log) do
     # Find admins to notify
     # For this system, we notify ALL admins, or maybe just the first one?
     # User said "first user... is admin... messages sent...".
@@ -74,7 +61,8 @@ defmodule StarTickets.Notifications.Dispatcher do
       String.contains?(action, "PROFESSIONAL_OFFLINE") -> "PROFESSIONAL_OFFLINE"
       String.contains?(action, "RATE_LIMIT") -> "RATE_LIMIT"
       String.contains?(action, "ERROR") -> "SYSTEM_ERROR"
-      true -> "OTHER_ALERT"
+      # Default: The action name itself (e.g., TICKET_CREATED)
+      true -> action
     end
   end
 
