@@ -234,13 +234,24 @@ echo ""
 # =============================================================================
 print_step "Installing Hex and Rebar..."
 
-# Try standard Hex install, fallback to GitHub if it fails (network issues)
+# Try standard Hex install, fallback to manual wget if it fails
 if ! mix local.hex --force; then
-    print_warning "Standard Hex install failed. Attempting install from GitHub..."
-    mix archive.install github hexpm/hex branch latest --force || print_error "Failed to install Hex from GitHub"
+    print_warning "Standard Hex install failed. Attempting manual download..."
+    
+    wget https://builds.hex.pm/installs/1.14.0/hex-2.0.6.ez -O hex.ez
+    mix archive.install ./hex.ez --force
+    rm hex.ez
 fi
 
-mix local.rebar --force
+# Try standard Rebar install, fallback to manual wget if it fails
+if ! mix local.rebar --force; then
+    print_warning "Standard Rebar install failed. Attempting manual download..."
+    
+    wget https://github.com/erlang/rebar3/releases/download/3.22.1/rebar3 -O rebar3
+    chmod +x rebar3
+    mix local.rebar ./rebar3 --force
+    rm rebar3
+fi
 
 print_success "Hex and Rebar installed"
 echo ""
