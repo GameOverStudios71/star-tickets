@@ -252,8 +252,10 @@ if ! mix local.rebar --force; then
     
     wget https://github.com/erlang/rebar3/releases/download/3.22.1/rebar3 -O rebar3
     chmod +x rebar3
-    mix local.rebar ./rebar3 --force
+    mkdir -p ~/.mix
+    cp rebar3 ~/.mix/rebar3
     rm rebar3
+    print_success "Rebar3 installed manually to ~/.mix/rebar3"
 fi
 
 # Re-enable exit-on-error
