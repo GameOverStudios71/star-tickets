@@ -8,6 +8,9 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
 
   def mount(_params, _session, socket) do
     if connected?(socket) do
+      # Register as observer - this activates the Sentinel
+      Overseer.register_observer(self())
+
       # Subscribe to Sentinel events
       PubSub.subscribe(StarTickets.PubSub, "sentinel_events")
       PubSub.subscribe(StarTickets.PubSub, "system:presence")
@@ -15,6 +18,7 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
 
     # Get initial state from Overseer
     initial_state = Overseer.get_state()
+    sentinel_active = Overseer.active?()
 
     initial_presence =
       if connected?(socket) do
@@ -31,7 +35,17 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
      |> assign(:presences, initial_presence)
      |> assign(:ingestion_collapsed, true)
      |> assign(:selected_actions, Actions.live_monitoring_defaults())
+     |> assign(:sentinel_active, sentinel_active)
      |> assign(:page_title, "Sentinel AI")}
+  end
+
+  def terminate(_reason, socket) do
+    # Unregister as observer - this may deactivate the Sentinel if no observers remain
+    if socket.assigns[:sentinel_active] do
+      Overseer.unregister_observer(self())
+    end
+
+    :ok
   end
 
   def handle_info(%{topic: "system:presence", event: "presence_diff", payload: diff}, socket) do
@@ -69,11 +83,19 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
         <div class="flex gap-4 text-xs">
           <div class="flex flex-col items-end">
             <span class="text-cyan-700">STATUS</span>
-            <span class="text-emerald-400 font-bold">ONLINE</span>
+            <%= if @sentinel_active do %>
+              <span class="text-emerald-400 font-bold flex items-center gap-1">
+                <span class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span> ACTIVE
+              </span>
+            <% else %>
+              <span class="text-gray-500 font-bold flex items-center gap-1">
+                <span class="w-2 h-2 bg-gray-500 rounded-full"></span> STANDBY
+              </span>
+            <% end %>
           </div>
           <div class="flex flex-col items-end">
-            <span class="text-cyan-700">UPTIME</span>
-            <span class="text-white">00:14:23</span>
+            <span class="text-cyan-700">OBSERVERS</span>
+            <span class="text-white">{if @sentinel_active, do: "1+", else: "0"}</span>
           </div>
         </div>
       </div>

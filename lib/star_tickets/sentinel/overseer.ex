@@ -25,6 +25,21 @@ defmodule StarTickets.Sentinel.Overseer do
     GenServer.call(__MODULE__, :get_state)
   end
 
+  @doc "Register an observer (e.g., LiveView PID). Sentinel activates when at least one observer exists."
+  def register_observer(pid) when is_pid(pid) do
+    GenServer.call(__MODULE__, {:register_observer, pid})
+  end
+
+  @doc "Unregister an observer. Sentinel deactivates when no observers remain."
+  def unregister_observer(pid) when is_pid(pid) do
+    GenServer.cast(__MODULE__, {:unregister_observer, pid})
+  end
+
+  @doc "Check if Sentinel is currently active."
+  def active? do
+    GenServer.call(__MODULE__, :is_active)
+  end
+
   def dismiss_anomaly(idx) do
     GenServer.cast(__MODULE__, {:dismiss_anomaly, idx})
   end
@@ -33,13 +48,14 @@ defmodule StarTickets.Sentinel.Overseer do
 
   @impl true
   def init(_) do
-    Logger.info("🔮 Sentinel Overseer is online and watching...")
-    PubSub.subscribe(@pubsub, @audit_topic)
-    :timer.send_interval(@tick_interval, :tick)
+    # Start DISABLED - activate only when observers register
+    Logger.info("🔮 Sentinel Overseer initialized (INACTIVE - waiting for observers)")
 
-    # State: %{..., previous_presences: %{}}
     {:ok,
      %{
+       active: false,
+       observers: MapSet.new(),
+       timer_ref: nil,
        projections: [],
        anomalies: [],
        recent_logs: [],
@@ -49,76 +65,155 @@ defmodule StarTickets.Sentinel.Overseer do
   end
 
   @impl true
+  def handle_call(:is_active, _from, state) do
+    {:reply, state.active, state}
+  end
+
+  @impl true
+  def handle_call({:register_observer, pid}, _from, state) do
+    # Monitor the observer so we can clean up if it dies
+    Process.monitor(pid)
+    new_observers = MapSet.put(state.observers, pid)
+
+    # Activate if this is the first observer
+    new_state =
+      if not state.active and MapSet.size(new_observers) > 0 do
+        activate_sentinel(%{state | observers: new_observers})
+      else
+        %{state | observers: new_observers}
+      end
+
+    {:reply, :ok, new_state}
+  end
+
+  @impl true
   def handle_call(:get_state, _from, state) do
-    {:reply, state, state}
+    {:reply, Map.drop(state, [:timer_ref, :observers]), state}
   end
 
   @impl true
   def handle_info({:audit_log_created, log}, state) do
-    # 1. Store recent log for "stream" view (keep last 50)
-    recent_logs = [log | state.recent_logs] |> Enum.take(50)
+    # Ignore if not active
+    if not state.active do
+      {:noreply, state}
+    else
+      # 1. Store recent log for "stream" view (keep last 50)
+      recent_logs = [log | state.recent_logs] |> Enum.take(50)
 
-    # 2. Check for anomalies (Errors)
-    new_anomalies = check_for_anomalies(log, state.anomalies)
+      # 2. Check for anomalies (Errors)
+      new_anomalies = check_for_anomalies(log, state.anomalies)
 
-    # 3. Process Projections (Verify existing or Create new)
-    updated_projections = process_projections(log, state.projections)
+      # 3. Process Projections (Verify existing or Create new)
+      updated_projections = process_projections(log, state.projections)
 
-    new_state = %{
-      state
-      | recent_logs: recent_logs,
-        anomalies: new_anomalies,
-        projections: updated_projections
-    }
+      new_state = %{
+        state
+        | recent_logs: recent_logs,
+          anomalies: new_anomalies,
+          projections: updated_projections
+      }
 
-    # Broadcast update to UI
-    broadcast_update(new_state)
+      # Broadcast update to UI
+      broadcast_update(new_state)
+
+      {:noreply, new_state}
+    end
+  end
+
+  @impl true
+  def handle_info(:tick, state) do
+    # Ignore if not active
+    if not state.active do
+      {:noreply, state}
+    else
+      # Check for expired projections
+      now = DateTime.utc_now()
+
+      {active, expired} =
+        Enum.split_with(state.projections, fn p ->
+          p.status != :pending or DateTime.compare(p.deadline, now) == :gt
+        end)
+
+      # Mark expired as failed
+      failed_projections =
+        expired
+        |> Enum.map(fn p -> %{p | status: :failed} end)
+
+      # If we had failures, we must update state and broadcast
+      if length(failed_projections) > 0 do
+        # Keep active + failed (for history, maybe limit history?)
+        # For now, let's keep everything but maybe trim old completed ones later
+        all_projections = active ++ failed_projections
+
+        new_state = %{state | projections: all_projections}
+        broadcast_update(new_state)
+        {:noreply, new_state}
+      else
+        # Check connectivity every tick
+        {new_active_alerts, current_presences} =
+          check_connectivity(state.active_alerts, state.previous_presences)
+
+        new_state = %{
+          state
+          | active_alerts: new_active_alerts,
+            previous_presences: current_presences
+        }
+
+        if new_active_alerts != state.active_alerts or
+             current_presences != state.previous_presences do
+          {:noreply, new_state}
+        else
+          {:noreply, state}
+        end
+      end
+    end
+  end
+
+  @impl true
+  def handle_info({:DOWN, _ref, :process, pid, _reason}, state) do
+    # Observer died - remove it
+    new_observers = MapSet.delete(state.observers, pid)
+
+    # Deactivate if no observers remain
+    new_state =
+      if state.active and MapSet.size(new_observers) == 0 do
+        deactivate_sentinel(%{state | observers: new_observers})
+      else
+        %{state | observers: new_observers}
+      end
 
     {:noreply, new_state}
   end
 
   @impl true
-  def handle_info(:tick, state) do
-    # Check for expired projections
-    now = DateTime.utc_now()
+  def handle_cast({:unregister_observer, pid}, state) do
+    new_observers = MapSet.delete(state.observers, pid)
 
-    {active, expired} =
-      Enum.split_with(state.projections, fn p ->
-        p.status != :pending or DateTime.compare(p.deadline, now) == :gt
-      end)
-
-    # Mark expired as failed
-    failed_projections =
-      expired
-      |> Enum.map(fn p -> %{p | status: :failed} end)
-
-    # If we had failures, we must update state and broadcast
-    if length(failed_projections) > 0 do
-      # Keep active + failed (for history, maybe limit history?)
-      # For now, let's keep everything but maybe trim old completed ones later
-      all_projections = active ++ failed_projections
-
-      new_state = %{state | projections: all_projections}
-      broadcast_update(new_state)
-      {:noreply, new_state}
-    else
-      # Check connectivity every tick
-      {new_active_alerts, current_presences} =
-        check_connectivity(state.active_alerts, state.previous_presences)
-
-      new_state = %{
-        state
-        | active_alerts: new_active_alerts,
-          previous_presences: current_presences
-      }
-
-      if new_active_alerts != state.active_alerts or
-           current_presences != state.previous_presences do
-        {:noreply, new_state}
+    # Deactivate if no observers remain
+    new_state =
+      if state.active and MapSet.size(new_observers) == 0 do
+        deactivate_sentinel(%{state | observers: new_observers})
       else
-        {:noreply, state}
+        %{state | observers: new_observers}
       end
-    end
+
+    {:noreply, new_state}
+  end
+
+  # Activation/Deactivation helpers
+
+  defp activate_sentinel(state) do
+    Logger.info("🔮 Sentinel Overseer ACTIVATED - monitoring started")
+    PubSub.subscribe(@pubsub, @audit_topic)
+    {:ok, timer_ref} = :timer.send_interval(@tick_interval, :tick)
+    %{state | active: true, timer_ref: timer_ref}
+  end
+
+  defp deactivate_sentinel(state) do
+    Logger.info("🔮 Sentinel Overseer DEACTIVATED - monitoring stopped")
+    PubSub.unsubscribe(@pubsub, @audit_topic)
+    if state.timer_ref, do: :timer.cancel(state.timer_ref)
+    %{state | active: false, timer_ref: nil}
   end
 
   @impl true
