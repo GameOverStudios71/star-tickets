@@ -1,0 +1,38 @@
+FROM node:20.11.0-slim
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    ffmpeg \
+    cat \
+    curl \
+    python3 \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Clone Evolution API (Specific version or latest?)
+# User script used standard clone, so implies latest default branch.
+RUN git clone https://github.com/EvolutionAPI/evolution-api.git .
+
+# Install dependencies
+# Using instructions from install_evolution.sh
+RUN npm install
+
+# Copy env example or expect env vars
+# We will rely on mapped .env or ENV vars from compose
+# But we need to generate client
+# We need to simulate the db:generate and build steps
+# These usually require the DB URL to be present for introspection?
+# Actually db:generate just needs the schema.
+# But build might fail without some configs.
+
+# We'll do the build step in Command or Entrypoint to ensure DB is ready if needed, 
+# or try to build here.
+RUN npm run db:generate
+RUN npm run build
+
+# Start command
+# We use a shell to ensure we can run migrations before starting
+CMD ["sh", "-c", "npx prisma migrate deploy && npm run start:prod"]

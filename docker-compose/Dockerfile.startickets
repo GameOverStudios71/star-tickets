@@ -1,0 +1,47 @@
+FROM hexpm/elixir:1.18.1-erlang-27.2-ubuntu-noble
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    autoconf \
+    inotify-tools \
+    watchman \
+    m4 \
+    libncurses5-dev \
+    libncurses-dev \
+    libssl-dev \
+    libwxgtk3.2-dev \
+    libwxgtk-webview3.2-dev \
+    libgl1-mesa-dev \
+    libglu1-mesa-dev \
+    libpng-dev \
+    libssh-dev \
+    unixodbc-dev \
+    xsltproc \
+    fop \
+    libxml2-utils \
+    git \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Clone Repository
+RUN git clone https://github.com/GameOverStudios71/star-tickets .
+
+# Install Hex + Rebar
+RUN mix local.hex --force && \
+    mix local.rebar --force
+
+# Install dependencies (Prod or Dev? User said "construir o sistema", likely dev/prod mix)
+# We will default to DEV environment for now as per "setup-dev-environment.sh"
+ENV MIX_ENV=dev
+
+RUN mix deps.get
+RUN mix compile
+
+# Expose Phoenix Port
+EXPOSE 4000
+
+# Start script
+CMD ["sh", "-c", "mix ecto.migrate && mix phx.server"]
