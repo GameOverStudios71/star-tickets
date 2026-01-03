@@ -4,9 +4,14 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
   alias StarTickets.Audit.Actions
   alias Phoenix.PubSub
 
+  alias StarTicketsWeb.ImpersonationHelpers
+
   import StarTicketsWeb.Components.AuditActionsFilter
 
-  def mount(_params, _session, socket) do
+  def mount(_params, session, socket) do
+    impersonation_assigns =
+      ImpersonationHelpers.load_impersonation_assigns(socket.assigns.current_scope, session)
+
     if connected?(socket) do
       # Register as observer - this activates the Sentinel
       Overseer.register_observer(self())
@@ -29,6 +34,7 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
 
     {:ok,
      socket
+     |> assign(impersonation_assigns)
      |> assign(:projections, initial_state.projections)
      |> assign(:anomalies, initial_state.anomalies)
      |> assign(:recent_logs, initial_state.recent_logs)
