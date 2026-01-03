@@ -112,6 +112,17 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
               <span class="text-cyan-700 font-bold text-[0.6rem]">OBSERVERS</span>
               <span class="text-white font-mono">{if @sentinel_active, do: "1+", else: "0"}</span>
             </div>
+
+            <div class="flex items-center ml-4 border-l border-white/10 pl-4">
+              <.link
+                href={~p"/admin/sentinel/grid"}
+                target="_blank"
+                class="text-cyan-600 hover:text-cyan-300 transition-colors"
+                title="Open Grid View"
+              >
+                <i class="fa-solid fa-table-cells-large text-xl"></i>
+              </.link>
+            </div>
           </div>
         </:right>
       </.app_header>
@@ -128,7 +139,14 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
 
         <div class="flex items-center justify-between relative">
           <!-- Connector Line -->
-          <div class="absolute top-1/2 left-0 w-full h-0.5 bg-cyan-900/30 -z-0"></div>
+          <% all_systems_go = Enum.all?(Map.values(flow_status), &(&1 == :ok)) %>
+          <div
+            class={"absolute top-1/2 left-0 w-full h-0.5 -z-0 transition-all duration-1000 " <>
+            if(all_systems_go, do: "shadow-[0_0_20px_rgba(251,191,36,0.8)] opacity-90", else: "opacity-70")
+          }
+            style={get_flow_line_style(flow_status, all_systems_go)}
+          >
+          </div>
           
     <!-- Step 1: Totem -->
           <div class={"relative z-10 flex flex-col items-center gap-2 #{if flow_status.totem == :ok, do: "opacity-100", else: "opacity-100"}"}>
@@ -390,21 +408,24 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
               </h2>
               <div class="grid grid-cols-1 gap-2 relative z-10 max-h-60 overflow-y-auto custom-scrollbar">
                 <%= for {error, idx} <- Enum.with_index(Enum.take(@anomalies, 10)) do %>
-                  <details class="group bg-red-900/40 rounded border border-red-500/30">
-                    <summary class="p-3 cursor-pointer list-none flex items-start gap-3 hover:bg-red-800/40 transition-colors">
-                      <i class="fa-solid fa-bug text-red-400 mt-0.5"></i>
+                  <% style = get_anomaly_style(error.action) %>
+                  <details class={"group #{style.bg} rounded border #{style.border}"}>
+                    <summary class={"p-3 cursor-pointer list-none flex items-start gap-3 #{style.bg_hover} transition-colors"}>
+                      <i class={"fa-solid #{style.summary_icon} mt-0.5"}></i>
                       <div class="flex-1">
-                        <p class="text-xs text-red-200 font-bold">{to_string(error.action)}</p>
-                        <p class="text-[10px] text-red-300/70">
+                        <p class={"text-xs font-bold #{style.text_primary}"}>
+                          {to_string(error.action)}
+                        </p>
+                        <p class={"text-[10px] #{style.text_secondary}"}>
                           {Calendar.strftime(error.inserted_at, "%H:%M:%S")} · {error.resource_type}
                         </p>
                       </div>
-                      <i class="fa-solid fa-chevron-down text-red-400/50 group-open:rotate-180 transition-transform text-xs">
+                      <i class={"fa-solid fa-chevron-down #{style.text_primary} opacity-50 group-open:rotate-180 transition-transform text-xs"}>
                       </i>
                     </summary>
-                    <div class="p-3 border-t border-red-500/20 bg-black/40">
+                    <div class={"p-3 border-t #{style.border} bg-black/40"}>
                       <div class="flex justify-between items-center mb-2">
-                        <span class="text-[10px] text-red-400 uppercase font-bold">
+                        <span class={"text-[10px] uppercase font-bold #{style.text_primary}"}>
                           Full JSON (Copy for debugging)
                         </span>
                         <div class="flex gap-2">
@@ -413,10 +434,11 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
                             phx-hook="DebounceSubmit"
                             phx-click="copy_anomaly_json"
                             phx-value-idx={idx}
-                            class="text-[10px] bg-red-500/20 hover:bg-red-500/40 text-red-300 px-2 py-1 rounded transition-colors"
+                            class={"text-[10px] #{style.bg} hover:bg-opacity-50 #{style.text_secondary} px-2 py-1 rounded transition-colors"}
                           >
                             <i class="fa-solid fa-copy mr-1"></i> Copy
                           </button>
+
                           <button
                             id={"dismiss-anomaly-#{idx}"}
                             phx-hook="DebounceSubmit"
@@ -663,14 +685,18 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
 
   defp format_anomaly_for_json(error) do
     %{
-      id: error[:id] || error.id,
-      action: to_string(error.action),
-      resource_type: error.resource_type,
-      resource_id: error.resource_id,
-      details: error.details,
-      metadata: error[:metadata] || %{},
-      timestamp: error.inserted_at,
-      user: if(error[:user], do: %{id: error.user.id, email: error.user.email}, else: nil)
+      id: Map.get(error, :id),
+      action: to_string(Map.get(error, :action)),
+      resource_type: Map.get(error, :resource_type),
+      resource_id: Map.get(error, :resource_id),
+      details: Map.get(error, :details),
+      metadata: Map.get(error, :metadata) || %{},
+      timestamp: Map.get(error, :inserted_at),
+      user:
+        if(user = Map.get(error, :user),
+          do: %{id: Map.get(user, :id), email: Map.get(user, :email)},
+          else: nil
+        )
     }
   end
 
@@ -750,5 +776,59 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
       tv: tv_ok,
       professional: professional_status
     }
+  end
+
+  defp get_flow_line_style(_flow_status, true) do
+    # Amber-400
+    "background: #fbbf24;"
+  end
+
+  defp get_flow_line_style(flow_status, false) do
+    # Define colors
+    # Emerald-500
+    c_ok = "#10b981"
+    # Red-500
+    c_err = "#ef4444"
+
+    # Map node status to color
+    # Pipeline: Totem -> Printer -> Reception -> TV -> Professional
+    c1 = if flow_status.totem == :ok, do: c_ok, else: c_err
+    c2 = if flow_status.printer == :ok, do: c_ok, else: c_err
+    c3 = if flow_status.reception == :ok, do: c_ok, else: c_err
+    c4 = if flow_status.tv == :ok, do: c_ok, else: c_err
+    c5 = if flow_status.professional == :ok, do: c_ok, else: c_err
+
+    # Gradient construction (hard stops)
+    # 5 sections = 20% each
+    "background: linear-gradient(to right,
+      #{c1} 0%, #{c1} 20%,
+      #{c2} 20%, #{c2} 40%,
+      #{c3} 40%, #{c3} 60%,
+      #{c4} 60%, #{c4} 80%,
+      #{c5} 80%, #{c5} 100%);"
+  end
+
+  defp get_anomaly_style(action) do
+    if String.starts_with?(to_string(action), "SYSTEM_WARNING") do
+      %{
+        border: "border-amber-500/30",
+        bg: "bg-amber-900/40",
+        bg_hover: "hover:bg-amber-800/40",
+        text_primary: "text-amber-200",
+        text_secondary: "text-amber-300/70",
+        icon: "fa-triangle-exclamation text-amber-400",
+        summary_icon: "fa-plug-circle-xmark text-amber-400"
+      }
+    else
+      %{
+        border: "border-red-500/30",
+        bg: "bg-red-900/40",
+        bg_hover: "hover:bg-red-800/40",
+        text_primary: "text-red-200",
+        text_secondary: "text-red-300/70",
+        icon: "fa-triangle-exclamation text-red-500",
+        summary_icon: "fa-bug text-red-400"
+      }
+    end
   end
 end

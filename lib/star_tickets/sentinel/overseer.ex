@@ -100,10 +100,13 @@ defmodule StarTickets.Sentinel.Overseer do
       # 1. Store recent log for "stream" view (keep last 50)
       recent_logs = [log | state.recent_logs] |> Enum.take(50)
 
-      # 2. Check for anomalies (Errors)
-      new_anomalies = check_for_anomalies(log, state.anomalies)
+      # 3. Auto-Dismiss resolved anomalies
+      anomalies_after_dismiss = dismiss_resolved_anomalies(log, state.anomalies)
 
-      # 3. Process Projections (Verify existing or Create new)
+      # 4. Check for NEW anomalies (Errors)
+      new_anomalies = check_for_anomalies(log, anomalies_after_dismiss)
+
+      # 5. Process Projections (Verify existing or Create new)
       updated_projections = process_projections(log, state.projections)
 
       new_state = %{
@@ -203,6 +206,9 @@ defmodule StarTickets.Sentinel.Overseer do
   @impl true
   def handle_cast({:dismiss_anomaly, idx}, state) do
     new_anomalies = List.delete_at(state.anomalies, idx)
+    # also remove any corresponding active alert from the set so it can re-trigger if needed?
+    # Actually, active_alerts only tracks global alerts (SYSTEM_ALERT_...), not individual anomalies.
+    # Global alerts are self-healing via check_connectivity logic.
     new_state = %{state | anomalies: new_anomalies}
     broadcast_update(new_state)
     {:noreply, new_state}
@@ -225,6 +231,68 @@ defmodule StarTickets.Sentinel.Overseer do
   end
 
   # Helpers
+
+  defp dismiss_resolved_anomalies(log, anomalies) do
+    action = to_string(log.action)
+
+    cond do
+      # Case 1: Individual Reconnect (SYSTEM_INFO_..._CONNECT)
+      # Fixes: SYSTEM_WARNING_..._DISCONNECT with matching resource_id
+      String.ends_with?(action, "_CONNECT") and String.starts_with?(action, "SYSTEM_INFO") ->
+        target_resource = log.resource_id
+
+        target_type =
+          action
+          |> String.replace("SYSTEM_INFO_", "")
+          |> String.replace("_CONNECT", "")
+
+        Enum.reject(anomalies, fn a ->
+          a_action = to_string(a.action)
+
+          a.resource_id == target_resource and
+            String.contains?(a_action, target_type) and
+            String.ends_with?(a_action, "_DISCONNECT")
+        end)
+
+      # Case 2: Count Recovery (SYSTEM_INFO_..._RECOVER)
+      # Fixes: SYSTEM_WARNING_..._DROP (LIFO - remove latest)
+      String.ends_with?(action, "_RECOVER") and String.starts_with?(action, "SYSTEM_INFO") ->
+        target_type =
+          action
+          |> String.replace("SYSTEM_INFO_", "")
+          |> String.replace("_RECOVER", "")
+
+        # Find the index of the most recent matching warning
+        idx =
+          Enum.find_index(anomalies, fn a ->
+            a_action = to_string(a.action)
+
+            String.contains?(a_action, target_type) and
+              String.ends_with?(a_action, "_DROP")
+          end)
+
+        if idx, do: List.delete_at(anomalies, idx), else: anomalies
+
+      # Case 3: Global Online (SYSTEM_INFO_..._ONLINE)
+      # Fixes: SYSTEM_ALERT_..._OFFLINE
+      String.ends_with?(action, "_ONLINE") and String.starts_with?(action, "SYSTEM_INFO") ->
+        target_type =
+          action
+          |> String.replace("SYSTEM_INFO_", "")
+          |> String.replace("_ONLINE", "")
+
+        Enum.reject(anomalies, fn a ->
+          a_action = to_string(a.action)
+
+          String.contains?(a_action, target_type) and
+            String.contains?(a_action, "ALERT") and
+            String.ends_with?(a_action, "_OFFLINE")
+        end)
+
+      true ->
+        anomalies
+    end
+  end
 
   defp check_for_anomalies(log, current_anomalies) do
     action = to_string(log.action)
@@ -306,8 +374,8 @@ defmodule StarTickets.Sentinel.Overseer do
                 expected_action: "WEBCHECKIN_STARTED",
                 resource_id: log.resource_id,
                 # 10 min deadline (se demorar, talvez o cliente desistiu)
-                deadline: DateTime.add(DateTime.utc_now(), 10 * 60, :second),
-                confidence: 0.7
+                confidence: 0.7,
+                deadline: DateTime.add(DateTime.utc_now(), 10 * 60, :second)
               )
             ]
         else
@@ -383,7 +451,7 @@ defmodule StarTickets.Sentinel.Overseer do
           if MapSet.member?(acc, alert_key) do
             acc
           else
-            create_audit_log(alert_key, message, severity)
+            create_audit_log(alert_key, message, severity, "Overseer")
             MapSet.put(acc, alert_key)
           end
         else
@@ -391,7 +459,8 @@ defmodule StarTickets.Sentinel.Overseer do
             create_audit_log(
               String.replace(alert_key, "ALERT", "INFO") |> String.replace("OFFLINE", "ONLINE"),
               "Serviço recuperado: #{key} está online novamente.",
-              :info
+              :info,
+              "Overseer"
             )
 
             MapSet.delete(acc, alert_key)
@@ -404,14 +473,15 @@ defmodule StarTickets.Sentinel.Overseer do
     # 2. Individual Drop Checks
     # For Users (Reception/Professional): Track ID loss consistently
     # For Devices (Totem/TV): Track COUNT loss to avoid refresh spam
-    monitor_individual(active_alerts, grouped, previous_presences, :reception, "user")
+    active_alerts
+    |> monitor_individual(grouped, previous_presences, :reception, "user")
     |> monitor_individual(grouped, previous_presences, :professional, "user")
     |> monitor_count_drop(grouped, previous_presences, :totems, "Totem")
     |> monitor_count_drop(grouped, previous_presences, :tvs, "TV")
     |> then(fn alerts -> {alerts, grouped} end)
   end
 
-  # Monitor specific IDs leaving (User based)
+  # Monitor specific IDs leaving or joining (User based)
   defp monitor_individual(active_alerts, current, previous, key, _type_label) do
     cur_list = Map.get(current, key, [])
     prev_list = Map.get(previous, key, [])
@@ -421,21 +491,39 @@ defmodule StarTickets.Sentinel.Overseer do
 
     # Find IDs that were present but are now gone
     lost_ids = MapSet.difference(prev_ids, cur_ids)
+    # Find IDs that returned
+    gained_ids = MapSet.difference(cur_ids, prev_ids)
 
-    Enum.reduce(lost_ids, active_alerts, fn id, acc ->
-      # Try to find name for better log
-      lost_meta = Enum.find(prev_list, fn m -> (m.id || m["id"]) == id end)
-      name = lost_meta[:name] || lost_meta["name"] || "ID #{id}"
+    # Log Disconnects
+    acc_after_loss =
+      Enum.reduce(lost_ids, active_alerts, fn id, acc ->
+        # Try to find name for better log
+        lost_meta = Enum.find(prev_list, fn m -> (m.id || m["id"]) == id end)
+        name = lost_meta[:name] || lost_meta["name"] || "ID #{id}"
+
+        create_audit_log(
+          "SYSTEM_WARNING_#{String.upcase(to_string(key))}_DISCONNECT",
+          "#{name} desconectou-se do sistema.",
+          :warning,
+          # Pass ID as resource_id for matching
+          to_string(id)
+        )
+
+        acc
+      end)
+
+    # Log Reconnects (for auto-dismissal)
+    Enum.reduce(gained_ids, acc_after_loss, fn id, acc ->
+      new_meta = Enum.find(cur_list, fn m -> (m.id || m["id"]) == id end)
+      name = new_meta[:name] || new_meta["name"] || "ID #{id}"
 
       create_audit_log(
-        "SYSTEM_WARNING_#{String.upcase(to_string(key))}_DISCONNECT",
-        "#{name} desconectou-se do sistema.",
-        :warning
+        "SYSTEM_INFO_#{String.upcase(to_string(key))}_CONNECT",
+        "#{name} conectou-se ao sistema.",
+        :info,
+        to_string(id)
       )
 
-      # We don't persist "individual" active alerts in the MapSet because they are events, not states
-      # Unless we want to track "User X is offline" state.
-      # User asked for "Notification" (Alert). Event log is sufficient.
       acc
     end)
   end
@@ -451,7 +539,19 @@ defmodule StarTickets.Sentinel.Overseer do
       create_audit_log(
         "SYSTEM_WARNING_#{String.upcase(to_string(key))}_DROP",
         "#{dropped} unidade(s) de #{device_label} desconectada(s) (Total: #{cur_count}).",
-        :warning
+        :warning,
+        "Overseer"
+      )
+    end
+
+    if cur_count > prev_count do
+      gained = cur_count - prev_count
+
+      create_audit_log(
+        "SYSTEM_INFO_#{String.upcase(to_string(key))}_RECOVER",
+        "#{gained} unidade(s) de #{device_label} reconectada(s) (Total: #{cur_count}).",
+        :info,
+        "Overseer"
       )
     end
 
@@ -475,12 +575,12 @@ defmodule StarTickets.Sentinel.Overseer do
     end)
   end
 
-  defp create_audit_log(action, details_text, severity) do
+  defp create_audit_log(action, details_text, severity, resource_id) do
     StarTickets.Audit.log_action(
       action,
       %{
         resource_type: "System",
-        resource_id: "Overseer",
+        resource_id: resource_id,
         details: %{message: details_text},
         metadata: %{severity: to_string(severity)},
         user_id: 1

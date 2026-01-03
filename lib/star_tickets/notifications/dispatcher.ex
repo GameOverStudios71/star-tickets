@@ -55,14 +55,32 @@ defmodule StarTickets.Notifications.Dispatcher do
 
   defp categorize_action(action) do
     cond do
-      String.contains?(action, "TOTEM_OFFLINE") -> "TOTEM_OFFLINE"
-      String.contains?(action, "RECEPTION_OFFLINE") -> "RECEPTION_OFFLINE"
-      String.contains?(action, "TV_OFFLINE") -> "TV_OFFLINE"
-      String.contains?(action, "PROFESSIONAL_OFFLINE") -> "PROFESSIONAL_OFFLINE"
-      String.contains?(action, "RATE_LIMIT") -> "RATE_LIMIT"
-      String.contains?(action, "ERROR") -> "SYSTEM_ERROR"
+      # Map Disconnects/Drops to the main Offline category so they share the same setting
+      String.contains?(action, "TOTEM") and
+          (String.contains?(action, "OFFLINE") or String.contains?(action, "DROP")) ->
+        "TOTEM_OFFLINE"
+
+      String.contains?(action, "RECEPTION") and
+          (String.contains?(action, "OFFLINE") or String.contains?(action, "DISCONNECT")) ->
+        "RECEPTION_OFFLINE"
+
+      String.contains?(action, "TV") and
+          (String.contains?(action, "OFFLINE") or String.contains?(action, "DROP")) ->
+        "TV_OFFLINE"
+
+      String.contains?(action, "PROFESSIONAL") and
+          (String.contains?(action, "OFFLINE") or String.contains?(action, "DISCONNECT")) ->
+        "PROFESSIONAL_OFFLINE"
+
+      String.contains?(action, "RATE_LIMIT") ->
+        "RATE_LIMIT"
+
+      String.contains?(action, "ERROR") ->
+        "SYSTEM_ERROR"
+
       # Default: The action name itself (e.g., TICKET_CREATED)
-      true -> action
+      true ->
+        action
     end
   end
 
