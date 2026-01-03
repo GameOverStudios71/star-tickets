@@ -17,6 +17,22 @@ defmodule StarTicketsWeb.Router do
     plug(:accepts, ["json"])
   end
 
+  # Rate limiting pipelines - protect against abuse
+  pipeline :rate_limit_auth do
+    # Stricter limit for auth routes (30 req/min)
+    plug(StarTicketsWeb.Plugs.RateLimiter, limit: 30, period: 60_000)
+  end
+
+  pipeline :rate_limit_totem do
+    # Very strict limit for totem (20 req/min per IP)
+    plug(StarTicketsWeb.Plugs.RateLimiter, limit: 20, period: 60_000)
+  end
+
+  pipeline :rate_limit_general do
+    # General limit for authenticated routes (100 req/min)
+    plug(StarTicketsWeb.Plugs.RateLimiter, limit: 100, period: 60_000)
+  end
+
   scope "/", StarTicketsWeb do
     pipe_through(:browser)
 
@@ -27,10 +43,10 @@ defmodule StarTicketsWeb.Router do
     live("/webcheckin/:token", Public.WebCheckinLive, :index)
   end
 
-  ## Authentication routes
+  ## Authentication routes (with stricter rate limiting)
 
   scope "/", StarTicketsWeb do
-    pipe_through([:browser, :redirect_if_user_is_authenticated])
+    pipe_through([:browser, :rate_limit_auth, :redirect_if_user_is_authenticated])
 
     live_session :redirect_if_user_is_authenticated,
       on_mount: [
@@ -48,7 +64,7 @@ defmodule StarTicketsWeb.Router do
   end
 
   scope "/", StarTicketsWeb do
-    pipe_through([:browser, :require_authenticated_user])
+    pipe_through([:browser, :rate_limit_general, :require_authenticated_user])
 
     post("/impersonate", ImpersonationController, :create)
     delete("/impersonate", ImpersonationController, :delete)
