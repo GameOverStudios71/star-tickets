@@ -195,6 +195,8 @@ defmodule StarTicketsWeb.Admin.TVsLive do
                   <.icon name="hero-pencil" class="size-5 text-blue-400" />
                 </.link>
                 <button
+                  id={"delete-tv-#{tv.id}"}
+                  phx-hook="DebounceSubmit"
                   phx-click="confirm_delete"
                   phx-value-id={tv.id}
                   class="btn btn-sm btn-ghost btn-square"
@@ -235,6 +237,8 @@ defmodule StarTicketsWeb.Admin.TVsLive do
               Cancelar
             </button>
             <button
+              id="do-delete-tv"
+              phx-hook="DebounceSubmit"
               phx-click="do_delete"
               class="st-modal-btn st-modal-btn-confirm"
             >

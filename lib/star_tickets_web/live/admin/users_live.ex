@@ -222,6 +222,8 @@ defmodule StarTicketsWeb.Admin.UsersLive do
                 <.icon name="hero-pencil-square" class="size-5 text-blue-400" />
               </.link>
               <button
+                id={"delete-user-#{user.id}"}
+                phx-hook="DebounceSubmit"
                 phx-click="confirm_delete"
                 phx-value-id={user.id}
                 class="btn btn-sm btn-ghost btn-square"
@@ -258,6 +260,8 @@ defmodule StarTicketsWeb.Admin.UsersLive do
                 Cancelar
               </button>
               <button
+                id="do-delete-user"
+                phx-hook="DebounceSubmit"
                 phx-click="do_delete"
                 class="st-modal-btn st-modal-btn-confirm"
               >

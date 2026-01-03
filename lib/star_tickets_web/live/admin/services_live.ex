@@ -182,6 +182,8 @@ defmodule StarTicketsWeb.Admin.ServicesLive do
                 <.icon name="hero-pencil-square" class="size-5 text-blue-400" />
               </.link>
               <button
+                id={"delete-service-#{service.id}"}
+                phx-hook="DebounceSubmit"
                 phx-click="delete"
                 phx-value-id={service.id}
                 class="btn btn-sm btn-ghost btn-square"

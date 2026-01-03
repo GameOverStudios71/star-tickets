@@ -203,6 +203,8 @@ defmodule StarTicketsWeb.Admin.FormsLive do
                 <.icon name="hero-pencil-square" class="size-5 text-blue-400" />
               </.link>
               <button
+                id={"delete-form-#{template.id}"}
+                phx-hook="DebounceSubmit"
                 phx-click="delete"
                 phx-value-id={template.id}
                 class="btn btn-sm btn-ghost btn-square"

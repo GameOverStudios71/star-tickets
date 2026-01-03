@@ -208,6 +208,8 @@ defmodule StarTicketsWeb.Admin.EstablishmentsLive do
                 <.icon name="hero-pencil-square" class="size-5 text-blue-400" />
               </.link>
               <button
+                id={"delete-establishment-#{establishment.id}"}
+                phx-hook="DebounceSubmit"
                 phx-click="confirm_delete"
                 phx-value-id={establishment.id}
                 class="btn btn-sm btn-ghost btn-square"
@@ -244,6 +246,8 @@ defmodule StarTicketsWeb.Admin.EstablishmentsLive do
                 Cancelar
               </button>
               <button
+                id="do-delete-establishment"
+                phx-hook="DebounceSubmit"
                 phx-click="do_delete"
                 class="st-modal-btn st-modal-btn-confirm"
               >

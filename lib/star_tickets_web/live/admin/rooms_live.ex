@@ -183,6 +183,8 @@ defmodule StarTicketsWeb.Admin.RoomsLive do
                   <.icon name="hero-pencil" class="size-5 text-blue-400" />
                 </.link>
                 <button
+                  id={"delete-room-#{room.id}"}
+                  phx-hook="DebounceSubmit"
                   phx-click="confirm_delete"
                   phx-value-id={room.id}
                   class="btn btn-sm btn-ghost btn-square"
@@ -223,6 +225,8 @@ defmodule StarTicketsWeb.Admin.RoomsLive do
               Cancelar
             </button>
             <button
+              id="do-delete-room"
+              phx-hook="DebounceSubmit"
               phx-click="do_delete"
               class="st-modal-btn st-modal-btn-confirm"
             >

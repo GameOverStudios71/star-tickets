@@ -371,6 +371,8 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
                         </span>
                         <div class="flex gap-2">
                           <button
+                            id={"copy-anomaly-#{idx}"}
+                            phx-hook="DebounceSubmit"
                             phx-click="copy_anomaly_json"
                             phx-value-idx={idx}
                             class="text-[10px] bg-red-500/20 hover:bg-red-500/40 text-red-300 px-2 py-1 rounded transition-colors"
@@ -378,6 +380,8 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
                             <i class="fa-solid fa-copy mr-1"></i> Copy
                           </button>
                           <button
+                            id={"dismiss-anomaly-#{idx}"}
+                            phx-hook="DebounceSubmit"
                             phx-click="dismiss_anomaly"
                             phx-value-idx={idx}
                             class="text-[10px] bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-300 px-2 py-1 rounded transition-colors"
