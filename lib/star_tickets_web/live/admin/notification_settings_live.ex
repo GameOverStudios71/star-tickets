@@ -178,9 +178,11 @@ defmodule StarTicketsWeb.Admin.NotificationSettingsLive do
   def toggle_switch(assigns) do
     ~H"""
     <button
+      id={"toggle-#{String.downcase(@values[:type])}-#{@values[:role]}"}
       phx-click={@click}
       phx-value-type={@values[:type]}
       phx-value-role={@values[:role]}
+      phx-hook="DebounceSubmit"
       class={"relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 " <> if(@enabled, do: "bg-emerald-500", else: "bg-gray-700")}
       {@rest}
     >
