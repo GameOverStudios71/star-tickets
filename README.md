@@ -180,8 +180,93 @@ Sistema avançado de notificação para garantir alta disponibilidade.
 - **Real-time**: Atualizações instantâneas via Phoenix PubSub
 - **Responsivo**: Interface adaptável a diferentes dispositivos
 - **Acessível**: Suporte a atendimento preferencial
-
 - **Audit Logs**: Rastreabilidade completa de ações e diffs de dados
+
+### 🛡️ Resiliência e Proteção
+
+O StarTickets implementa um conjunto completo de medidas de resiliência inspiradas em casos reais de sistemas de alta carga (ex: Mega da Virada 2025).
+
+#### DebounceSubmit (Proteção contra Cliques Múltiplos)
+
+| Recurso | Descrição |
+|---------|-----------|
+| **JS Hook Global** | Hook `DebounceSubmit` em `assets/js/app.js` que previne cliques múltiplos |
+| **Feedback Visual** | Botão desabilita + spinner aparece durante processamento |
+| **Auto-reset** | Reativa automaticamente após resposta do servidor ou timeout de 10s |
+| **Cobertura Total** | 30+ botões críticos protegidos em todas as páginas |
+
+**Páginas Protegidas:**
+- Totem: CONFIRMAR E GERAR SENHA
+- Recepção: CHAMAR, INICIAR, FINALIZAR
+- Profissional: CHAMAR, INICIAR, FINALIZAR
+- Dispositivos: Desconectar, Desconectar Outros
+- Admin: Todos os botões de exclusão (Users, TVs, Rooms, Establishments, Services, Forms, Sentinel, TotemMenus, FormBuilder)
+
+#### Rate Limiting (Proteção contra Spam)
+
+| Pipeline | Limite | Rotas |
+|----------|--------|-------|
+| `rate_limit_auth` | 30 req/min | Login, Registro |
+| `rate_limit_general` | 100 req/min | Dashboard, Admin, Reception, Professional |
+| `rate_limit_totem` | 20 req/min | Totem (disponível para uso) |
+
+**Implementação:**
+- **Hammer** library com backend ETS para contagem de requisições
+- **Plug customizado** `StarTicketsWeb.Plugs.RateLimiter`
+- Resposta HTTP 429 com JSON de erro quando limite é excedido
+
+#### Connection Pool Tuning
+
+Configurações otimizadas em `config/runtime.exs`:
+
+```elixir
+config :star_tickets, StarTickets.Repo,
+  pool_size: 20,           # Aumentado de 10 para 20
+  queue_target: 500,       # ms - tempo alvo na fila
+  queue_interval: 1000,    # ms - intervalo de verificação
+  timeout: 15_000          # ms - timeout de checkout
+```
+
+#### Offline Indicator (Detecção de Desconexão)
+
+| Recurso | Descrição |
+|---------|-----------|
+| **Estilo Premium Acrylic** | Visual com blur, shadows e glow |
+| **Heartbeat Animation** | Indica tentativa de reconexão |
+| **Botão de Reporte** | Link direto para WhatsApp do admin |
+| **Cobertura Global** | Injetado no `root.html.heex` |
+
+#### Presença em Tempo Real
+
+| Recurso | Descrição |
+|---------|-----------|
+| **PresenceHook** | Rastreia usuários conectados via `Phoenix.Presence` |
+| **Contador no Dashboard** | Exibe número de usuários online com avatares |
+| **Topic Global** | `system:presence` para broadcast de status |
+
+#### Arquitetura de Resiliência
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                        FRONTEND (Browser)                             │
+├──────────────────────────────────────────────────────────────────────┤
+│  DebounceSubmit Hook     │  Offline Indicator     │  Presença         │
+│  (Previne cliques)       │  (Detecta queda)       │  (Status online)  │
+└──────────────────────────────────────────────────────────────────────┘
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│                          ROUTER (Elixir)                              │
+├──────────────────────────────────────────────────────────────────────┤
+│  rate_limit_auth (30/min)  │  rate_limit_general (100/min)           │
+│  (Login, Registro)         │  (Todas as rotas autenticadas)          │
+└──────────────────────────────────────────────────────────────────────┘
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│                        DATABASE (PostgreSQL)                          │
+├──────────────────────────────────────────────────────────────────────┤
+│  pool_size: 20  │  queue_target: 500ms  │  timeout: 15s              │
+└──────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
