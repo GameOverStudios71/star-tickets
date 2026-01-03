@@ -97,7 +97,7 @@ defmodule StarTicketsWeb.Admin.NotificationSettingsLive do
           title="🔔 Configuração de Notificações"
           description="Gerencie quais alertas são enviados via WhatsApp."
           breadcrumb_items={[
-            %{label: "Gerente", path: ~p"/manager"},
+            %{label: "Gerente", href: ~p"/manager"},
             %{label: "Notificações"}
           ]}
         >
