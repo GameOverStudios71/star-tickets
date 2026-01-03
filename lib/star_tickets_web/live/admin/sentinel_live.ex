@@ -63,42 +63,52 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
   def render(assigns) do
     ~H"""
     <div class="st-app has-background min-h-screen text-white font-mono p-4 flex flex-col pt-20">
-      <!-- Header -->
-      <div class="flex items-center justify-between mb-8 border-b border-cyan-900/50 pb-4">
-        <div class="flex items-center gap-4">
-          <div class="relative w-12 h-12 flex items-center justify-center">
-            <div class="absolute inset-0 bg-cyan-500 blur-xl opacity-20 animate-pulse"></div>
-            <div class="relative w-full h-full border-2 border-cyan-400 rounded-full flex items-center justify-center bg-black">
-              <i class="fa-solid fa-eye text-cyan-400 text-xl animate-pulse"></i>
+      <.app_header
+        show_home={true}
+        current_scope={@current_scope}
+        client_name={@client_name}
+        establishments={@establishments}
+        users={@users}
+        impersonating={@impersonating}
+      >
+        <:left>
+          <div class="flex items-center gap-4">
+            <div class="relative w-10 h-10 flex items-center justify-center">
+              <div class="absolute inset-0 bg-cyan-500 blur-xl opacity-20 animate-pulse"></div>
+              <div class="relative w-full h-full border-2 border-cyan-400 rounded-full flex items-center justify-center bg-black">
+                <i class="fa-solid fa-eye text-cyan-400 text-sm animate-pulse"></i>
+              </div>
+            </div>
+            <div>
+              <h1 class="text-xl font-bold tracking-widest text-cyan-400">SENTINEL_AI</h1>
+              <p class="text-[0.6rem] text-cyan-700 uppercase tracking-[0.3em] hidden md:block">
+                System Monitoring
+              </p>
             </div>
           </div>
-          <div>
-            <h1 class="text-2xl font-bold tracking-widest text-cyan-400">SENTINEL_AI</h1>
-            <p class="text-xs text-cyan-700 uppercase tracking-[0.3em]">
-              System Monitoring & Projection Engine
-            </p>
-          </div>
-        </div>
+        </:left>
 
-        <div class="flex gap-4 text-xs">
-          <div class="flex flex-col items-end">
-            <span class="text-cyan-700">STATUS</span>
-            <%= if @sentinel_active do %>
-              <span class="text-emerald-400 font-bold flex items-center gap-1">
-                <span class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span> ACTIVE
-              </span>
-            <% else %>
-              <span class="text-gray-500 font-bold flex items-center gap-1">
-                <span class="w-2 h-2 bg-gray-500 rounded-full"></span> STANDBY
-              </span>
-            <% end %>
+        <:right>
+          <div class="flex gap-4 text-xs mr-4">
+            <div class="flex flex-col items-end">
+              <span class="text-cyan-700 font-bold text-[0.6rem]">STATUS</span>
+              <%= if @sentinel_active do %>
+                <span class="text-emerald-400 font-bold flex items-center gap-1">
+                  <span class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span> ACTIVE
+                </span>
+              <% else %>
+                <span class="text-gray-500 font-bold flex items-center gap-1">
+                  <span class="w-2 h-2 bg-gray-500 rounded-full"></span> STANDBY
+                </span>
+              <% end %>
+            </div>
+            <div class="flex flex-col items-end">
+              <span class="text-cyan-700 font-bold text-[0.6rem]">OBSERVERS</span>
+              <span class="text-white font-mono">{if @sentinel_active, do: "1+", else: "0"}</span>
+            </div>
           </div>
-          <div class="flex flex-col items-end">
-            <span class="text-cyan-700">OBSERVERS</span>
-            <span class="text-white">{if @sentinel_active, do: "1+", else: "0"}</span>
-          </div>
-        </div>
-      </div>
+        </:right>
+      </.app_header>
       
     <!-- Connectivity Monitor & Operational Flow -->
       <% connected = group_presences(@presences) %>
