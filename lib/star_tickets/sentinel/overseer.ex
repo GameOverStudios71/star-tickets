@@ -320,19 +320,94 @@ defmodule StarTickets.Sentinel.Overseer do
 
     satisfied = Enum.map(satisfied, fn p -> %{p | status: :verified} end)
 
-    # B. Generate new projections based on heuristics
+    # B. Check for customer name update in log details
+    # The log details might contain customer_name directly or in diff
+    # Use Inspect to find it safely or try map access if structure is known
+    # Assuming details is a map and might have "customer_name" or customer_name atom
+    customer_name =
+      cond do
+        is_map(log.details) && Map.has_key?(log.details, :customer_name) ->
+          val = log.details.customer_name
+          if is_map(val), do: val[:to] || val["to"], else: val
+
+        is_map(log.details) && Map.has_key?(log.details, "customer_name") ->
+          val = log.details["customer_name"]
+          if is_map(val), do: val[:to] || val["to"], else: val
+
+        # In diff, it might be inside "diff" -> "customer_name"
+        is_map(log.details) && get_in(log.details, [:diff, :customer_name]) ->
+          val = get_in(log.details, [:diff, :customer_name])
+          if is_map(val), do: val[:to] || val["to"], else: val
+
+        is_map(log.details) && get_in(log.details, ["diff", "customer_name"]) ->
+          val = get_in(log.details, ["diff", "customer_name"])
+          if is_map(val), do: val[:to] || val["to"], else: val
+
+        true ->
+          nil
+      end
+
+    # C. Generate new projections based on heuristics
     new_projections = generate_projections(log)
+
+    all_projections = new_projections ++ satisfied ++ remaining
+
+    # D. Propagate customer name to all projections for this resource_id
+    final_projections =
+      if customer_name do
+        resource_id = log.resource_id
+
+        Enum.map(all_projections, fn p ->
+          if p.resource_id == resource_id do
+            %{p | customer_name: customer_name}
+          else
+            p
+          end
+        end)
+      else
+        all_projections
+      end
+
+    # E. Interference / Failure Logic
+    # If "Chamada Recepção" is verified and Web Check-in is still pending, mark Web Check-in as failed.
+    final_projections =
+      Enum.map(final_projections, fn p ->
+        if p.name == "Web Check-in" and p.status == :pending do
+          sibling_reception =
+            Enum.find(final_projections, fn s ->
+              s.resource_id == p.resource_id and s.name == "2. Chamada Recepção"
+            end)
+
+          if sibling_reception && sibling_reception.status == :verified do
+            %{p | status: :failed}
+          else
+            p
+          end
+        else
+          p
+        end
+      end)
 
     # Clean up old final states to avoid infinite growth?
     # For this demo, let's keep last 100 mixed
-    (new_projections ++ satisfied ++ remaining)
+    final_projections
     |> Enum.sort_by(& &1.created_at, {:desc, DateTime})
     |> Enum.take(100)
   end
 
   defp matches_expectation?(log, projection) do
     # Simple match: Action matches and (if resource defined) resource matches
-    action_match = log.action == projection.expected_action
+    action_match =
+      cond do
+        projection.name == "Web Check-in" ->
+          log.action in ["WEBCHECKIN_STARTED", "WEBCHECKIN_COMPLETED"]
+
+        projection.expected_action == "TICKET_UPDATED" and log.action == "TICKET_SERVICES_UPDATED" ->
+          true
+
+        true ->
+          log.action == projection.expected_action
+      end
 
     resource_match =
       if projection.resource_id do
@@ -343,12 +418,15 @@ defmodule StarTickets.Sentinel.Overseer do
 
     basic_match = action_match and resource_match
 
-    if basic_match and log.action == "TICKET_UPDATED" do
+    if basic_match and (log.action == "TICKET_UPDATED" or log.action == "TICKET_SERVICES_UPDATED") do
       # Refined check for specific status
       expected_status_fragment =
         cond do
           String.contains?(projection.name, "Chamada Recepção") -> "CALLED_RECEPTION"
-          String.contains?(projection.name, "Chamada Médico") -> "CALLED_PROFESSIONAL"
+          String.contains?(projection.name, "Atendimento Recepção") -> "IN_RECEPTION"
+          String.contains?(projection.name, "Aguardando Atendimento") -> "WAITING_PROFESSIONAL"
+          String.contains?(projection.name, "Chamada Atendimento") -> "CALLED_PROFESSIONAL"
+          String.contains?(projection.name, "Atendimento em Andamento") -> "IN_ATTENDANCE"
           String.contains?(projection.name, "Finalização") -> "FINISHED"
           true -> nil
         end
@@ -402,39 +480,63 @@ defmodule StarTickets.Sentinel.Overseer do
             deadline: DateTime.add(now, 30 * 60, :second)
           )
 
-        # 3. Professional Call (60 min)
+        # 3. Reception Attendance
         p3 =
           Projection.new(
-            name: "3. Chamada Médico",
+            name: "3. Atendimento Recepção",
+            description: "Atendimento iniciado na recepção.",
+            trigger_event: log,
+            expected_action: "TICKET_UPDATED",
+            resource_id: ticket_id,
+            deadline: DateTime.add(now, 45 * 60, :second)
+          )
+
+        # 4. Waiting Professional
+        p4 =
+          Projection.new(
+            name: "4. Aguardando Atendimento",
+            description: "Aguardando profissional de saúde.",
+            trigger_event: log,
+            expected_action: "TICKET_UPDATED",
+            resource_id: ticket_id,
+            deadline: DateTime.add(now, 60 * 60, :second)
+          )
+
+        # 5. Professional Call
+        p5 =
+          Projection.new(
+            name: "5. Chamada Atendimento",
             description: "Aguardando chamada no consultório.",
             trigger_event: log,
             expected_action: "TICKET_UPDATED",
             resource_id: ticket_id,
-            deadline: DateTime.add(now, 60 * 60, :second),
-            # Custom check needed: status -> CALLED_PROFESSIONAL
-            confidence: 0.8
+            deadline: DateTime.add(now, 75 * 60, :second)
           )
 
-        # 4. Finish
-        p4 =
+        # 6. Service Attendance
+        p6 =
           Projection.new(
-            name: "4. Finalização",
+            name: "6. Atendimento em Andamento",
+            description: "Em atendimento médico.",
+            trigger_event: log,
+            expected_action: "TICKET_UPDATED",
+            resource_id: ticket_id,
+            deadline: DateTime.add(now, 90 * 60, :second)
+          )
+
+        # 7. Finish
+        p7 =
+          Projection.new(
+            name: "7. Finalização",
             description: "Atendimento concluído.",
             trigger_event: log,
             expected_action: "TICKET_UPDATED",
             resource_id: ticket_id,
-            deadline: DateTime.add(now, 90 * 60, :second),
-            # Custom check: status -> FINISHED
-            confidence: 0.7
+            deadline: DateTime.add(now, 120 * 60, :second)
           )
 
         # Construct the full list properly
-        base = [
-          print_proj,
-          reception_proj,
-          p3,
-          p4
-        ]
+        base = [print_proj, reception_proj, p3, p4, p5, p6, p7]
 
         # WebCheckin (if applicable)
         has_forms = log.details["has_forms"] == true or log.details[:has_forms] == true

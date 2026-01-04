@@ -20,7 +20,8 @@ defmodule StarTickets.Sentinel.Projection do
     # :pending, :verified, :failed
     :status,
     # 0.0 to 1.0 (AI confidence score - simulated)
-    :confidence
+    :confidence,
+    :customer_name
   ]
 
   def new(attrs) do

@@ -40,7 +40,18 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
      |> assign(:recent_logs, initial_state.recent_logs)
      |> assign(:presences, initial_presence)
      |> assign(:ingestion_collapsed, true)
+     |> assign(:ingestion_collapsed, true)
      |> assign(:selected_actions, Actions.live_monitoring_defaults())
+     |> assign(:journey_filters, [
+       "Web Check-in",
+       "1. Impressão",
+       "2. Chamada Recepção",
+       "3. Atendimento Recepção",
+       "4. Aguardando Atendimento",
+       "5. Chamada Atendimento",
+       "6. Atendimento em Andamento",
+       "7. Finalização"
+     ])
      |> assign(:sentinel_active, sentinel_active)
      |> assign(:page_title, "Sentinel AI")}
   end
@@ -64,6 +75,19 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
      |> assign(:projections, state.projections)
      |> assign(:anomalies, state.anomalies)
      |> assign(:recent_logs, state.recent_logs)}
+  end
+
+  def handle_event("toggle_journey_filter", %{"filter" => filter}, socket) do
+    filters = socket.assigns.journey_filters
+
+    new_filters =
+      if filter in filters do
+        List.delete(filters, filter)
+      else
+        [filter | filters]
+      end
+
+    {:noreply, assign(socket, :journey_filters, new_filters)}
   end
 
   def render(assigns) do
@@ -459,15 +483,64 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
           <% end %>
           <!-- Projections Journey List -->
           <div class="bg-black/30 backdrop-blur-md border border-white/10 rounded-xl p-6 flex-1 overflow-hidden flex flex-col shadow-2xl">
-            <h2 class="text-cyan-600 font-bold uppercase tracking-widest mb-4 flex items-center gap-2 text-sm">
-              <i class="fa-solid fa-timeline"></i>
-              Active Journeys
-              <span class="bg-cyan-900/50 text-cyan-300 px-2 py-0.5 rounded text-xs">
-                {length(@projections)} Active Steps
+            <h2 class="text-cyan-600 font-bold uppercase tracking-widest mb-4 flex items-center gap-2 text-sm justify-between">
+              <span class="flex items-center gap-2">
+                <i class="fa-solid fa-timeline"></i>
+                Active Journeys
+                <span class="bg-cyan-900/50 text-cyan-300 px-2 py-0.5 rounded text-xs">
+                  {length(@projections)} Active Steps
+                </span>
               </span>
             </h2>
+            
+    <!-- Journey Filters Checkboxes -->
+            <div class="mb-4 flex flex-wrap gap-2 text-[10px] bg-black/20 p-2 rounded border border-white/5">
+              <%= for step <- [
+                   "Web Check-in",
+                   "1. Impressão",
+                   "2. Chamada Recepção",
+                   "3. Atendimento Recepção",
+                   "4. Aguardando Atendimento",
+                   "5. Chamada Atendimento",
+                   "6. Atendimento em Andamento",
+                   "7. Finalização"
+                 ] do %>
+                <div
+                  class={"flex items-center gap-2 px-2 py-1 rounded border cursor-pointer select-none transition-all " <>
+                     if(step in @journey_filters,
+                        do: "bg-cyan-500/10 border-cyan-500/50 text-cyan-300",
+                        else: "bg-white/5 border-white/10 text-white/40")}
+                  phx-click="toggle_journey_filter"
+                  phx-value-filter={step}
+                >
+                  <div class={"w-3 h-3 rounded flex items-center justify-center border " <>
+                         if(step in @journey_filters, do: "bg-cyan-500 border-cyan-500", else: "border-white/30")}>
+                    <%= if step in @journey_filters do %>
+                      <i class="fa-solid fa-check text-[8px] text-black"></i>
+                    <% end %>
+                  </div>
+                  <%= if step == "Web Check-in" do %>
+                    <span>Web Check-in</span>
+                  <% else %>
+                    <span>{String.replace(step, ~r/^\d+\. /, "")}</span>
+                  <% end %>
+                </div>
+              <% end %>
+            </div>
 
             <% grouped_projections = group_projections_by_ticket(@projections) %>
+            
+    <!-- Apply Filters -->
+            <% grouped_projections =
+              Enum.filter(grouped_projections, fn {_ticket_id, steps} ->
+                # Filter logic: Show if Current Active Step is in filters
+                sorted = Enum.sort_by(steps, & &1.deadline, {:asc, DateTime})
+                current = Enum.find(sorted, &(&1.status == :pending)) || List.last(sorted)
+
+                # Logic: if current is available, check name.
+                # If all completed, current is last step (Finalização).
+                current && current.name in @journey_filters
+              end) %>
 
             <div class="flex-1 overflow-y-auto max-h-[600px] space-y-4 pr-2 custom-scrollbar">
               <%= for {ticket_id, steps} <- grouped_projections do %>
@@ -478,17 +551,116 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
 
                 ticket_code =
                   first_step.trigger_event.details["code"] || first_step.trigger_event.details[:code] ||
-                    "UNKNOWN" %>
+                    "UNKNOWN"
+
+                # Check if any step has customer_name populated
+                raw_name = Enum.find_value(steps, &Map.get(&1, :customer_name))
+
+                customer_name =
+                  case raw_name do
+                    %{to: name} -> name
+                    %{"to" => name} -> name
+                    name when is_binary(name) -> name
+                    _ -> nil
+                  end
+
+                # TV Status - Compute BOTH Reception and Professional separately
+                reception_call = Enum.find(steps, &(&1.name == "2. Chamada Recepção"))
+                reception_attn = Enum.find(steps, &(&1.name == "3. Atendimento Recepção"))
+
+                reception_tv_status =
+                  cond do
+                    reception_attn && reception_attn.status == :verified ->
+                      loc =
+                        if reception_call,
+                          do: reception_call.trigger_event.metadata["target_location"] || "Recepção",
+                          else: "Recepção"
+
+                      {:checked, loc}
+
+                    reception_call && reception_call.status == :verified ->
+                      loc = reception_call.trigger_event.metadata["target_location"] || "Recepção"
+                      {:calling, loc}
+
+                    true ->
+                      nil
+                  end
+
+                professional_call = Enum.find(steps, &(&1.name == "5. Chamada Atendimento"))
+                professional_attn = Enum.find(steps, &(&1.name == "6. Atendimento em Andamento"))
+
+                professional_tv_status =
+                  cond do
+                    professional_attn && professional_attn.status == :verified ->
+                      loc =
+                        if professional_call,
+                          do:
+                            professional_call.trigger_event.metadata["target_location"] ||
+                              "Consultório",
+                          else: "Consultório"
+
+                      {:checked, loc}
+
+                    professional_call && professional_call.status == :verified ->
+                      loc =
+                        professional_call.trigger_event.metadata["target_location"] || "Consultório"
+
+                      {:calling, loc}
+
+                    true ->
+                      nil
+                  end %>
                 <div class="bg-black/40 border border-white/5 rounded-lg p-4 hover:border-cyan-500/30 transition-colors">
                   <div class="flex justify-between items-center mb-3">
                     <div class="flex items-center gap-3">
                       <span class="text-lg font-bold text-white tracking-wider">{ticket_code}</span>
+                      <%= if customer_name do %>
+                        <span class="text-sm font-bold text-cyan-400 truncate max-w-[200px]">
+                          {customer_name}
+                        </span>
+                      <% end %>
                       <span class="text-xs text-white/40 uppercase tracking-widest">
                         #{ticket_id}
                       </span>
                     </div>
-                    <div class="text-[10px] text-white/30 font-mono">
-                      Started: {Calendar.strftime(first_step.created_at, "%H:%M:%S")}
+                    <div class="flex items-center gap-3 text-[10px] text-white/30 font-mono">
+                      <%= if reception_tv_status do %>
+                        <% {r_icon, r_class, r_text} =
+                          case reception_tv_status do
+                            {:calling, _} -> {"fa-tv", "text-emerald-400 animate-pulse", "CHAMANDO"}
+                            {:checked, _} -> {"fa-check-circle", "text-white/30", "CALLED"}
+                          end
+
+                        {_, r_loc} = reception_tv_status %>
+                        <div class="flex items-center gap-1.5 font-bold">
+                          <div class={r_class}>
+                            <i class={"fa-solid #{r_icon}"}></i>
+                            <span>{r_text}</span>
+                          </div>
+                          <span class="text-[9px] text-white/50 border-l border-white/20 pl-1.5 ml-1 leading-none uppercase tracking-widest">
+                            {r_loc}
+                          </span>
+                        </div>
+                      <% end %>
+                      <%= if professional_tv_status do %>
+                        <% {p_icon, p_class, p_text} =
+                          case professional_tv_status do
+                            {:calling, _} -> {"fa-tv", "text-cyan-400 animate-pulse", "CHAMANDO"}
+                            {:checked, _} -> {"fa-check-circle", "text-white/30", "CALLED"}
+                          end
+
+                        {_, p_loc} = professional_tv_status %>
+                        <div class="flex items-center gap-1.5 font-bold">
+                          <div class={p_class}>
+                            <i class={"fa-solid #{p_icon}"}></i>
+                            <span>{p_text}</span>
+                          </div>
+                          <span class="text-[9px] text-cyan-500/70 border-l border-cyan-500/30 pl-1.5 ml-1 leading-none uppercase tracking-widest">
+                            {p_loc}
+                          </span>
+                        </div>
+                      <% end %>
+                      <span>Started: {Calendar.strftime(first_step.created_at, "%H:%M:%S")}</span>
                     </div>
                   </div>
                   
@@ -826,9 +998,11 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
     name = step.name |> String.downcase()
 
     cond do
-      String.contains?(name, "print") -> "fa-print"
+      String.contains?(name, "print") or String.contains?(name, "impressão") -> "fa-print"
       String.contains?(name, "recep") -> "fa-desktop"
-      String.contains?(name, "médico") -> "fa-user-doctor"
+      String.contains?(name, "aguardando atendimento") -> "fa-clock"
+      String.contains?(name, "chamada atendimento") -> "fa-user-doctor"
+      String.contains?(name, "atendimento em andamento") -> "fa-stethoscope"
       String.contains?(name, "finaliza") -> "fa-flag-checkered"
       String.contains?(name, "check-in") -> "fa-mobile-screen"
       true -> "fa-circle-dot"

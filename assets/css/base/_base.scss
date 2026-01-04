@@ -7,12 +7,23 @@
     min-height: 100vh;
 }
 
-.has-background {
+body {
     background-image: url('/images/background.jpg');
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
-    background-color: #000;
+    background-color: #000 !important;
+    /* Force black default */
+    margin: 0;
+}
+
+.has-background {
+    /* Kept for compatibility if used on specific divs, forcing same style */
+    background-image: url('/images/background.jpg');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-color: #000 !important;
 }
 
 /* ================================================================

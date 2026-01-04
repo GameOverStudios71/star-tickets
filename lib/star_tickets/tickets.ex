@@ -6,6 +6,7 @@ defmodule StarTickets.Tickets do
   import Ecto.Query, warn: false
   alias StarTickets.Repo
   alias StarTickets.Tickets.Ticket
+  alias StarTickets.Accounts.Room
   alias Phoenix.PubSub
 
   @topic "tickets"
@@ -32,7 +33,8 @@ defmodule StarTickets.Tickets do
     Ecto.Multi.new()
     |> Ecto.Multi.update(:ticket, changeset)
     |> Ecto.Multi.run(:log, fn repo, %{ticket: updated_ticket} ->
-      Audit.log_diff(repo, ticket, updated_ticket, "TICKET", actor)
+      metadata = Map.get(attrs, :audit_metadata, %{})
+      Audit.log_diff(repo, ticket, updated_ticket, "TICKET", actor, metadata)
     end)
     |> Repo.transaction()
     |> case do
@@ -53,7 +55,8 @@ defmodule StarTickets.Tickets do
     Ecto.Multi.new()
     |> Ecto.Multi.update(:ticket, changeset)
     |> Ecto.Multi.run(:log, fn repo, %{ticket: updated_ticket} ->
-      Audit.log_diff(repo, ticket, updated_ticket, "TICKET_SERVICES", actor)
+      metadata = Map.get(attrs, :audit_metadata, %{})
+      Audit.log_diff(repo, ticket, updated_ticket, "TICKET_SERVICES", actor, metadata)
     end)
     |> Repo.transaction()
     |> case do
@@ -245,7 +248,10 @@ defmodule StarTickets.Tickets do
         %{
           status: "CALLED_PROFESSIONAL",
           user_id: user_id,
-          room_id: room_id
+          room_id: room_id,
+          audit_metadata: %{
+            target_location: Repo.get(Room, room_id).name
+          }
         },
         actor
       )
@@ -269,7 +275,10 @@ defmodule StarTickets.Tickets do
         %{
           status: "CALLED_RECEPTION",
           user_id: user_id,
-          room_id: room_id
+          room_id: room_id,
+          audit_metadata: %{
+            target_location: Repo.get(Room, room_id).name
+          }
         },
         actor
       )
