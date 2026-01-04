@@ -457,115 +457,85 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
               </div>
             </div>
           <% end %>
-          
-    <!-- Projections Grid -->
+          <!-- Projections Journey List -->
           <div class="bg-black/30 backdrop-blur-md border border-white/10 rounded-xl p-6 flex-1 overflow-hidden flex flex-col shadow-2xl">
             <h2 class="text-cyan-600 font-bold uppercase tracking-widest mb-4 flex items-center gap-2 text-sm">
               <i class="fa-solid fa-timeline"></i>
-              Active Projections
+              Active Journeys
               <span class="bg-cyan-900/50 text-cyan-300 px-2 py-0.5 rounded text-xs">
-                {length(@projections)}
+                {length(@projections)} Active Steps
               </span>
             </h2>
 
-            <div class="flex-1 overflow-y-auto max-h-[600px] grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 content-start pr-2 custom-scrollbar">
-              <%= for proj <- @projections do %>
-                <div class={"border rounded-lg p-4 relative overflow-hidden transition-all duration-500 min-h-[180px] #{status_classes(proj)}"}>
-                  <div class="flex justify-between items-start mb-2 relative z-10">
-                    <span class="text-[10px] uppercase font-bold tracking-wider opacity-70">
-                      ID: {String.slice(proj.id, 0, 8)}
-                    </span>
-                    <span class="text-xs font-bold px-2 py-0.5 rounded bg-black/30 backdrop-blur-sm">
-                      {proj.status}
-                    </span>
-                  </div>
+            <% grouped_projections = group_projections_by_ticket(@projections) %>
 
-                  <h3 class="font-bold text-sm mb-1 relative z-10">{proj.name}</h3>
-                  <p class="text-xs opacity-70 mb-3 relative z-10">{proj.description}</p>
+            <div class="flex-1 overflow-y-auto max-h-[600px] space-y-4 pr-2 custom-scrollbar">
+              <%= for {ticket_id, steps} <- grouped_projections do %>
+                <% # Sort steps by expected order/deadline
+                sorted_steps = Enum.sort_by(steps, & &1.deadline, {:asc, DateTime})
+                # Get ticket info from first step
+                first_step = List.first(sorted_steps)
+
+                ticket_code =
+                  first_step.trigger_event.details["code"] || first_step.trigger_event.details[:code] ||
+                    "UNKNOWN" %>
+                <div class="bg-black/40 border border-white/5 rounded-lg p-4 hover:border-cyan-500/30 transition-colors">
+                  <div class="flex justify-between items-center mb-3">
+                    <div class="flex items-center gap-3">
+                      <span class="text-lg font-bold text-white tracking-wider">{ticket_code}</span>
+                      <span class="text-xs text-white/40 uppercase tracking-widest">
+                        #{ticket_id}
+                      </span>
+                    </div>
+                    <div class="text-[10px] text-white/30 font-mono">
+                      Started: {Calendar.strftime(first_step.created_at, "%H:%M:%S")}
+                    </div>
+                  </div>
                   
-    <!-- Ticket Details Section -->
-                  <%= if proj.trigger_event.details do %>
-                    <div class="text-[10px] mb-3 relative z-10 space-y-1 bg-black/20 rounded p-2">
-                      <%= if proj.trigger_event.details["customer_name"] || proj.trigger_event.details[:customer_name] do %>
-                        <div class="flex items-center gap-1">
-                          <i class="fa-solid fa-user opacity-50 w-3"></i>
-                          <span class="opacity-70">Cliente:</span>
-                          <span class="font-bold">
-                            {proj.trigger_event.details["customer_name"] ||
-                              proj.trigger_event.details[:customer_name]}
-                          </span>
-                        </div>
-                      <% end %>
-                      <%= if proj.trigger_event.details["code"] || proj.trigger_event.details[:code] || proj.trigger_event.details["ticket_code"] do %>
-                        <div class="flex items-center gap-1">
-                          <i class="fa-solid fa-ticket opacity-50 w-3"></i>
-                          <span class="opacity-70">Senha:</span>
-                          <span class="font-bold font-mono">
-                            {proj.trigger_event.details["code"] || proj.trigger_event.details[:code] ||
-                              proj.trigger_event.details["ticket_code"]}
-                          </span>
-                        </div>
-                      <% end %>
-                      <%= if proj.trigger_event.details["services"] do %>
-                        <div class="flex items-start gap-1">
-                          <i class="fa-solid fa-list-check opacity-50 w-3 mt-0.5"></i>
-                          <span class="opacity-70">Serviços:</span>
-                          <span class="font-bold">{proj.trigger_event.details["services"]}</span>
-                        </div>
-                      <% end %>
-                      <%= if proj.trigger_event.details["reception_user"] do %>
-                        <div class="flex items-center gap-1">
-                          <i class="fa-solid fa-desktop opacity-50 w-3"></i>
-                          <span class="opacity-70">Recepção:</span>
-                          <span class="font-bold">
-                            {proj.trigger_event.details["reception_user"]}
-                          </span>
-                        </div>
-                      <% end %>
-                      <%= if proj.trigger_event.details["professional_user"] do %>
-                        <div class="flex items-center gap-1">
-                          <i class="fa-solid fa-user-doctor opacity-50 w-3"></i>
-                          <span class="opacity-70">Profissional:</span>
-                          <span class="font-bold">
-                            {proj.trigger_event.details["professional_user"]}
-                          </span>
-                        </div>
-                      <% end %>
-                    </div>
-                  <% end %>
+    <!-- Steps Cluster -->
+                  <div class="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar">
+                    <%= for step <- sorted_steps do %>
+                      <div class={"flex-shrink-0 flex flex-col items-center gap-1 min-w-[100px] p-2 rounded border transition-all relative group
+                      #{journey_step_classes(step.status)}
+                   "}>
+                        <i class={"fa-solid #{journey_step_icon(step, step.status)} text-lg mb-1"}>
+                        </i>
+                        <span class="text-[9px] uppercase font-bold text-center leading-tight">
+                          {step.name}
+                        </span>
 
-                  <div class="flex items-center gap-2 text-[10px] relative z-10">
-                    <div class="flex flex-col">
-                      <span class="opacity-50 uppercase">Trigger</span>
-                      <span class="font-bold">{proj.trigger_event.action}</span>
-                    </div>
-                    <i class="fa-solid fa-arrow-right opacity-50"></i>
-                    <div class="flex flex-col">
-                      <span class="opacity-50 uppercase">Waiting For</span>
-                      <span class="font-bold">{proj.expected_action}</span>
-                    </div>
-                  </div>
-
-                  <%= if proj.status == :pending do %>
-                    <div class="mt-4 w-full bg-black/30 h-1 rounded-full overflow-hidden relative z-10">
-                      <div class="h-full bg-current opacity-50 w-full animate-progress origin-left">
+                        <%= if step.status == :pending do %>
+                          <span class="text-[8px] opacity-60 font-mono mt-1">
+                            Due: {Calendar.strftime(step.deadline, "%H:%M")}
+                          </span>
+                        <% end %>
+                        <%= if step.status == :verified do %>
+                          <span class="text-[8px] font-bold mt-1 text-emerald-400">DONE</span>
+                        <% end %>
+                        <%= if step.status == :failed do %>
+                          <span class="text-[8px] font-bold mt-1 text-red-400">FAILED</span>
+                        <% end %>
+                        
+    <!-- Tooltip -->
+                        <div class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 bg-black/90 border border-white/20 p-2 rounded text-[10px] hidden group-hover:block z-50 pointer-events-none">
+                          <p class="font-bold text-white mb-1">{step.description}</p>
+                          <p class="text-white/60">Expected: {step.expected_action}</p>
+                        </div>
                       </div>
-                    </div>
-                    <div class="text-[9px] text-right mt-1 opacity-50 relative z-10">
-                      Expires: {Calendar.strftime(proj.deadline, "%H:%M:%S")}
-                    </div>
-                  <% end %>
-                  
-    <!-- Background Icon -->
-                  <i class={"fa-solid #{status_icon(proj.status)} absolute -bottom-4 -right-4 text-8xl opacity-5 pointer-events-none"}>
-                  </i>
+                      
+    <!-- Connector -->
+                      <%= if step != List.last(sorted_steps) do %>
+                        <div class="h-0.5 w-4 bg-white/10 flex-shrink-0"></div>
+                      <% end %>
+                    <% end %>
+                  </div>
                 </div>
               <% end %>
 
               <%= if Enum.empty?(@projections) do %>
-                <div class="col-span-full flex flex-col items-center justify-center text-cyan-900 py-12">
+                <div class="flex flex-col items-center justify-center text-cyan-900 py-12">
                   <i class="fa-solid fa-brain text-4xl mb-2 animate-pulse"></i>
-                  <p>No active projections. Waiting for events...</p>
+                  <p>No active journeys. Waiting for new tickets...</p>
                 </div>
               <% end %>
             </div>
@@ -829,6 +799,39 @@ defmodule StarTicketsWeb.Admin.SentinelLive do
         icon: "fa-triangle-exclamation text-red-500",
         summary_icon: "fa-bug text-red-400"
       }
+    end
+  end
+
+  defp group_projections_by_ticket(projections) do
+    projections
+    |> Enum.group_by(& &1.resource_id)
+    # Sort groups by newest first (look at created_at of first item)
+    |> Enum.sort_by(
+      fn {_id, list} ->
+        List.first(list).created_at
+      end,
+      {:desc, DateTime}
+    )
+  end
+
+  defp journey_step_classes(status) do
+    case status do
+      :pending -> "bg-white/5 border-white/10 text-white/40"
+      :verified -> "bg-emerald-500/10 border-emerald-500/50 text-emerald-400"
+      :failed -> "bg-red-500/10 border-red-500/50 text-red-400"
+    end
+  end
+
+  defp journey_step_icon(step, _status) do
+    name = step.name |> String.downcase()
+
+    cond do
+      String.contains?(name, "print") -> "fa-print"
+      String.contains?(name, "recep") -> "fa-desktop"
+      String.contains?(name, "médico") -> "fa-user-doctor"
+      String.contains?(name, "finaliza") -> "fa-flag-checkered"
+      String.contains?(name, "check-in") -> "fa-mobile-screen"
+      true -> "fa-circle-dot"
     end
   end
 end

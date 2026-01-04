@@ -59,6 +59,7 @@ defmodule StarTickets.Audit do
       %AuditLog{}
       |> AuditLog.changeset(attrs)
       |> repo.insert()
+      |> broadcast_log()
     else
       {:ok, nil}
     end
@@ -69,10 +70,18 @@ defmodule StarTickets.Audit do
   end
 
   defp broadcast_log({:ok, log}) do
-    # Preload user for display
-    log = Repo.preload(log, :user)
-    PubSub.broadcast(StarTickets.PubSub, "audit_logs", {:audit_log_created, log})
-    {:ok, log}
+    try do
+      # Preload user for display
+      log = Repo.preload(log, :user)
+      PubSub.broadcast(StarTickets.PubSub, "audit_logs", {:audit_log_created, log})
+      {:ok, log}
+    rescue
+      e ->
+        require Logger
+        Logger.error("Failed to broadcast audit log: #{inspect(e)}")
+        # Return success to avoid failing the transaction
+        {:ok, log}
+    end
   end
 
   defp broadcast_log({:error, _} = error), do: error

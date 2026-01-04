@@ -338,88 +338,123 @@ defmodule StarTickets.Sentinel.Overseer do
       if projection.resource_id do
         projection.resource_id == log.resource_id
       else
-        # loosely match if no resource id tracked
         true
       end
 
-    action_match and resource_match
+    basic_match = action_match and resource_match
+
+    if basic_match and log.action == "TICKET_UPDATED" do
+      # Refined check for specific status
+      expected_status_fragment =
+        cond do
+          String.contains?(projection.name, "Chamada Recepção") -> "CALLED_RECEPTION"
+          String.contains?(projection.name, "Chamada Médico") -> "CALLED_PROFESSIONAL"
+          String.contains?(projection.name, "Finalização") -> "FINISHED"
+          true -> nil
+        end
+
+      if expected_status_fragment do
+        # details typically contains "changes" or "status"
+        # Since Audit.log_diff sends 'updated_ticket' as payload, structure implies diffs.
+        # But log_diff implementation details in `Audit` module are important.
+        # Let's assume `details` string or map contains the new status.
+        # The `Audit.log_diff` usually logs changes like `%{status: "old" => "new"}` or similar.
+        # Let's be loose: if the details string/map contains the status string.
+        details_str = inspect(log.details, pretty: true)
+        String.contains?(details_str, expected_status_fragment)
+      else
+        true
+      end
+    else
+      basic_match
+    end
   end
 
   defp generate_projections(log) do
     case log.action do
       "TICKET_CREATED" ->
-        # Base projection: ticket should be called
-        base = [
+        # Generate FULL lifecycle projections immediately
+        now = DateTime.utc_now()
+        ticket_id = log.resource_id
+
+        # 1. Totem Print (Immediate - 30s)
+        # Already verified since we just created it (implicit)
+        print_proj =
           Projection.new(
-            name: "Ticket ##{log.resource_id} Flow",
-            description: "Espero que este ticket seja chamado em breve.",
+            name: "1. Impressão",
+            description: "Impressão do ticket no totem.",
             trigger_event: log,
-            expected_action: "TICKET_CALLED",
-            resource_id: log.resource_id,
-            # 30 min deadline
-            deadline: DateTime.add(DateTime.utc_now(), 30 * 60, :second)
+            expected_action: "TOTEM_TICKET_PRINTED",
+            resource_id: ticket_id,
+            status: :verified,
+            deadline: DateTime.add(now, 30, :second)
           )
+
+        # 2. Reception Call (30 min)
+        # Expect TICKET_UPDATED with status CALLED_RECEPTION
+        reception_proj =
+          Projection.new(
+            name: "2. Chamada Recepção",
+            description: "Aguardando chamada na recepção.",
+            trigger_event: log,
+            expected_action: "TICKET_UPDATED",
+            resource_id: ticket_id,
+            deadline: DateTime.add(now, 30 * 60, :second)
+          )
+
+        # 3. Professional Call (60 min)
+        p3 =
+          Projection.new(
+            name: "3. Chamada Médico",
+            description: "Aguardando chamada no consultório.",
+            trigger_event: log,
+            expected_action: "TICKET_UPDATED",
+            resource_id: ticket_id,
+            deadline: DateTime.add(now, 60 * 60, :second),
+            # Custom check needed: status -> CALLED_PROFESSIONAL
+            confidence: 0.8
+          )
+
+        # 4. Finish
+        p4 =
+          Projection.new(
+            name: "4. Finalização",
+            description: "Atendimento concluído.",
+            trigger_event: log,
+            expected_action: "TICKET_UPDATED",
+            resource_id: ticket_id,
+            deadline: DateTime.add(now, 90 * 60, :second),
+            # Custom check: status -> FINISHED
+            confidence: 0.7
+          )
+
+        # Construct the full list properly
+        base = [
+          print_proj,
+          reception_proj,
+          p3,
+          p4
         ]
 
-        # If ticket has forms, also expect web checkin to be started
+        # WebCheckin (if applicable)
         has_forms = log.details["has_forms"] == true or log.details[:has_forms] == true
 
         if has_forms do
-          base ++
-            [
-              Projection.new(
-                name: "WebCheckin ##{log.resource_id}",
-                description: "Ticket com formulário. Aguardando cliente acessar Web Check-in.",
-                trigger_event: log,
-                expected_action: "WEBCHECKIN_STARTED",
-                resource_id: log.resource_id,
-                # 10 min deadline (se demorar, talvez o cliente desistiu)
-                confidence: 0.7,
-                deadline: DateTime.add(DateTime.utc_now(), 10 * 60, :second)
-              )
-            ]
+          wc_proj =
+            Projection.new(
+              name: "Web Check-in",
+              description: "Preenchimento antecipado.",
+              trigger_event: log,
+              # This comes from WebCheckinLive logging explicitly?
+              expected_action: "WEBCHECKIN_COMPLETED",
+              resource_id: ticket_id,
+              deadline: DateTime.add(now, 15 * 60, :second)
+            )
+
+          [wc_proj | base]
         else
           base
         end
-
-      "WEBCHECKIN_STARTED" ->
-        [
-          Projection.new(
-            name: "WebCheckin Completion ##{log.resource_id}",
-            description: "Cliente iniciou Web Check-in. Deve completar em breve.",
-            trigger_event: log,
-            expected_action: "WEBCHECKIN_COMPLETED",
-            resource_id: log.resource_id,
-            # 15 min deadline (formulários podem ser longos)
-            deadline: DateTime.add(DateTime.utc_now(), 15 * 60, :second)
-          )
-        ]
-
-      "TICKET_CALLED" ->
-        [
-          Projection.new(
-            name: "Ticket ##{log.resource_id} Completion",
-            description: "Ticket em atendimento. Deve ser finalizado.",
-            trigger_event: log,
-            expected_action: "TICKET_FINISHED",
-            resource_id: log.resource_id,
-            # 20 min deadline
-            deadline: DateTime.add(DateTime.utc_now(), 20 * 60, :second)
-          )
-        ]
-
-      "TOTEM_TICKET_GENERATION_STARTED" ->
-        [
-          Projection.new(
-            name: "Totem Print ##{log.resource_id}",
-            description: "Geração iniciada. Impressão deve ocorrer.",
-            trigger_event: log,
-            expected_action: "TOTEM_TICKET_PRINTED",
-            resource_id: log.resource_id,
-            # 15 sec deadline
-            deadline: DateTime.add(DateTime.utc_now(), 15, :second)
-          )
-        ]
 
       _ ->
         []
