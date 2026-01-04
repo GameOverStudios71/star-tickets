@@ -146,6 +146,24 @@ defmodule StarTicketsWeb.ManagerLive do
               <p class="text-white/60 group-hover:text-white/80">Configurar alertas e notificações</p>
             </.link>
             
+    <!-- Ticket Tracking -->
+            <.link
+              navigate={~p"/admin/ticket-tracking"}
+              class="st-card st-nav-card group relative overflow-hidden bg-gradient-to-br from-indigo-900/50 to-black border border-indigo-500/20 cursor-pointer"
+            >
+              <div class="absolute inset-0 bg-indigo-500/5 group-hover:bg-indigo-500/10 transition-colors">
+              </div>
+              <span class="st-icon relative z-10 group-hover:scale-110 transition-transform">🎫</span>
+              <h2 class="relative z-10 group-hover:text-indigo-300 transition-colors">
+                Ticket Tracking
+              </h2>
+              <p class="relative z-10 text-white/60 group-hover:text-white/80">
+                Rastreamento completo de tickets
+              </p>
+              <div class="absolute -bottom-4 -right-4 w-20 h-20 bg-indigo-500/10 blur-2xl rounded-full group-hover:bg-indigo-500/20 transition-all">
+              </div>
+            </.link>
+            
     <!-- Placeholder for other manager tasks -->
             <.link navigate={~p"/dashboard"} class="st-card st-nav-card opacity-50 cursor-not-allowed">
               <span class="st-icon">📈</span>

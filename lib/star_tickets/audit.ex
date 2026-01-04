@@ -164,6 +164,20 @@ defmodule StarTickets.Audit do
   defp to_integer(_), do: 1
 
   @doc """
+  Lists all audit logs for a specific ticket by its ID.
+  Returns logs in chronological order (oldest first).
+  """
+  def list_logs_for_ticket(ticket_id) when is_binary(ticket_id) or is_integer(ticket_id) do
+    ticket_id_str = to_string(ticket_id)
+
+    AuditLog
+    |> where([q], q.resource_id == ^ticket_id_str and q.resource_type == "Ticket")
+    |> order_by(asc: :inserted_at)
+    |> Repo.all()
+    |> Repo.preload(:user)
+  end
+
+  @doc """
   Deletes logs older than N days.
   """
   def delete_logs_older_than(days) do

@@ -116,6 +116,9 @@ defmodule StarTicketsWeb.Router do
       # Sentinel AI
       live("/admin/sentinel", Admin.SentinelLive, :index)
       live("/admin/sentinel/grid", Admin.SentinelGridLive, :index)
+
+      # Ticket Tracking
+      live("/admin/ticket-tracking", Admin.TicketTrackingLive, :index)
       live("/admin/users/new", Admin.UsersLive, :new)
       live("/admin/users/:id/edit", Admin.UsersLive, :edit)
 
